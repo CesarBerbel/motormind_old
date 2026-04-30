@@ -2,6 +2,9 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.utils import timezone
+
+from service_orders.models import ServiceOrder
 
 from .forms import CustomUserCreationForm, EmailAuthenticationForm
 from .permissions import role_required
@@ -83,11 +86,51 @@ def login_view(request):
 @login_required
 def dashboard_view(request):
     """
-    Show protected dashboard page.
+    Show protected dashboard page with operational counters.
     """
+    today = timezone.localdate()
+
+    overdue_service_orders_count = (
+        ServiceOrder.objects.filter(
+            expected_delivery_date__lt=today,
+        )
+        .exclude(
+            status__in=[
+                ServiceOrder.Status.FINISHED,
+                ServiceOrder.Status.CANCELED,
+            ],
+        )
+        .count()
+    )
+
+    open_service_orders_count = ServiceOrder.objects.exclude(
+        status__in=[
+            ServiceOrder.Status.FINISHED,
+            ServiceOrder.Status.CANCELED,
+        ],
+    ).count()
+
+    assigned_to_me_count = (
+        ServiceOrder.objects.filter(
+            assigned_mechanic=request.user,
+        )
+        .exclude(
+            status__in=[
+                ServiceOrder.Status.FINISHED,
+                ServiceOrder.Status.CANCELED,
+            ],
+        )
+        .count()
+    )
+
     return render(
         request,
         "accounts/dashboard.html",
+        {
+            "overdue_service_orders_count": overdue_service_orders_count,
+            "open_service_orders_count": open_service_orders_count,
+            "assigned_to_me_count": assigned_to_me_count,
+        },
     )
 
 

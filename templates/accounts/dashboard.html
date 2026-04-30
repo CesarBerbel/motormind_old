@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load group_tags %}
 
 {% block title %}
     Painel - Sistema de Oficina
@@ -24,6 +25,88 @@
         </div>
 
     </div>
+</div>
+
+<div class="row g-3 mb-4">
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-danger">
+            <div class="card-body">
+
+                <h2 class="h6 text-danger">
+                    Ordens atrasadas
+                </h2>
+
+                <p class="display-6 mb-2">
+                    {{ overdue_service_orders_count }}
+                </p>
+
+                <p class="text-muted">
+                    Ordens com previsão de entrega vencida e ainda não finalizadas.
+                </p>
+
+                {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" or request.user|has_group:"Mecânico" %}
+                    <a href="{% url 'service_orders:service_order_board' %}?overdue=1" class="btn btn-outline-danger btn-sm">
+                        Ver atrasadas
+                    </a>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-primary">
+            <div class="card-body">
+
+                <h2 class="h6 text-primary">
+                    Ordens em aberto
+                </h2>
+
+                <p class="display-6 mb-2">
+                    {{ open_service_orders_count }}
+                </p>
+
+                <p class="text-muted">
+                    Ordens que ainda estão em andamento na oficina.
+                </p>
+
+                {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" or request.user|has_group:"Mecânico" or request.user|has_group:"Financeiro" %}
+                    <a href="{% url 'service_orders:service_order_list' %}" class="btn btn-outline-primary btn-sm">
+                        Ver ordens
+                    </a>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-warning">
+            <div class="card-body">
+
+                <h2 class="h6 text-warning">
+                    Minhas ordens
+                </h2>
+
+                <p class="display-6 mb-2">
+                    {{ assigned_to_me_count }}
+                </p>
+
+                <p class="text-muted">
+                    Ordens em aberto atribuídas ao seu usuário.
+                </p>
+
+                {% if request.user|has_group:"Mecânico" %}
+                    <a href="{% url 'service_orders:service_order_board' %}?mechanic={{ request.user.pk }}" class="btn btn-outline-warning btn-sm">
+                        Ver minhas ordens
+                    </a>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <div class="row g-3">
