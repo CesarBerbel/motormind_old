@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from customers.models import Customer, Vehicle
-from service_orders.models import ServiceOrder
+from service_orders.models import ServiceOrder, ServiceOrderHistory
 
 
 @pytest.fixture
@@ -270,3 +270,123 @@ def test_board_overdue_filter_only_shows_overdue_active_orders(
     assert board_orders["finished_order"].title not in content
     assert board_orders["canceled_overdue_order"].title not in content
     assert "Atrasada" in content
+
+
+@pytest.mark.django_db
+def test_attendant_can_quick_update_status_from_board(client, users, board_orders):
+    """
+    Test if attendant can quickly update status from board.
+    """
+    service_order = board_orders["open_order"]
+
+    client.login(
+        username=users["attendant"].email,
+        password="StrongPassword123",
+    )
+
+    response = client.post(
+        reverse(
+            "service_orders:service_order_quick_status_update",
+            args=[service_order.pk],
+        ),
+        data={
+            "status": ServiceOrder.Status.IN_PROGRESS,
+        },
+    )
+
+    service_order.refresh_from_db()
+
+    assert response.status_code == 302
+    assert service_order.status == ServiceOrder.Status.IN_PROGRESS
+    assert ServiceOrderHistory.objects.filter(
+        service_order=service_order,
+        field_name="status",
+        old_value=ServiceOrder.Status.OPEN,
+        new_value=ServiceOrder.Status.IN_PROGRESS,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_quick_update_finished_status_sets_finished_at(client, users, board_orders):
+    """
+    Test if quick update to finished status sets finished_at.
+    """
+    service_order = board_orders["open_order"]
+
+    client.login(
+        username=users["attendant"].email,
+        password="StrongPassword123",
+    )
+
+    response = client.post(
+        reverse(
+            "service_orders:service_order_quick_status_update",
+            args=[service_order.pk],
+        ),
+        data={
+            "status": ServiceOrder.Status.FINISHED,
+        },
+    )
+
+    service_order.refresh_from_db()
+
+    assert response.status_code == 302
+    assert service_order.status == ServiceOrder.Status.FINISHED
+    assert service_order.finished_at is not None
+
+
+@pytest.mark.django_db
+def test_financial_cannot_quick_update_status(client, users, board_orders):
+    """
+    Test if financial user cannot quickly update status from board.
+    """
+    service_order = board_orders["open_order"]
+
+    client.login(
+        username=users["financial"].email,
+        password="StrongPassword123",
+    )
+
+    response = client.post(
+        reverse(
+            "service_orders:service_order_quick_status_update",
+            args=[service_order.pk],
+        ),
+        data={
+            "status": ServiceOrder.Status.IN_PROGRESS,
+        },
+    )
+
+    service_order.refresh_from_db()
+
+    assert response.status_code == 302
+    assert reverse("accounts:dashboard") in response.url
+    assert service_order.status == ServiceOrder.Status.OPEN
+
+
+@pytest.mark.django_db
+def test_quick_update_rejects_invalid_status(client, users, board_orders):
+    """
+    Test if quick update rejects invalid status.
+    """
+    service_order = board_orders["open_order"]
+
+    client.login(
+        username=users["attendant"].email,
+        password="StrongPassword123",
+    )
+
+    response = client.post(
+        reverse(
+            "service_orders:service_order_quick_status_update",
+            args=[service_order.pk],
+        ),
+        data={
+            "status": "invalid-status",
+        },
+    )
+
+    service_order.refresh_from_db()
+
+    assert response.status_code == 302
+    assert service_order.status == ServiceOrder.Status.OPEN

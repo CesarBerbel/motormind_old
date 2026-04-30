@@ -68,11 +68,6 @@ def get_mechanic_queryset():
 def get_overdue_service_order_filter():
     """
     Return filter for overdue service orders.
-
-    A service order is overdue when:
-    - expected delivery date is before today
-    - status is not finished
-    - status is not canceled
     """
     today = timezone.localdate()
 
@@ -190,8 +185,76 @@ def service_order_board_view(request):
             "mechanics": get_mechanic_queryset(),
             "overdue": overdue,
             "today": timezone.localdate(),
+            "status_choices": ServiceOrder.Status.choices,
         },
     )
+
+
+@login_required
+@groups_required(["Administrador", "Atendente", "Mecânico"])
+def service_order_quick_status_update_view(request, pk):
+    """
+    Quickly update service order status from operational board.
+    """
+    service_order = get_object_or_404(
+        ServiceOrder,
+        pk=pk,
+    )
+
+    canceled_redirect = redirect_if_canceled(request, service_order)
+
+    if canceled_redirect:
+        return canceled_redirect
+
+    if request.method != "POST":
+        messages.error(
+            request,
+            "Método inválido para alterar status.",
+        )
+
+        return redirect("service_orders:service_order_board")
+
+    new_status = request.POST.get("status")
+    valid_statuses = [
+        status_value for status_value, _label in ServiceOrder.Status.choices
+    ]
+
+    if new_status not in valid_statuses:
+        messages.error(
+            request,
+            "Status informado é inválido.",
+        )
+
+        return redirect("service_orders:service_order_board")
+
+    old_instance = ServiceOrder.objects.get(pk=service_order.pk)
+
+    service_order.status = new_status
+
+    if service_order.status == ServiceOrder.Status.FINISHED:
+        service_order.finished_at = timezone.now()
+    else:
+        service_order.finished_at = None
+
+    service_order.save()
+
+    create_service_order_history(
+        service_order=service_order,
+        changed_by=request.user,
+        old_instance=old_instance,
+    )
+
+    messages.success(
+        request,
+        "Status da ordem de serviço atualizado com sucesso.",
+    )
+
+    next_url = request.POST.get("next") or "service_orders:service_order_board"
+
+    if next_url == "service_orders:service_order_board":
+        return redirect("service_orders:service_order_board")
+
+    return redirect(next_url)
 
 
 @login_required
