@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django import forms
 
 from customers.models import Vehicle
@@ -5,10 +7,101 @@ from customers.models import Vehicle
 from .models import ServiceOrder, ServiceOrderItem
 
 
+class BRLDecimalField(forms.DecimalField):
+    """
+    Field that accepts Brazilian money formats like:
+    R$ 1.234,56
+    1.234,56
+    1234,56
+    1234.56
+    """
+
+    default_error_messages = {
+        "invalid": "Informe um valor monetário válido. Exemplo: R$ 150,00.",
+    }
+
+    def to_python(self, value):
+        """
+        Convert Brazilian money string to Decimal.
+        """
+        if value in self.empty_values:
+            return None
+
+        if isinstance(value, Decimal):
+            return value
+
+        value = str(value).strip()
+        value = value.replace("R$", "")
+        value = value.replace(" ", "")
+
+        if "," in value:
+            value = value.replace(".", "")
+            value = value.replace(",", ".")
+
+        try:
+            return Decimal(value)
+        except InvalidOperation as exc:
+            raise forms.ValidationError(
+                self.error_messages["invalid"],
+                code="invalid",
+            ) from exc
+
+
 class ServiceOrderForm(forms.ModelForm):
     """
     Form used by administrators and attendants to create and update service orders.
     """
+
+    labor_cost = BRLDecimalField(
+        label="Valor da mão de obra",
+        min_value=Decimal("0.00"),
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        initial=Decimal("0.00"),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control money-input",
+                "placeholder": "Ex: R$ 150,00",
+                "inputmode": "decimal",
+                "autocomplete": "off",
+            }
+        ),
+    )
+
+    parts_cost = BRLDecimalField(
+        label="Valor das peças",
+        min_value=Decimal("0.00"),
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        initial=Decimal("0.00"),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control money-input",
+                "placeholder": "Ex: R$ 200,00",
+                "inputmode": "decimal",
+                "autocomplete": "off",
+            }
+        ),
+    )
+
+    discount = BRLDecimalField(
+        label="Desconto",
+        min_value=Decimal("0.00"),
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        initial=Decimal("0.00"),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control money-input",
+                "placeholder": "Ex: R$ 50,00",
+                "inputmode": "decimal",
+                "autocomplete": "off",
+            }
+        ),
+    )
 
     class Meta:
         model = ServiceOrder
@@ -71,27 +164,6 @@ class ServiceOrderForm(forms.ModelForm):
                     "class": "form-select",
                 }
             ),
-            "labor_cost": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: 150,00",
-                    "step": "0.01",
-                }
-            ),
-            "parts_cost": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: 200,00",
-                    "step": "0.01",
-                }
-            ),
-            "discount": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: 50,00",
-                    "step": "0.01",
-                }
-            ),
             "expected_delivery_date": forms.DateInput(
                 format="%Y-%m-%d",
                 attrs={
@@ -109,9 +181,6 @@ class ServiceOrderForm(forms.ModelForm):
             "diagnosis": "Diagnóstico técnico",
             "solution": "Serviço executado",
             "status": "Status",
-            "labor_cost": "Valor da mão de obra",
-            "parts_cost": "Valor das peças",
-            "discount": "Desconto",
             "expected_delivery_date": "Previsão de entrega",
         }
 
@@ -138,6 +207,24 @@ class ServiceOrderForm(forms.ModelForm):
                 customer_id=self.instance.customer_id,
                 is_active=True,
             ).order_by("plate")
+
+    def clean_labor_cost(self):
+        """
+        Return zero when labor cost is empty.
+        """
+        return self.cleaned_data.get("labor_cost") or Decimal("0.00")
+
+    def clean_parts_cost(self):
+        """
+        Return zero when parts cost is empty.
+        """
+        return self.cleaned_data.get("parts_cost") or Decimal("0.00")
+
+    def clean_discount(self):
+        """
+        Return zero when discount is empty.
+        """
+        return self.cleaned_data.get("discount") or Decimal("0.00")
 
     def clean(self):
         """
@@ -203,6 +290,21 @@ class ServiceOrderItemForm(forms.ModelForm):
     Form used to create and update service order items.
     """
 
+    unit_price = BRLDecimalField(
+        label="Preço unitário",
+        min_value=Decimal("0.00"),
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control money-input",
+                "placeholder": "Ex: R$ 100,00",
+                "inputmode": "decimal",
+                "autocomplete": "off",
+            }
+        ),
+    )
+
     class Meta:
         model = ServiceOrderItem
         fields = [
@@ -232,19 +334,10 @@ class ServiceOrderItemForm(forms.ModelForm):
                     "min": "0.01",
                 }
             ),
-            "unit_price": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: 100,00",
-                    "step": "0.01",
-                    "min": "0.00",
-                }
-            ),
         }
 
         labels = {
             "item_type": "Tipo",
             "description": "Descrição",
             "quantity": "Quantidade",
-            "unit_price": "Preço unitário",
         }
