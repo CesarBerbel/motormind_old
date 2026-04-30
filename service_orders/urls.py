@@ -37,6 +37,11 @@ urlpatterns = [
         name="service_order_technical_update",
     ),
     path(
+        "ordens/<int:pk>/status-rapido/",
+        views.service_order_quick_status_update_view,
+        name="service_order_quick_status_update",
+    ),
+    path(
         "ordens/<int:pk>/cancelar/",
         views.service_order_cancel_view,
         name="service_order_cancel",
