@@ -41,4 +41,9 @@ urlpatterns = [
         views.vehicles_by_customer_view,
         name="vehicles_by_customer",
     ),
+    path(
+        "ordens/<int:pk>/itens/adicionar/",
+        views.service_order_item_add_view,
+        name="service_order_item_add",
+    ),
 ]

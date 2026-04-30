@@ -8,7 +8,7 @@ from django.utils import timezone
 from accounts.permissions import groups_required
 from customers.models import Vehicle
 
-from .forms import ServiceOrderForm, ServiceOrderTechnicalForm
+from .forms import ServiceOrderForm, ServiceOrderItemForm, ServiceOrderTechnicalForm
 from .models import ServiceOrder
 from .services import create_service_order_history
 
@@ -339,4 +339,36 @@ def vehicles_by_customer_view(request):
         {
             "vehicles": data,
         }
+    )
+
+
+@login_required
+@groups_required(["Administrador", "Atendente"])
+def service_order_item_add_view(request, pk):
+    """
+    Add item to service order.
+    """
+    service_order = get_object_or_404(ServiceOrder, pk=pk)
+
+    if request.method == "POST":
+        form = ServiceOrderItemForm(request.POST)
+
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.service_order = service_order
+            item.save()
+
+            messages.success(request, "Item adicionado com sucesso.")
+
+            return redirect("service_orders:service_order_detail", pk=pk)
+    else:
+        form = ServiceOrderItemForm()
+
+    return render(
+        request,
+        "service_orders/service_order_item_form.html",
+        {
+            "form": form,
+            "service_order": service_order,
+        },
     )
