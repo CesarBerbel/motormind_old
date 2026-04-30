@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Painel - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-12">
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+
+                <h1 class="h4 mb-2">
+                    Painel principal
+                </h1>
+
+                <p class="mb-0 text-muted">
+                    Bem-vindo ao sistema de gestão da oficina.
+                </p>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="row g-3">
+
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Administração
+                </h2>
+
+                <p class="text-muted">
+                    Gerencie usuários, permissões e configurações gerais.
+                </p>
+
+                <a href="{% url 'accounts:admin_area' %}" class="btn btn-outline-primary btn-sm">
+                    Acessar
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Atendimento
+                </h2>
+
+                <p class="text-muted">
+                    Área para recepção, clientes e abertura de ordens.
+                </p>
+
+                <a href="{% url 'accounts:attendant_area' %}" class="btn btn-outline-primary btn-sm">
+                    Acessar
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Mecânica
+                </h2>
+
+                <p class="text-muted">
+                    Área para execução e acompanhamento dos serviços.
+                </p>
+
+                <a href="{% url 'accounts:mechanic_area' %}" class="btn btn-outline-primary btn-sm">
+                    Acessar
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Financeiro
+                </h2>
+
+                <p class="text-muted">
+                    Área para pagamentos, receitas, despesas e relatórios.
+                </p>
+
+                <a href="{% url 'accounts:financial_area' %}" class="btn btn-outline-primary btn-sm">
+                    Acessar
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

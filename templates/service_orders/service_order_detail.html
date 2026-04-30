@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% load group_tags %}
+
+{% block title %}
+    Ordem de serviço #{{ service_order.pk }} - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-1">
+            Ordem de serviço #{{ service_order.pk }}
+        </h1>
+
+        <p class="text-muted mb-0">
+            {{ service_order.title }}
+        </p>
+    </div>
+
+    <div>
+        {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+            <a href="{% url 'service_orders:service_order_update' service_order.pk %}" class="btn btn-outline-secondary">
+                Editar
+            </a>
+        {% endif %}
+
+        {% if request.user|has_group:"Administrador" or request.user|has_group:"Mecânico" %}
+            <a href="{% url 'service_orders:service_order_technical_update' service_order.pk %}" class="btn btn-outline-warning">
+                Atualizar técnico
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Dados gerais
+                </h2>
+
+                <p><strong>Cliente:</strong> {{ service_order.customer.name }}</p>
+                <p><strong>Veículo:</strong> {{ service_order.vehicle.plate }} - {{ service_order.vehicle.brand }} {{ service_order.vehicle.model }}</p>
+                <p><strong>Status:</strong> {{ service_order.get_status_display }}</p>
+                <p><strong>Criado por:</strong> {{ service_order.created_by.email }}</p>
+                <p><strong>Criada em:</strong> {{ service_order.created_at|date:"d/m/Y H:i" }}</p>
+
+                <p class="mb-0">
+                    <strong>Previsão de entrega:</strong>
+                    {{ service_order.expected_delivery_date|date:"d/m/Y"|default:"Não informada" }}
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Valores
+                </h2>
+
+                <p><strong>Mão de obra:</strong> € {{ service_order.labor_cost }}</p>
+                <p><strong>Peças:</strong> € {{ service_order.parts_cost }}</p>
+                <p><strong>Desconto:</strong> € {{ service_order.discount }}</p>
+
+                <hr>
+
+                <p class="h5 mb-0">
+                    <strong>Total:</strong> € {{ service_order.total_amount }}
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row g-3 mb-4">
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Problema informado
+                </h2>
+
+                <p class="mb-0">
+                    {{ service_order.description }}
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Diagnóstico técnico
+                </h2>
+
+                <p class="mb-0">
+                    {{ service_order.diagnosis|default:"Ainda não informado." }}
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Serviço executado
+                </h2>
+
+                <p class="mb-0">
+                    {{ service_order.solution|default:"Ainda não informado." }}
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="d-flex justify-content-between">
+    <a href="{% url 'service_orders:service_order_list' %}" class="btn btn-outline-secondary">
+        Voltar
+    </a>
+
+    {% if request.user|has_group:"Administrador" %}
+        <a href="{% url 'service_orders:service_order_delete' service_order.pk %}" class="btn btn-outline-danger">
+            Excluir ordem de serviço
+        </a>
+    {% endif %}
+</div>
+
+{% endblock %}

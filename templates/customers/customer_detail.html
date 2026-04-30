@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load group_tags %}
+
+{% block title %}
+    Detalhes do cliente - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-1">
+            {{ customer.name }}
+        </h1>
+
+        <p class="text-muted mb-0">
+            Detalhes do cliente e veículos vinculados.
+        </p>
+    </div>
+
+    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+        <div>
+            <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-outline-secondary">
+                Editar cliente
+            </a>
+
+            <a href="{% url 'customers:vehicle_create' %}" class="btn btn-primary">
+                Cadastrar veículo
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Dados do cliente
+                </h2>
+
+                <p><strong>Telefone:</strong> {{ customer.phone }}</p>
+                <p><strong>Email:</strong> {{ customer.email|default:"Não informado" }}</p>
+                <p><strong>Documento:</strong> {{ customer.document|default:"Não informado" }}</p>
+                <p><strong>Endereço:</strong> {{ customer.address|default:"Não informado" }}</p>
+
+                <p class="mb-0">
+                    <strong>Situação:</strong>
+                    {% if customer.is_active %}
+                        <span class="badge text-bg-success">Ativo</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary">Inativo</span>
+                    {% endif %}
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h2 class="h6">
+                    Observações
+                </h2>
+
+                <p class="mb-0">
+                    {{ customer.notes|default:"Nenhuma observação registrada." }}
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <h2 class="h5 mb-3">
+            Veículos do cliente
+        </h2>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Matrícula/Placa</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>Ano</th>
+                        <th>Quilometragem</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for vehicle in vehicles %}
+                        <tr>
+                            <td>{{ vehicle.plate }}</td>
+                            <td>{{ vehicle.brand }}</td>
+                            <td>{{ vehicle.model }}</td>
+                            <td>{{ vehicle.year|default:"-" }}</td>
+                            <td>{{ vehicle.mileage|default:"-" }}</td>
+                            <td class="text-end">
+                                {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                                    <a href="{% url 'customers:vehicle_update' vehicle.pk %}" class="btn btn-sm btn-outline-secondary">
+                                        Editar
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">
+                                        Somente visualização
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                Nenhum veículo vinculado a este cliente.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
+            Voltar
+        </a>
+
+    </div>
+</div>
+
+{% endblock %}

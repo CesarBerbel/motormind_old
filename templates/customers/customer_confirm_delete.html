@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Excluir cliente - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+
+        <div class="card shadow-sm border-danger">
+            <div class="card-body">
+
+                <h1 class="h4 text-danger">
+                    Excluir cliente
+                </h1>
+
+                <p>
+                    Tem certeza que deseja excluir o cliente
+                    <strong>{{ customer.name }}</strong>?
+                </p>
+
+                <div class="alert alert-warning">
+                    Esta ação também excluirá os veículos vinculados a este cliente.
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+
+                        <button type="submit" class="btn btn-danger">
+                            Confirmar exclusão
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

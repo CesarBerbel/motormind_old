@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Criar conta - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+                <h1 class="h4 text-center mb-3">
+                    Criar conta
+                </h1>
+
+                <p class="text-muted text-center mb-4">
+                    Preencha os dados abaixo para acessar o sistema.
+                </p>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {{ form.as_p }}
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        Criar conta
+                    </button>
+                </form>
+
+                <hr>
+
+                <p class="text-center mb-0">
+                    Já tem uma conta?
+                    <a href="{% url 'accounts:login' %}">
+                        Entrar no sistema
+                    </a>
+                </p>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

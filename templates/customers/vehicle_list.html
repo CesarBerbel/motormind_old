@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load group_tags %}
+
+{% block title %}
+    Veículos - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-1">
+            Veículos
+        </h1>
+
+        <p class="text-muted mb-0">
+            Gerencie os veículos cadastrados na oficina.
+        </p>
+    </div>
+
+    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+        <a href="{% url 'customers:vehicle_create' %}" class="btn btn-primary">
+            Cadastrar veículo
+        </a>
+    {% endif %}
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-4">
+    <div class="row g-2">
+        <div class="col-md-10">
+            <input
+                type="text"
+                name="search"
+                value="{{ search }}"
+                class="form-control"
+                placeholder="Buscar por matrícula, placa, marca, modelo ou cliente"
+            >
+        </div>
+
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                Buscar
+            </button>
+        </div>
+    </div>
+</form>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Matrícula/Placa</th>
+                        <th>Cliente</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>Ano</th>
+                        <th>Situação</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for vehicle in vehicles %}
+                        <tr>
+                            <td>{{ vehicle.plate }}</td>
+                            <td>{{ vehicle.customer.name }}</td>
+                            <td>{{ vehicle.brand }}</td>
+                            <td>{{ vehicle.model }}</td>
+                            <td>{{ vehicle.year|default:"-" }}</td>
+                            <td>
+                                {% if vehicle.is_active %}
+                                    <span class="badge text-bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+
+                                {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                                    <a href="{% url 'customers:customer_detail' vehicle.customer.pk %}" class="btn btn-sm btn-outline-primary">
+                                        Cliente
+                                    </a>
+
+                                    <a href="{% url 'customers:vehicle_update' vehicle.pk %}" class="btn btn-sm btn-outline-secondary">
+                                        Editar
+                                    </a>
+
+                                    <a href="{% url 'customers:vehicle_delete' vehicle.pk %}" class="btn btn-sm btn-outline-danger">
+                                        Excluir
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">
+                                        Somente visualização
+                                    </span>
+                                {% endif %}
+
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                Nenhum veículo encontrado.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
