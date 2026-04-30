@@ -25,7 +25,7 @@
 <form method="get" class="card card-body shadow-sm mb-4">
     <div class="row g-2">
 
-        <div class="col-md-6">
+        <div class="col-md-5">
             <input
                 type="text"
                 name="search"
@@ -35,7 +35,7 @@
             >
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <select name="mechanic" class="form-select">
                 <option value="">Todos os mecânicos</option>
 
@@ -52,6 +52,15 @@
         </div>
 
         <div class="col-md-2">
+            <select name="overdue" class="form-select">
+                <option value="">Todas as OS</option>
+                <option value="1" {% if overdue == "1" %}selected{% endif %}>
+                    Somente atrasadas
+                </option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
             <button type="submit" class="btn btn-primary w-100">
                 Filtrar
             </button>
@@ -59,6 +68,12 @@
 
     </div>
 </form>
+
+{% if overdue == "1" %}
+    <div class="alert alert-warning">
+        Exibindo somente ordens atrasadas. Uma OS é considerada atrasada quando a previsão de entrega é anterior a hoje e o status não é Finalizada nem Cancelada.
+    </div>
+{% endif %}
 
 <div class="row g-3">
 
@@ -89,9 +104,15 @@
                                         #{{ service_order.pk }}
                                     </strong>
 
-                                    <span class="badge text-bg-secondary">
-                                        {{ service_order.get_status_display }}
-                                    </span>
+                                    {% if service_order.expected_delivery_date and service_order.expected_delivery_date < today and service_order.status != "finished" and service_order.status != "canceled" %}
+                                        <span class="badge text-bg-danger">
+                                            Atrasada
+                                        </span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">
+                                            {{ service_order.get_status_display }}
+                                        </span>
+                                    {% endif %}
                                 </div>
 
                                 <h2 class="h6 mb-2">

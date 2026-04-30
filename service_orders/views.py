@@ -65,6 +65,25 @@ def get_mechanic_queryset():
     )
 
 
+def get_overdue_service_order_filter():
+    """
+    Return filter for overdue service orders.
+
+    A service order is overdue when:
+    - expected delivery date is before today
+    - status is not finished
+    - status is not canceled
+    """
+    today = timezone.localdate()
+
+    return Q(expected_delivery_date__lt=today) & ~Q(
+        status__in=[
+            ServiceOrder.Status.FINISHED,
+            ServiceOrder.Status.CANCELED,
+        ]
+    )
+
+
 @login_required
 @groups_required(["Administrador", "Atendente", "Mecânico", "Financeiro"])
 def service_order_list_view(request):
@@ -113,6 +132,7 @@ def service_order_board_view(request):
     """
     search = request.GET.get("search", "")
     mechanic_id = request.GET.get("mechanic", "")
+    overdue = request.GET.get("overdue", "")
 
     service_orders = ServiceOrder.objects.select_related(
         "customer",
@@ -142,14 +162,21 @@ def service_order_board_view(request):
             assigned_mechanic_id=mechanic_id,
         )
 
+    if overdue == "1":
+        service_orders = service_orders.filter(
+            get_overdue_service_order_filter(),
+        )
+
     status_columns = []
 
     for status_value, status_label in ServiceOrder.Status.choices:
+        orders = service_orders.filter(status=status_value)
+
         status_columns.append(
             {
                 "value": status_value,
                 "label": status_label,
-                "orders": service_orders.filter(status=status_value),
+                "orders": orders,
             }
         )
 
@@ -161,6 +188,8 @@ def service_order_board_view(request):
             "search": search,
             "mechanic_id": mechanic_id,
             "mechanics": get_mechanic_queryset(),
+            "overdue": overdue,
+            "today": timezone.localdate(),
         },
     )
 
