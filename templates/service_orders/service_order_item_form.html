@@ -1,19 +1,45 @@
 {% extends "base.html" %}
 
+{% block title %}
+    {{ page_title }} - Sistema de Oficina
+{% endblock %}
+
 {% block content %}
 
-<h1 class="h4 mb-4">
-    Adicionar item na OS #{{ service_order.pk }}
-</h1>
+<div class="row justify-content-center">
+    <div class="col-lg-7">
 
-<form method="post">
-    {% csrf_token %}
+        <div class="card shadow-sm">
+            <div class="card-body">
 
-    {{ form.as_p }}
+                <h1 class="h4 mb-2">
+                    {{ page_title }}
+                </h1>
 
-    <button type="submit" class="btn btn-primary">
-        Salvar item
-    </button>
-</form>
+                <p class="text-muted mb-4">
+                    Ordem de serviço #{{ service_order.pk }} - {{ service_order.title }}
+                </p>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {{ form.as_p }}
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'service_orders:service_order_detail' service_order.pk %}" class="btn btn-outline-secondary">
+                            Voltar
+                        </a>
+
+                        <button type="submit" class="btn btn-primary">
+                            {{ button_text }}
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
 
 {% endblock %}

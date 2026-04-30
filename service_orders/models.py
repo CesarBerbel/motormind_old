@@ -150,12 +150,7 @@ class ServiceOrder(models.Model):
         """
         Calculate final total using legacy costs plus item totals.
         """
-        total = (
-            self.labor_cost
-            + self.parts_cost
-            + self.items_total
-            - self.discount
-        )
+        total = self.labor_cost + self.parts_cost + self.items_total - self.discount
 
         if total < Decimal("0.00"):
             return Decimal("0.00")
