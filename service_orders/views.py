@@ -1,5 +1,7 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Group
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -43,6 +45,45 @@ def redirect_if_canceled(request, service_order):
     return None
 
 
+def get_mechanic_queryset():
+    """
+    Return active users from mechanic group.
+    """
+    User = get_user_model()
+
+    mechanic_group = Group.objects.filter(name="Mecânico").first()
+
+    if not mechanic_group:
+        return User.objects.none()
+
+    return User.objects.filter(
+        groups=mechanic_group,
+        is_active=True,
+    ).order_by(
+        "first_name",
+        "email",
+    )
+
+
+def get_overdue_service_order_filter():
+    """
+    Return filter for overdue service orders.
+
+    A service order is overdue when:
+    - expected delivery date is before today
+    - status is not finished
+    - status is not canceled
+    """
+    today = timezone.localdate()
+
+    return Q(expected_delivery_date__lt=today) & ~Q(
+        status__in=[
+            ServiceOrder.Status.FINISHED,
+            ServiceOrder.Status.CANCELED,
+        ]
+    )
+
+
 @login_required
 @groups_required(["Administrador", "Atendente", "Mecânico", "Financeiro"])
 def service_order_list_view(request):
@@ -79,6 +120,76 @@ def service_order_list_view(request):
             "search": search,
             "status": status,
             "status_choices": ServiceOrder.Status.choices,
+        },
+    )
+
+
+@login_required
+@groups_required(["Administrador", "Atendente", "Mecânico"])
+def service_order_board_view(request):
+    """
+    Show an operational board grouped by service order status.
+    """
+    search = request.GET.get("search", "")
+    mechanic_id = request.GET.get("mechanic", "")
+    overdue = request.GET.get("overdue", "")
+
+    service_orders = ServiceOrder.objects.select_related(
+        "customer",
+        "vehicle",
+        "created_by",
+        "assigned_mechanic",
+    ).order_by(
+        "expected_delivery_date",
+        "created_at",
+    )
+
+    if search:
+        service_orders = service_orders.filter(
+            Q(customer__name__icontains=search)
+            | Q(vehicle__plate__icontains=search)
+            | Q(vehicle__brand__icontains=search)
+            | Q(vehicle__model__icontains=search)
+            | Q(title__icontains=search)
+            | Q(description__icontains=search)
+            | Q(assigned_mechanic__email__icontains=search)
+            | Q(assigned_mechanic__first_name__icontains=search)
+            | Q(assigned_mechanic__last_name__icontains=search)
+        )
+
+    if mechanic_id:
+        service_orders = service_orders.filter(
+            assigned_mechanic_id=mechanic_id,
+        )
+
+    if overdue == "1":
+        service_orders = service_orders.filter(
+            get_overdue_service_order_filter(),
+        )
+
+    status_columns = []
+
+    for status_value, status_label in ServiceOrder.Status.choices:
+        orders = service_orders.filter(status=status_value)
+
+        status_columns.append(
+            {
+                "value": status_value,
+                "label": status_label,
+                "orders": orders,
+            }
+        )
+
+    return render(
+        request,
+        "service_orders/service_order_board.html",
+        {
+            "status_columns": status_columns,
+            "search": search,
+            "mechanic_id": mechanic_id,
+            "mechanics": get_mechanic_queryset(),
+            "overdue": overdue,
+            "today": timezone.localdate(),
         },
     )
 

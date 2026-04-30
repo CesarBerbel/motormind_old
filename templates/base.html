@@ -1,7 +1,7 @@
 {% load group_tags %}
 
 <!doctype html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
     <meta charset="utf-8">
 
@@ -20,7 +20,7 @@
 <body class="bg-light">
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
+    <div class="container-fluid">
 
         <a class="navbar-brand" href="{% url 'accounts:dashboard' %}">
             Sistema de Oficina
@@ -70,6 +70,14 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'service_orders:service_order_list' %}">
                                 Ordens de serviço
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" or request.user|has_group:"Mecânico" %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'service_orders:service_order_board' %}">
+                                Quadro da oficina
                             </a>
                         </li>
                     {% endif %}
@@ -148,7 +156,7 @@
     </div>
 </nav>
 
-<main class="container py-4">
+<main class="container-fluid py-4">
 
     {% if messages %}
         {% for message in messages %}
