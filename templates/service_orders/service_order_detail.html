@@ -182,8 +182,8 @@
     </a>
 
     {% if request.user|has_group:"Administrador" %}
-        <a href="{% url 'service_orders:service_order_delete' service_order.pk %}" class="btn btn-outline-danger">
-            Excluir ordem de serviço
+        <a href="{% url 'service_orders:service_order_cancel' service_order.pk %}" class="btn btn-outline-warning">
+            Cancelar ordem de serviço
         </a>
     {% endif %}
 </div>

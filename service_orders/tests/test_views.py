@@ -221,57 +221,35 @@ def test_mechanic_can_update_technical_data(
 
 
 @pytest.mark.django_db
-def test_attendant_cannot_delete_service_order(
-    client,
-    order_data,
-):
-    """
-    Test if attendant cannot delete service order.
-    """
-    client.login(
-        username="attendant@example.com",
-        password="StrongPassword123",
-    )
-
-    response = client.get(
-        reverse(
-            "service_orders:service_order_delete",
-            args=[order_data["service_order"].pk],
-        )
-    )
-
-    assert response.status_code == 302
-    assert reverse("accounts:dashboard") in response.url
-
-
-@pytest.mark.django_db
-def test_admin_can_delete_service_order(
+def test_admin_can_cancel_service_order(
     client,
     order_data,
     create_user_with_group,
 ):
     """
-    Test if administrator can delete service order.
+    Test if administrator can cancel service order.
     """
     create_user_with_group(
-        "admin@example.com",
+        "admin_cancel@example.com",
         "Administrador",
     )
 
     client.login(
-        username="admin@example.com",
+        username="admin_cancel@example.com",
         password="StrongPassword123",
     )
 
     response = client.post(
         reverse(
-            "service_orders:service_order_delete",
+            "service_orders:service_order_cancel",
             args=[order_data["service_order"].pk],
         )
     )
 
+    order_data["service_order"].refresh_from_db()
+
     assert response.status_code == 302
-    assert not ServiceOrder.objects.filter(pk=order_data["service_order"].pk).exists()
+    assert order_data["service_order"].status == ServiceOrder.Status.CANCELED
 
 
 @pytest.mark.django_db

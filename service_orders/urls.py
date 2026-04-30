@@ -32,9 +32,9 @@ urlpatterns = [
         name="service_order_technical_update",
     ),
     path(
-        "ordens/<int:pk>/excluir/",
-        views.service_order_delete_view,
-        name="service_order_delete",
+        "ordens/<int:pk>/cancelar/",
+        views.service_order_cancel_view,
+        name="service_order_cancel",
     ),
     path(
         "ajax/veiculos-por-cliente/",

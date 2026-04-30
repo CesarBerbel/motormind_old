@@ -132,6 +132,13 @@ def service_order_update_view(request, pk):
         pk=pk,
     )
 
+    if service_order.status == ServiceOrder.Status.CANCELED:
+        messages.error(
+            request,
+            "Ordens de serviço canceladas não podem ser editadas.",
+        )
+        return redirect("service_orders:service_order_detail", pk=service_order.pk)
+
     old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
     if request.method == "POST":
@@ -200,6 +207,13 @@ def service_order_technical_update_view(request, pk):
         pk=pk,
     )
 
+    if service_order.status == ServiceOrder.Status.CANCELED:
+        messages.error(
+            request,
+            "Ordens de serviço canceladas não podem ser editadas.",
+        )
+        return redirect("service_orders:service_order_detail", pk=service_order.pk)
+
     old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
     if request.method == "POST":
@@ -259,9 +273,9 @@ def service_order_technical_update_view(request, pk):
 
 @login_required
 @groups_required(["Administrador"])
-def service_order_delete_view(request, pk):
+def service_order_cancel_view(request, pk):
     """
-    Delete a service order. Only administrators can delete.
+    Cancel a service order instead of deleting it.
     """
     service_order = get_object_or_404(
         ServiceOrder,
@@ -269,18 +283,28 @@ def service_order_delete_view(request, pk):
     )
 
     if request.method == "POST":
-        service_order.delete()
+        old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
-        messages.success(
-            request,
-            "Ordem de serviço excluída com sucesso.",
+        service_order.status = ServiceOrder.Status.CANCELED
+        service_order.finished_at = None
+        service_order.save()
+
+        create_service_order_history(
+            service_order=service_order,
+            changed_by=request.user,
+            old_instance=old_instance,
         )
 
-        return redirect("service_orders:service_order_list")
+        messages.warning(
+            request,
+            "Ordem de serviço cancelada com sucesso.",
+        )
+
+        return redirect("service_orders:service_order_detail", pk=pk)
 
     return render(
         request,
-        "service_orders/service_order_confirm_delete.html",
+        "service_orders/service_order_confirm_cancel.html",
         {
             "service_order": service_order,
         },
