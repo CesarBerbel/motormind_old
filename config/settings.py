@@ -30,6 +30,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -99,13 +100,39 @@ DATABASES = {
 LANGUAGE_CODE = "pt-br"
 
 
-TIME_ZONE = "Europe/Lisbon"
+TIME_ZONE = "America/Sao_Paulo"
 
 
 USE_I18N = True
 
 
 USE_TZ = True
+
+
+DATE_FORMAT = "d/m/Y"
+
+
+DATETIME_FORMAT = "d/m/Y H:i"
+
+
+SHORT_DATE_FORMAT = "d/m/Y"
+
+
+SHORT_DATETIME_FORMAT = "d/m/Y H:i"
+
+
+DECIMAL_SEPARATOR = ","
+
+
+THOUSAND_SEPARATOR = "."
+
+
+USE_THOUSAND_SEPARATOR = True
+
+
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]
 
 
 STATIC_URL = "static/"

@@ -74,29 +74,30 @@ class ServiceOrderForm(forms.ModelForm):
             "labor_cost": forms.NumberInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "0,00",
+                    "placeholder": "Ex: 150,00",
                     "step": "0.01",
                 }
             ),
             "parts_cost": forms.NumberInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "0,00",
+                    "placeholder": "Ex: 200,00",
                     "step": "0.01",
                 }
             ),
             "discount": forms.NumberInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "0,00",
+                    "placeholder": "Ex: 50,00",
                     "step": "0.01",
                 }
             ),
             "expected_delivery_date": forms.DateInput(
+                format="%Y-%m-%d",
                 attrs={
                     "class": "form-control",
                     "type": "date",
-                }
+                },
             ),
         }
 
@@ -234,7 +235,7 @@ class ServiceOrderItemForm(forms.ModelForm):
             "unit_price": forms.NumberInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Digite o preço unitário",
+                    "placeholder": "Ex: 100,00",
                     "step": "0.01",
                     "min": "0.00",
                 }
