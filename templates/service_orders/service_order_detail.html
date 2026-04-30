@@ -134,14 +134,56 @@
 
 </div>
 
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+
+        <h2 class="h5 mb-3">
+            Histórico de alterações
+        </h2>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Usuário</th>
+                        <th>Campo</th>
+                        <th>Valor antigo</th>
+                        <th>Valor novo</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for history in histories %}
+                        <tr>
+                            <td>{{ history.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>{{ history.changed_by.email }}</td>
+                            <td>{{ history.field_name }}</td>
+                            <td>{{ history.old_value|default:"-" }}</td>
+                            <td>{{ history.new_value|default:"-" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">
+                                Nenhuma alteração registrada até o momento.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
 <div class="d-flex justify-content-between">
     <a href="{% url 'service_orders:service_order_list' %}" class="btn btn-outline-secondary">
         Voltar
     </a>
 
     {% if request.user|has_group:"Administrador" %}
-        <a href="{% url 'service_orders:service_order_delete' service_order.pk %}" class="btn btn-outline-danger">
-            Excluir ordem de serviço
+        <a href="{% url 'service_orders:service_order_cancel' service_order.pk %}" class="btn btn-outline-warning">
+            Cancelar ordem de serviço
         </a>
     {% endif %}
 </div>

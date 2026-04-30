@@ -1,13 +1,16 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.permissions import groups_required
+from customers.models import Vehicle
 
 from .forms import ServiceOrderForm, ServiceOrderTechnicalForm
 from .models import ServiceOrder
+from .services import create_service_order_history
 
 
 @login_required
@@ -95,22 +98,25 @@ def service_order_create_view(request):
 @groups_required(["Administrador", "Atendente", "Mecânico", "Financeiro"])
 def service_order_detail_view(request, pk):
     """
-    Show service order details.
+    Show service order details with audit history.
     """
     service_order = get_object_or_404(
         ServiceOrder.objects.select_related(
             "customer",
             "vehicle",
             "created_by",
-        ),
+        ).prefetch_related("history"),
         pk=pk,
     )
+
+    histories = service_order.history.select_related("changed_by").all()
 
     return render(
         request,
         "service_orders/service_order_detail.html",
         {
             "service_order": service_order,
+            "histories": histories,
         },
     )
 
@@ -125,6 +131,15 @@ def service_order_update_view(request, pk):
         ServiceOrder,
         pk=pk,
     )
+
+    if service_order.status == ServiceOrder.Status.CANCELED:
+        messages.error(
+            request,
+            "Ordens de serviço canceladas não podem ser editadas.",
+        )
+        return redirect("service_orders:service_order_detail", pk=service_order.pk)
+
+    old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
     if request.method == "POST":
         form = ServiceOrderForm(
@@ -145,6 +160,12 @@ def service_order_update_view(request, pk):
                 updated_order.finished_at = None
 
             updated_order.save()
+
+            create_service_order_history(
+                service_order=updated_order,
+                changed_by=request.user,
+                old_instance=old_instance,
+            )
 
             messages.success(
                 request,
@@ -186,6 +207,15 @@ def service_order_technical_update_view(request, pk):
         pk=pk,
     )
 
+    if service_order.status == ServiceOrder.Status.CANCELED:
+        messages.error(
+            request,
+            "Ordens de serviço canceladas não podem ser editadas.",
+        )
+        return redirect("service_orders:service_order_detail", pk=service_order.pk)
+
+    old_instance = ServiceOrder.objects.get(pk=service_order.pk)
+
     if request.method == "POST":
         form = ServiceOrderTechnicalForm(
             request.POST,
@@ -205,6 +235,12 @@ def service_order_technical_update_view(request, pk):
                 updated_order.finished_at = None
 
             updated_order.save()
+
+            create_service_order_history(
+                service_order=updated_order,
+                changed_by=request.user,
+                old_instance=old_instance,
+            )
 
             messages.success(
                 request,
@@ -237,9 +273,9 @@ def service_order_technical_update_view(request, pk):
 
 @login_required
 @groups_required(["Administrador"])
-def service_order_delete_view(request, pk):
+def service_order_cancel_view(request, pk):
     """
-    Delete a service order. Only administrators can delete.
+    Cancel a service order instead of deleting it.
     """
     service_order = get_object_or_404(
         ServiceOrder,
@@ -247,19 +283,60 @@ def service_order_delete_view(request, pk):
     )
 
     if request.method == "POST":
-        service_order.delete()
+        old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
-        messages.success(
-            request,
-            "Ordem de serviço excluída com sucesso.",
+        service_order.status = ServiceOrder.Status.CANCELED
+        service_order.finished_at = None
+        service_order.save()
+
+        create_service_order_history(
+            service_order=service_order,
+            changed_by=request.user,
+            old_instance=old_instance,
         )
 
-        return redirect("service_orders:service_order_list")
+        messages.warning(
+            request,
+            "Ordem de serviço cancelada com sucesso.",
+        )
+
+        return redirect("service_orders:service_order_detail", pk=pk)
 
     return render(
         request,
-        "service_orders/service_order_confirm_delete.html",
+        "service_orders/service_order_confirm_cancel.html",
         {
             "service_order": service_order,
         },
+    )
+
+
+@login_required
+@groups_required(["Administrador", "Atendente"])
+def vehicles_by_customer_view(request):
+    """
+    Return active vehicles from a selected customer as JSON.
+    """
+    customer_id = request.GET.get("customer_id")
+
+    vehicles = Vehicle.objects.none()
+
+    if customer_id:
+        vehicles = Vehicle.objects.filter(
+            customer_id=customer_id,
+            is_active=True,
+        ).order_by("plate")
+
+    data = [
+        {
+            "id": vehicle.id,
+            "text": f"{vehicle.plate} - {vehicle.brand} {vehicle.model}",
+        }
+        for vehicle in vehicles
+    ]
+
+    return JsonResponse(
+        {
+            "vehicles": data,
+        }
     )
