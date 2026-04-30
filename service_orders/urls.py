@@ -12,6 +12,11 @@ urlpatterns = [
         name="service_order_list",
     ),
     path(
+        "quadro/",
+        views.service_order_board_view,
+        name="service_order_board",
+    ),
+    path(
         "ordens/criar/",
         views.service_order_create_view,
         name="service_order_create",
