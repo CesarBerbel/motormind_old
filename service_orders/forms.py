@@ -1,5 +1,7 @@
 from django import forms
 
+from customers.models import Vehicle
+
 from .models import ServiceOrder
 
 
@@ -28,11 +30,13 @@ class ServiceOrderForm(forms.ModelForm):
             "customer": forms.Select(
                 attrs={
                     "class": "form-select",
+                    "id": "id_customer",
                 }
             ),
             "vehicle": forms.Select(
                 attrs={
                     "class": "form-select",
+                    "id": "id_vehicle",
                 }
             ),
             "title": forms.TextInput(
@@ -109,6 +113,30 @@ class ServiceOrderForm(forms.ModelForm):
             "discount": "Desconto",
             "expected_delivery_date": "Previsão de entrega",
         }
+
+    def __init__(self, *args, **kwargs):
+        """
+        Limit vehicle options according to selected customer when possible.
+        """
+        super().__init__(*args, **kwargs)
+
+        self.fields["vehicle"].queryset = Vehicle.objects.none()
+
+        if "customer" in self.data:
+            try:
+                customer_id = int(self.data.get("customer"))
+                self.fields["vehicle"].queryset = Vehicle.objects.filter(
+                    customer_id=customer_id,
+                    is_active=True,
+                ).order_by("plate")
+            except (TypeError, ValueError):
+                self.fields["vehicle"].queryset = Vehicle.objects.none()
+
+        elif self.instance.pk and self.instance.customer_id:
+            self.fields["vehicle"].queryset = Vehicle.objects.filter(
+                customer_id=self.instance.customer_id,
+                is_active=True,
+            ).order_by("plate")
 
     def clean(self):
         """

@@ -36,4 +36,9 @@ urlpatterns = [
         views.service_order_delete_view,
         name="service_order_delete",
     ),
+    path(
+        "ajax/veiculos-por-cliente/",
+        views.vehicles_by_customer_view,
+        name="vehicles_by_customer",
+    ),
 ]

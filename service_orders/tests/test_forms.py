@@ -102,7 +102,7 @@ def test_service_order_form_rejects_vehicle_from_other_customer(
     )
 
     assert not form.is_valid()
-    assert "__all__" in form.errors
+    assert "vehicle" in form.errors
 
 
 @pytest.mark.django_db

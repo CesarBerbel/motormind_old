@@ -38,4 +38,73 @@
     </div>
 </div>
 
+<script>
+    // This script loads only vehicles that belong to the selected customer.
+    document.addEventListener("DOMContentLoaded", function () {
+        const customerSelect = document.getElementById("id_customer");
+        const vehicleSelect = document.getElementById("id_vehicle");
+
+        if (!customerSelect || !vehicleSelect) {
+            return;
+        }
+
+        const vehiclesUrl = "{% url 'service_orders:vehicles_by_customer' %}";
+
+        function resetVehicleOptions() {
+            vehicleSelect.innerHTML = "";
+
+            const defaultOption = document.createElement("option");
+            defaultOption.value = "";
+            defaultOption.textContent = "Selecione um veículo";
+
+            vehicleSelect.appendChild(defaultOption);
+        }
+
+        function loadVehicles(customerId) {
+            resetVehicleOptions();
+
+            if (!customerId) {
+                return;
+            }
+
+            fetch(`${vehiclesUrl}?customer_id=${customerId}`, {
+                method: "GET",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error("Erro ao carregar veículos.");
+                    }
+
+                    return response.json();
+                })
+                .then(function (data) {
+                    data.vehicles.forEach(function (vehicle) {
+                        const option = document.createElement("option");
+
+                        option.value = vehicle.id;
+                        option.textContent = vehicle.text;
+
+                        vehicleSelect.appendChild(option);
+                    });
+                })
+                .catch(function () {
+                    resetVehicleOptions();
+
+                    const errorOption = document.createElement("option");
+                    errorOption.value = "";
+                    errorOption.textContent = "Não foi possível carregar os veículos";
+
+                    vehicleSelect.appendChild(errorOption);
+                });
+        }
+
+        customerSelect.addEventListener("change", function () {
+            loadVehicles(customerSelect.value);
+        });
+    });
+</script>
+
 {% endblock %}

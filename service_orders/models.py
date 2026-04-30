@@ -144,3 +144,53 @@ class ServiceOrder(models.Model):
             return Decimal("0.00")
 
         return total
+
+
+class ServiceOrderHistory(models.Model):
+    """
+    Model that stores audit history for service order changes.
+    """
+
+    service_order = models.ForeignKey(
+        ServiceOrder,
+        on_delete=models.CASCADE,
+        related_name="history",
+        verbose_name="Ordem de serviço",
+    )
+
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="service_order_changes",
+        verbose_name="Alterado por",
+    )
+
+    field_name = models.CharField(
+        max_length=100,
+        verbose_name="Campo alterado",
+    )
+
+    old_value = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Valor antigo",
+    )
+
+    new_value = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Valor novo",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Criado em",
+    )
+
+    class Meta:
+        verbose_name = "Histórico da ordem de serviço"
+        verbose_name_plural = "Históricos das ordens de serviço"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"OS #{self.service_order_id} - {self.field_name}"
