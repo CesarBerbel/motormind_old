@@ -111,8 +111,8 @@
                                 {% endif %}
 
                                 {% if request.user|has_group:"Administrador" %}
-                                    <a href="{% url 'service_orders:service_order_delete' service_order.pk %}" class="btn btn-sm btn-outline-danger">
-                                        Excluir
+                                    <a href="{% url 'service_orders:service_order_cancel' service_order.pk %}" class="btn btn-sm btn-outline-danger">
+                                        Cancelar
                                     </a>
                                 {% endif %}
 
