@@ -1,6 +1,33 @@
 from django.contrib import admin
 
-from .models import ServiceOrder, ServiceOrderHistory
+from .models import (
+    ServiceOrder,
+    ServiceOrderHistory,
+    ServiceOrderItem,
+    ServiceOrderNote,
+)
+
+
+class ServiceOrderItemInline(admin.TabularInline):
+    """
+    Inline admin to show service order items.
+    """
+
+    model = ServiceOrderItem
+    extra = 0
+
+
+class ServiceOrderNoteInline(admin.TabularInline):
+    """
+    Inline admin to show service order notes.
+    """
+
+    model = ServiceOrderNote
+    extra = 0
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
 
 
 class ServiceOrderHistoryInline(admin.TabularInline):
@@ -45,6 +72,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         "id",
         "customer",
         "vehicle",
+        "assigned_mechanic",
         "title",
         "status",
         "total_amount",
@@ -54,6 +82,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
 
     list_filter = (
         "status",
+        "assigned_mechanic",
         "created_at",
         "expected_delivery_date",
     )
@@ -61,6 +90,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     search_fields = (
         "customer__name",
         "vehicle__plate",
+        "assigned_mechanic__email",
         "title",
         "description",
     )
@@ -76,11 +106,14 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         "customer",
         "vehicle",
         "created_by",
+        "assigned_mechanic",
     )
 
     ordering = ("-created_at",)
 
     inlines = [
+        ServiceOrderItemInline,
+        ServiceOrderNoteInline,
         ServiceOrderHistoryInline,
     ]
 
@@ -92,6 +125,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
                     "customer",
                     "vehicle",
                     "created_by",
+                    "assigned_mechanic",
                     "title",
                     "status",
                 )
@@ -129,6 +163,64 @@ class ServiceOrderAdmin(admin.ModelAdmin):
                 )
             },
         ),
+    )
+
+
+@admin.register(ServiceOrderItem)
+class ServiceOrderItemAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for service order items.
+    """
+
+    list_display = (
+        "service_order",
+        "item_type",
+        "description",
+        "quantity",
+        "unit_price",
+        "total",
+    )
+
+    list_filter = (
+        "item_type",
+        "created_at",
+    )
+
+    search_fields = (
+        "description",
+        "service_order__title",
+        "service_order__customer__name",
+    )
+
+
+@admin.register(ServiceOrderNote)
+class ServiceOrderNoteAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for service order notes.
+    """
+
+    list_display = (
+        "service_order",
+        "note_type",
+        "created_by",
+        "created_at",
+    )
+
+    list_filter = (
+        "note_type",
+        "created_at",
+    )
+
+    search_fields = (
+        "text",
+        "service_order__title",
+        "service_order__customer__name",
+        "created_by__email",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
     )
 
 

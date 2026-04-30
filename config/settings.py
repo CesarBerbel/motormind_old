@@ -71,30 +71,30 @@ DATABASES = {
 }
 
 
-# AUTH_PASSWORD_VALIDATORS = [
-#     {
-#         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-#         "OPTIONS": {
-#             "user_attributes": (
-#                 "email",
-#                 "first_name",
-#                 "last_name",
-#             ),
-#         },
-#     },
-#     {
-#         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-#         "OPTIONS": {
-#             "min_length": 8,
-#         },
-#     },
-#     {
-#         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-#     },
-#     {
-#         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-#     },
-# ]
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "OPTIONS": {
+            "user_attributes": (
+                "email",
+                "first_name",
+                "last_name",
+            ),
+        },
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {
+            "min_length": 8,
+        },
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
 
 
 LANGUAGE_CODE = "pt-br"
@@ -136,6 +136,11 @@ LOCALE_PATHS = [
 
 
 STATIC_URL = "static/"
+
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

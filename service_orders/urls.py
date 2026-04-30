@@ -52,6 +52,11 @@ urlpatterns = [
         name="service_order_item_delete",
     ),
     path(
+        "ordens/<int:pk>/observacoes/adicionar/",
+        views.service_order_note_create_view,
+        name="service_order_note_create",
+    ),
+    path(
         "ajax/veiculos-por-cliente/",
         views.vehicles_by_customer_view,
         name="vehicles_by_customer",

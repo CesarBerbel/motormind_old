@@ -99,23 +99,23 @@ def test_project_uses_brazilian_language_and_timezone():
 @pytest.mark.django_db
 def test_service_order_form_has_brazilian_money_placeholders():
     """
-    Test if service order financial fields use Brazilian placeholders.
+    Test if service order financial fields use Brazilian Real placeholders.
     """
     form = ServiceOrderForm()
 
-    assert form.fields["labor_cost"].widget.attrs["placeholder"] == "Ex: 150,00"
-    assert form.fields["parts_cost"].widget.attrs["placeholder"] == "Ex: 200,00"
-    assert form.fields["discount"].widget.attrs["placeholder"] == "Ex: 50,00"
+    assert form.fields["labor_cost"].widget.attrs["placeholder"] == "Ex: R$ 150,00"
+    assert form.fields["parts_cost"].widget.attrs["placeholder"] == "Ex: R$ 200,00"
+    assert form.fields["discount"].widget.attrs["placeholder"] == "Ex: R$ 50,00"
 
 
 @pytest.mark.django_db
 def test_service_order_item_form_has_brazilian_money_placeholder():
     """
-    Test if item unit price field uses Brazilian placeholder.
+    Test if item unit price field uses Brazilian Real placeholder.
     """
     form = ServiceOrderItemForm()
 
-    assert form.fields["unit_price"].widget.attrs["placeholder"] == "Ex: 100,00"
+    assert form.fields["unit_price"].widget.attrs["placeholder"] == "Ex: R$ 100,00"
 
 
 @pytest.mark.django_db

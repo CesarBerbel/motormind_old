@@ -1,6 +1,7 @@
 from .models import ServiceOrderHistory
 
 AUDITED_FIELDS = [
+    "assigned_mechanic",
     "title",
     "description",
     "diagnosis",

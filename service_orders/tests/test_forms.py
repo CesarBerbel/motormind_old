@@ -1,8 +1,14 @@
+from decimal import Decimal
+
 import pytest
 from django.contrib.auth import get_user_model
 
 from customers.models import Customer, Vehicle
-from service_orders.forms import ServiceOrderForm, ServiceOrderTechnicalForm
+from service_orders.forms import (
+    BRLDecimalField,
+    ServiceOrderForm,
+    ServiceOrderTechnicalForm,
+)
 from service_orders.models import ServiceOrder
 
 
@@ -20,12 +26,12 @@ def service_order_base_data():
 
     customer = Customer.objects.create(
         name="Cliente Teste",
-        phone="+351 910 000 000",
+        phone="+55 11 99999-9999",
     )
 
     vehicle = Vehicle.objects.create(
         customer=customer,
-        plate="AA-00-AA",
+        plate="ABC-1234",
         brand="Toyota",
         model="Corolla",
     )
@@ -37,10 +43,37 @@ def service_order_base_data():
     }
 
 
+def test_brl_decimal_field_accepts_currency_format():
+    """
+    Test if BRL field accepts formatted Brazilian currency.
+    """
+    field = BRLDecimalField(max_digits=10, decimal_places=2)
+
+    assert field.clean("R$ 1.234,56") == Decimal("1234.56")
+
+
+def test_brl_decimal_field_accepts_comma_decimal():
+    """
+    Test if BRL field accepts comma decimal format.
+    """
+    field = BRLDecimalField(max_digits=10, decimal_places=2)
+
+    assert field.clean("150,00") == Decimal("150.00")
+
+
+def test_brl_decimal_field_accepts_dot_decimal():
+    """
+    Test if BRL field accepts regular decimal format.
+    """
+    field = BRLDecimalField(max_digits=10, decimal_places=2)
+
+    assert field.clean("150.00") == Decimal("150.00")
+
+
 @pytest.mark.django_db
 def test_service_order_form_valid_data(service_order_base_data):
     """
-    Test service order form with valid data.
+    Test service order form with valid Brazilian money data.
     """
     customer = service_order_base_data["customer"]
     vehicle = service_order_base_data["vehicle"]
@@ -54,14 +87,17 @@ def test_service_order_form_valid_data(service_order_base_data):
             "diagnosis": "",
             "solution": "",
             "status": ServiceOrder.Status.OPEN,
-            "labor_cost": "30.00",
-            "parts_cost": "20.00",
-            "discount": "0.00",
+            "labor_cost": "R$ 30,00",
+            "parts_cost": "R$ 20,00",
+            "discount": "R$ 0,00",
             "expected_delivery_date": "",
         }
     )
 
     assert form.is_valid()
+    assert form.cleaned_data["labor_cost"] == Decimal("30.00")
+    assert form.cleaned_data["parts_cost"] == Decimal("20.00")
+    assert form.cleaned_data["discount"] == Decimal("0.00")
 
 
 @pytest.mark.django_db
@@ -75,12 +111,12 @@ def test_service_order_form_rejects_vehicle_from_other_customer(
 
     other_customer = Customer.objects.create(
         name="Outro Cliente",
-        phone="+351 920 000 000",
+        phone="+55 11 98888-8888",
     )
 
     other_vehicle = Vehicle.objects.create(
         customer=other_customer,
-        plate="BB-11-BB",
+        plate="XYZ-9876",
         brand="Ford",
         model="Focus",
     )
@@ -94,9 +130,9 @@ def test_service_order_form_rejects_vehicle_from_other_customer(
             "diagnosis": "",
             "solution": "",
             "status": ServiceOrder.Status.OPEN,
-            "labor_cost": "0.00",
-            "parts_cost": "0.00",
-            "discount": "0.00",
+            "labor_cost": "R$ 0,00",
+            "parts_cost": "R$ 0,00",
+            "discount": "R$ 0,00",
             "expected_delivery_date": "",
         }
     )
