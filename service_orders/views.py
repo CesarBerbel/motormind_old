@@ -204,9 +204,27 @@ def service_order_quick_status_update_view(request, pk):
     canceled_redirect = redirect_if_canceled(request, service_order)
 
     if canceled_redirect:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Ordens canceladas não podem ser alteradas.",
+                },
+                status=400,
+            )
+
         return canceled_redirect
 
     if request.method != "POST":
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Método inválido.",
+                },
+                status=405,
+            )
+
         messages.error(
             request,
             "Método inválido para alterar status.",
@@ -220,6 +238,15 @@ def service_order_quick_status_update_view(request, pk):
     ]
 
     if new_status not in valid_statuses:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Status informado é inválido.",
+                },
+                status=400,
+            )
+
         messages.error(
             request,
             "Status informado é inválido.",
@@ -243,6 +270,15 @@ def service_order_quick_status_update_view(request, pk):
         changed_by=request.user,
         old_instance=old_instance,
     )
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse(
+            {
+                "success": True,
+                "status": service_order.status,
+                "status_label": service_order.get_status_display(),
+            }
+        )
 
     messages.success(
         request,
