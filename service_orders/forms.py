@@ -2,7 +2,7 @@ from django import forms
 
 from customers.models import Vehicle
 
-from .models import ServiceOrder
+from .models import ServiceOrder, ServiceOrderItem
 
 
 class ServiceOrderForm(forms.ModelForm):
@@ -27,18 +27,8 @@ class ServiceOrderForm(forms.ModelForm):
         ]
 
         widgets = {
-            "customer": forms.Select(
-                attrs={
-                    "class": "form-select",
-                    "id": "id_customer",
-                }
-            ),
-            "vehicle": forms.Select(
-                attrs={
-                    "class": "form-select",
-                    "id": "id_vehicle",
-                }
-            ),
+            "customer": forms.Select(attrs={"class": "form-select", "id": "id_customer"}),
+            "vehicle": forms.Select(attrs={"class": "form-select", "id": "id_vehicle"}),
             "title": forms.TextInput(
                 attrs={
                     "class": "form-control",
@@ -66,11 +56,7 @@ class ServiceOrderForm(forms.ModelForm):
                     "rows": 4,
                 }
             ),
-            "status": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
+            "status": forms.Select(attrs={"class": "form-select"}),
             "labor_cost": forms.NumberInput(
                 attrs={
                     "class": "form-control",
@@ -183,15 +169,59 @@ class ServiceOrderTechnicalForm(forms.ModelForm):
                     "rows": 5,
                 }
             ),
-            "status": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
+            "status": forms.Select(attrs={"class": "form-select"}),
         }
 
         labels = {
             "diagnosis": "Diagnóstico técnico",
             "solution": "Serviço executado",
             "status": "Status",
+        }
+
+
+class ServiceOrderItemForm(forms.ModelForm):
+    """
+    Form used to create and update service order items.
+    """
+
+    class Meta:
+        model = ServiceOrderItem
+        fields = [
+            "item_type",
+            "description",
+            "quantity",
+            "unit_price",
+        ]
+
+        widgets = {
+            "item_type": forms.Select(attrs={"class": "form-select"}),
+            "description": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Digite a descrição do item",
+                }
+            ),
+            "quantity": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Digite a quantidade",
+                    "step": "0.01",
+                    "min": "0.01",
+                }
+            ),
+            "unit_price": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Digite o preço unitário",
+                    "step": "0.01",
+                    "min": "0.00",
+                }
+            ),
+        }
+
+        labels = {
+            "item_type": "Tipo",
+            "description": "Descrição",
+            "quantity": "Quantidade",
+            "unit_price": "Preço unitário",
         }

@@ -134,11 +134,28 @@ class ServiceOrder(models.Model):
         return f"OS #{self.pk} - {self.customer.name}"
 
     @property
+    def items_total(self):
+        """
+        Calculate total amount from service order items.
+        """
+        total = Decimal("0.00")
+
+        for item in self.items.all():
+            total += item.total
+
+        return total
+
+    @property
     def total_amount(self):
         """
-        Calculate the total amount using Decimal fields.
+        Calculate final total using legacy costs plus item totals.
         """
-        total = self.labor_cost + self.parts_cost - self.discount
+        total = (
+            self.labor_cost
+            + self.parts_cost
+            + self.items_total
+            - self.discount
+        )
 
         if total < Decimal("0.00"):
             return Decimal("0.00")
@@ -194,3 +211,79 @@ class ServiceOrderHistory(models.Model):
 
     def __str__(self):
         return f"OS #{self.service_order_id} - {self.field_name}"
+
+
+class ServiceOrderItem(models.Model):
+    """
+    Model that stores parts and services linked to a service order.
+    """
+
+    class ItemType(models.TextChoices):
+        """
+        Controlled item types.
+        """
+
+        SERVICE = "service", "Serviço"
+        PART = "part", "Peça"
+
+    service_order = models.ForeignKey(
+        ServiceOrder,
+        on_delete=models.CASCADE,
+        related_name="items",
+        verbose_name="Ordem de serviço",
+    )
+
+    item_type = models.CharField(
+        max_length=20,
+        choices=ItemType.choices,
+        verbose_name="Tipo",
+    )
+
+    description = models.CharField(
+        max_length=255,
+        verbose_name="Descrição",
+    )
+
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("1.00"),
+        validators=[
+            MinValueValidator(Decimal("0.01")),
+        ],
+        verbose_name="Quantidade",
+    )
+
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal("0.00")),
+        ],
+        verbose_name="Preço unitário",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Criado em",
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Atualizado em",
+    )
+
+    class Meta:
+        verbose_name = "Item da ordem de serviço"
+        verbose_name_plural = "Itens da ordem de serviço"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return self.description
+
+    @property
+    def total(self):
+        """
+        Calculate item total using Decimal values.
+        """
+        return self.quantity * self.unit_price

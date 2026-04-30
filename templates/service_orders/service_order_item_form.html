@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="h4 mb-4">
+    Adicionar item na OS #{{ service_order.pk }}
+</h1>
+
+<form method="post">
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <button type="submit" class="btn btn-primary">
+        Salvar item
+    </button>
+</form>
+
+{% endblock %}
