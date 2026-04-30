@@ -1,19 +1,17 @@
 from decimal import Decimal, InvalidOperation
 
 from django import forms
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 
 from customers.models import Vehicle
 
-from .models import ServiceOrder, ServiceOrderItem
+from .models import ServiceOrder, ServiceOrderItem, ServiceOrderNote
 
 
 class BRLDecimalField(forms.DecimalField):
     """
-    Field that accepts Brazilian money formats like:
-    R$ 1.234,56
-    1.234,56
-    1234,56
-    1234.56
+    Field that accepts Brazilian money formats.
     """
 
     default_error_messages = {
@@ -108,6 +106,7 @@ class ServiceOrderForm(forms.ModelForm):
         fields = [
             "customer",
             "vehicle",
+            "assigned_mechanic",
             "title",
             "description",
             "diagnosis",
@@ -130,6 +129,11 @@ class ServiceOrderForm(forms.ModelForm):
                 attrs={
                     "class": "form-select",
                     "id": "id_vehicle",
+                }
+            ),
+            "assigned_mechanic": forms.Select(
+                attrs={
+                    "class": "form-select",
                 }
             ),
             "title": forms.TextInput(
@@ -176,6 +180,7 @@ class ServiceOrderForm(forms.ModelForm):
         labels = {
             "customer": "Cliente",
             "vehicle": "Veículo",
+            "assigned_mechanic": "Mecânico responsável",
             "title": "Título",
             "description": "Descrição do problema",
             "diagnosis": "Diagnóstico técnico",
@@ -186,11 +191,28 @@ class ServiceOrderForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         """
-        Limit vehicle options according to selected customer when possible.
+        Limit vehicle options according to selected customer and mechanic group.
         """
         super().__init__(*args, **kwargs)
 
         self.fields["vehicle"].queryset = Vehicle.objects.none()
+
+        User = get_user_model()
+
+        mechanic_group = Group.objects.filter(name="Mecânico").first()
+
+        if mechanic_group:
+            self.fields["assigned_mechanic"].queryset = User.objects.filter(
+                groups=mechanic_group,
+                is_active=True,
+            ).order_by("first_name", "email")
+        else:
+            self.fields["assigned_mechanic"].queryset = User.objects.none()
+
+        self.fields["assigned_mechanic"].required = False
+        self.fields[
+            "assigned_mechanic"
+        ].empty_label = "Selecione o mecânico responsável"
 
         if "customer" in self.data:
             try:
@@ -340,4 +362,37 @@ class ServiceOrderItemForm(forms.ModelForm):
             "item_type": "Tipo",
             "description": "Descrição",
             "quantity": "Quantidade",
+        }
+
+
+class ServiceOrderNoteForm(forms.ModelForm):
+    """
+    Form used to create internal service order notes.
+    """
+
+    class Meta:
+        model = ServiceOrderNote
+        fields = [
+            "note_type",
+            "text",
+        ]
+
+        widgets = {
+            "note_type": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "text": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Digite uma observação interna sobre a ordem de serviço",
+                    "rows": 4,
+                }
+            ),
+        }
+
+        labels = {
+            "note_type": "Tipo da observação",
+            "text": "Observação",
         }

@@ -45,6 +45,15 @@ class ServiceOrder(models.Model):
         verbose_name="Criado por",
     )
 
+    assigned_mechanic = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="assigned_service_orders",
+        blank=True,
+        null=True,
+        verbose_name="Mecânico responsável",
+    )
+
     title = models.CharField(
         max_length=150,
         verbose_name="Título",
@@ -282,3 +291,62 @@ class ServiceOrderItem(models.Model):
         Calculate item total using Decimal values.
         """
         return self.quantity * self.unit_price
+
+
+class ServiceOrderNote(models.Model):
+    """
+    Model that stores internal notes linked to service orders.
+    """
+
+    class NoteType(models.TextChoices):
+        """
+        Controlled note types.
+        """
+
+        INTERNAL = "internal", "Interna"
+        CUSTOMER = "customer", "Cliente"
+        TECHNICAL = "technical", "Técnica"
+        URGENT = "urgent", "Urgente"
+
+    service_order = models.ForeignKey(
+        ServiceOrder,
+        on_delete=models.CASCADE,
+        related_name="notes",
+        verbose_name="Ordem de serviço",
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="service_order_notes",
+        verbose_name="Criado por",
+    )
+
+    note_type = models.CharField(
+        max_length=20,
+        choices=NoteType.choices,
+        default=NoteType.INTERNAL,
+        verbose_name="Tipo",
+    )
+
+    text = models.TextField(
+        verbose_name="Observação",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Criada em",
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Atualizada em",
+    )
+
+    class Meta:
+        verbose_name = "Nota interna da ordem de serviço"
+        verbose_name_plural = "Notas internas das ordens de serviço"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"OS #{self.service_order_id} - {self.get_note_type_display()}"

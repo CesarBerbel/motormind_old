@@ -56,6 +56,16 @@
                 <p><strong>Veículo:</strong> {{ service_order.vehicle.plate }} - {{ service_order.vehicle.brand }} {{ service_order.vehicle.model }}</p>
                 <p><strong>Status:</strong> {{ service_order.get_status_display }}</p>
                 <p><strong>Criado por:</strong> {{ service_order.created_by.email }}</p>
+
+                <p>
+                    <strong>Mecânico responsável:</strong>
+                    {% if service_order.assigned_mechanic %}
+                        {{ service_order.assigned_mechanic.email }}
+                    {% else %}
+                        Não definido
+                    {% endif %}
+                </p>
+
                 <p><strong>Criada em:</strong> {{ service_order.created_at|date:"d/m/Y H:i" }}</p>
 
                 <p class="mb-0">
@@ -158,6 +168,57 @@
         </div>
     </div>
 
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">
+                Observações internas
+            </h2>
+        </div>
+
+        {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" or request.user|has_group:"Mecânico" %}
+            {% if service_order.status != "canceled" %}
+                <form method="post" action="{% url 'service_orders:service_order_note_create' service_order.pk %}" class="mb-4">
+                    {% csrf_token %}
+
+                    {{ note_form.as_p }}
+
+                    <button type="submit" class="btn btn-primary">
+                        Adicionar observação
+                    </button>
+                </form>
+            {% endif %}
+        {% endif %}
+
+        <div class="list-group">
+            {% for note in notes %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ note.get_note_type_display }}</strong>
+                        <small class="text-muted">
+                            {{ note.created_at|date:"d/m/Y H:i" }}
+                        </small>
+                    </div>
+
+                    <p class="mb-1 mt-2">
+                        {{ note.text }}
+                    </p>
+
+                    <small class="text-muted">
+                        Criado por: {{ note.created_by.email }}
+                    </small>
+                </div>
+            {% empty %}
+                <div class="text-center text-muted py-3">
+                    Nenhuma observação registrada.
+                </div>
+            {% endfor %}
+        </div>
+
+    </div>
 </div>
 
 <div class="card shadow-sm mb-4">
