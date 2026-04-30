@@ -1,4 +1,5 @@
 // This script enables drag and drop status updates on the service order board.
+// It also updates column counters without reloading the page.
 
 function getCookie(name) {
     let cookieValue = null;
@@ -34,6 +35,44 @@ function showDragMessage(message, type) {
     `;
 }
 
+function updateColumnCounters() {
+    const columns = document.querySelectorAll(".service-order-dropzone");
+
+    columns.forEach(function (column) {
+        const status = column.dataset.status;
+        const counter = document.querySelector(
+            `.service-order-column-counter[data-status="${status}"]`
+        );
+
+        if (!counter) {
+            return;
+        }
+
+        const cards = column.querySelectorAll(".service-order-card");
+
+        counter.textContent = cards.length;
+    });
+}
+
+function updateEmptyColumnMessages() {
+    const columns = document.querySelectorAll(".service-order-dropzone");
+
+    columns.forEach(function (column) {
+        const cards = column.querySelectorAll(".service-order-card");
+        const emptyMessage = column.querySelector(".service-order-empty-message");
+
+        if (!emptyMessage) {
+            return;
+        }
+
+        if (cards.length === 0) {
+            emptyMessage.classList.remove("d-none");
+        } else {
+            emptyMessage.classList.add("d-none");
+        }
+    });
+}
+
 function updateServiceOrderStatus(orderId, status, updateUrl) {
     const csrfToken = getCookie("csrftoken");
 
@@ -59,6 +98,9 @@ function updateServiceOrderStatus(orderId, status, updateUrl) {
 document.addEventListener("DOMContentLoaded", function () {
     const cards = document.querySelectorAll(".service-order-card");
     const columns = document.querySelectorAll(".service-order-dropzone");
+
+    updateColumnCounters();
+    updateEmptyColumnMessages();
 
     cards.forEach(function (card) {
         card.addEventListener("dragstart", function (event) {
@@ -113,9 +155,15 @@ document.addEventListener("DOMContentLoaded", function () {
                         statusBadge.className = "badge text-bg-secondary service-order-status-badge";
                     }
 
+                    updateColumnCounters();
+                    updateEmptyColumnMessages();
+
                     showDragMessage("Status atualizado com sucesso.", "success");
                 })
                 .catch(function () {
+                    updateColumnCounters();
+                    updateEmptyColumnMessages();
+
                     showDragMessage("Não foi possível atualizar o status da ordem.", "danger");
                 });
         });

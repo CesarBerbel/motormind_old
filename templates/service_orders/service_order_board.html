@@ -90,7 +90,10 @@
                             {{ column.label }}
                         </span>
 
-                        <span class="badge text-bg-light">
+                        <span
+                            class="badge text-bg-light service-order-column-counter"
+                            data-status="{{ column.value }}"
+                        >
                             {{ column.orders|length }}
                         </span>
                     </div>
@@ -187,11 +190,11 @@
 
                             </div>
                         </div>
-                    {% empty %}
-                        <div class="text-center text-muted small py-3">
-                            Nenhuma OS neste status.
-                        </div>
                     {% endfor %}
+
+                    <div class="text-center text-muted small py-3 service-order-empty-message {% if column.orders|length > 0 %}d-none{% endif %}">
+                        Nenhuma OS neste status.
+                    </div>
 
                 </div>
             </div>
