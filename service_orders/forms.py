@@ -27,8 +27,18 @@ class ServiceOrderForm(forms.ModelForm):
         ]
 
         widgets = {
-            "customer": forms.Select(attrs={"class": "form-select", "id": "id_customer"}),
-            "vehicle": forms.Select(attrs={"class": "form-select", "id": "id_vehicle"}),
+            "customer": forms.Select(
+                attrs={
+                    "class": "form-select",
+                    "id": "id_customer",
+                }
+            ),
+            "vehicle": forms.Select(
+                attrs={
+                    "class": "form-select",
+                    "id": "id_vehicle",
+                }
+            ),
             "title": forms.TextInput(
                 attrs={
                     "class": "form-control",
@@ -56,7 +66,11 @@ class ServiceOrderForm(forms.ModelForm):
                     "rows": 4,
                 }
             ),
-            "status": forms.Select(attrs={"class": "form-select"}),
+            "status": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
             "labor_cost": forms.NumberInput(
                 attrs={
                     "class": "form-control",
@@ -169,7 +183,11 @@ class ServiceOrderTechnicalForm(forms.ModelForm):
                     "rows": 5,
                 }
             ),
-            "status": forms.Select(attrs={"class": "form-select"}),
+            "status": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
         }
 
         labels = {
@@ -194,7 +212,11 @@ class ServiceOrderItemForm(forms.ModelForm):
         ]
 
         widgets = {
-            "item_type": forms.Select(attrs={"class": "form-select"}),
+            "item_type": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
             "description": forms.TextInput(
                 attrs={
                     "class": "form-control",

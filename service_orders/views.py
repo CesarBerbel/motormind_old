@@ -9,8 +9,33 @@ from accounts.permissions import groups_required
 from customers.models import Vehicle
 
 from .forms import ServiceOrderForm, ServiceOrderItemForm, ServiceOrderTechnicalForm
-from .models import ServiceOrder
+from .models import ServiceOrder, ServiceOrderItem
 from .services import create_service_order_history
+
+
+def service_order_is_canceled(service_order):
+    """
+    Check if service order is canceled.
+    """
+    return service_order.status == ServiceOrder.Status.CANCELED
+
+
+def redirect_if_canceled(request, service_order):
+    """
+    Redirect user when trying to change a canceled service order.
+    """
+    if service_order_is_canceled(service_order):
+        messages.error(
+            request,
+            "Ordens de serviço canceladas não podem ser alteradas.",
+        )
+
+        return redirect(
+            "service_orders:service_order_detail",
+            pk=service_order.pk,
+        )
+
+    return None
 
 
 @login_required
@@ -98,17 +123,21 @@ def service_order_create_view(request):
 @groups_required(["Administrador", "Atendente", "Mecânico", "Financeiro"])
 def service_order_detail_view(request, pk):
     """
-    Show service order details with audit history.
+    Show service order details with items, financial summary and audit history.
     """
     service_order = get_object_or_404(
         ServiceOrder.objects.select_related(
             "customer",
             "vehicle",
             "created_by",
-        ).prefetch_related("history"),
+        ).prefetch_related(
+            "items",
+            "history",
+        ),
         pk=pk,
     )
 
+    items = service_order.items.all()
     histories = service_order.history.select_related("changed_by").all()
 
     return render(
@@ -116,6 +145,7 @@ def service_order_detail_view(request, pk):
         "service_orders/service_order_detail.html",
         {
             "service_order": service_order,
+            "items": items,
             "histories": histories,
         },
     )
@@ -132,12 +162,10 @@ def service_order_update_view(request, pk):
         pk=pk,
     )
 
-    if service_order.status == ServiceOrder.Status.CANCELED:
-        messages.error(
-            request,
-            "Ordens de serviço canceladas não podem ser editadas.",
-        )
-        return redirect("service_orders:service_order_detail", pk=service_order.pk)
+    canceled_redirect = redirect_if_canceled(request, service_order)
+
+    if canceled_redirect:
+        return canceled_redirect
 
     old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
@@ -207,12 +235,10 @@ def service_order_technical_update_view(request, pk):
         pk=pk,
     )
 
-    if service_order.status == ServiceOrder.Status.CANCELED:
-        messages.error(
-            request,
-            "Ordens de serviço canceladas não podem ser editadas.",
-        )
-        return redirect("service_orders:service_order_detail", pk=service_order.pk)
+    canceled_redirect = redirect_if_canceled(request, service_order)
+
+    if canceled_redirect:
+        return canceled_redirect
 
     old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
@@ -273,9 +299,9 @@ def service_order_technical_update_view(request, pk):
 
 @login_required
 @groups_required(["Administrador"])
-def service_order_cancel_view(request, pk):
+def service_order_delete_view(request, pk):
     """
-    Cancel a service order instead of deleting it.
+    Delete a service order. Only administrators can delete.
     """
     service_order = get_object_or_404(
         ServiceOrder,
@@ -283,30 +309,181 @@ def service_order_cancel_view(request, pk):
     )
 
     if request.method == "POST":
-        old_instance = ServiceOrder.objects.get(pk=service_order.pk)
+        service_order.delete()
 
-        service_order.status = ServiceOrder.Status.CANCELED
-        service_order.finished_at = None
-        service_order.save()
-
-        create_service_order_history(
-            service_order=service_order,
-            changed_by=request.user,
-            old_instance=old_instance,
-        )
-
-        messages.warning(
+        messages.success(
             request,
-            "Ordem de serviço cancelada com sucesso.",
+            "Ordem de serviço excluída com sucesso.",
         )
 
-        return redirect("service_orders:service_order_detail", pk=pk)
+        return redirect("service_orders:service_order_list")
 
     return render(
         request,
-        "service_orders/service_order_confirm_cancel.html",
+        "service_orders/service_order_confirm_delete.html",
         {
             "service_order": service_order,
+        },
+    )
+
+
+@login_required
+@groups_required(["Administrador", "Atendente"])
+def service_order_item_add_view(request, pk):
+    """
+    Add an item to a service order.
+    """
+    service_order = get_object_or_404(
+        ServiceOrder,
+        pk=pk,
+    )
+
+    canceled_redirect = redirect_if_canceled(request, service_order)
+
+    if canceled_redirect:
+        return canceled_redirect
+
+    if request.method == "POST":
+        form = ServiceOrderItemForm(request.POST)
+
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.service_order = service_order
+            item.save()
+
+            messages.success(
+                request,
+                "Item adicionado com sucesso.",
+            )
+
+            return redirect(
+                "service_orders:service_order_detail",
+                pk=service_order.pk,
+            )
+
+        messages.error(
+            request,
+            "Não foi possível adicionar o item. Verifique os dados informados.",
+        )
+
+    else:
+        form = ServiceOrderItemForm()
+
+    return render(
+        request,
+        "service_orders/service_order_item_form.html",
+        {
+            "form": form,
+            "service_order": service_order,
+            "page_title": "Adicionar item",
+            "button_text": "Salvar item",
+        },
+    )
+
+
+@login_required
+@groups_required(["Administrador", "Atendente"])
+def service_order_item_update_view(request, pk, item_pk):
+    """
+    Update an item from a service order.
+    """
+    service_order = get_object_or_404(
+        ServiceOrder,
+        pk=pk,
+    )
+
+    canceled_redirect = redirect_if_canceled(request, service_order)
+
+    if canceled_redirect:
+        return canceled_redirect
+
+    item = get_object_or_404(
+        ServiceOrderItem,
+        pk=item_pk,
+        service_order=service_order,
+    )
+
+    if request.method == "POST":
+        form = ServiceOrderItemForm(
+            request.POST,
+            instance=item,
+        )
+
+        if form.is_valid():
+            form.save()
+
+            messages.success(
+                request,
+                "Item atualizado com sucesso.",
+            )
+
+            return redirect(
+                "service_orders:service_order_detail",
+                pk=service_order.pk,
+            )
+
+        messages.error(
+            request,
+            "Não foi possível atualizar o item. Verifique os dados informados.",
+        )
+
+    else:
+        form = ServiceOrderItemForm(instance=item)
+
+    return render(
+        request,
+        "service_orders/service_order_item_form.html",
+        {
+            "form": form,
+            "service_order": service_order,
+            "item": item,
+            "page_title": "Editar item",
+            "button_text": "Salvar alterações",
+        },
+    )
+
+
+@login_required
+@groups_required(["Administrador", "Atendente"])
+def service_order_item_delete_view(request, pk, item_pk):
+    """
+    Delete an item from a service order.
+    """
+    service_order = get_object_or_404(
+        ServiceOrder,
+        pk=pk,
+    )
+
+    canceled_redirect = redirect_if_canceled(request, service_order)
+
+    if canceled_redirect:
+        return canceled_redirect
+
+    item = get_object_or_404(
+        ServiceOrderItem,
+        pk=item_pk,
+        service_order=service_order,
+    )
+
+    if request.method == "POST":
+        item.delete()
+
+        messages.success(
+            request,
+            "Item excluído com sucesso.",
+        )
+
+        return redirect(
+            "service_orders:service_order_detail",
+            pk=service_order.pk,
+        )
+
+    return render(
+        request,
+        "service_orders/service_order_item_confirm_delete.html",
+        {
+            "service_order": service_order,
+            "item": item,
         },
     )
 
@@ -343,32 +520,43 @@ def vehicles_by_customer_view(request):
 
 
 @login_required
-@groups_required(["Administrador", "Atendente"])
-def service_order_item_add_view(request, pk):
+@groups_required(["Administrador"])
+def service_order_cancel_view(request, pk):
     """
-    Add item to service order.
+    Cancel a service order instead of deleting it.
     """
-    service_order = get_object_or_404(ServiceOrder, pk=pk)
+    service_order = get_object_or_404(
+        ServiceOrder,
+        pk=pk,
+    )
 
     if request.method == "POST":
-        form = ServiceOrderItemForm(request.POST)
+        old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
-        if form.is_valid():
-            item = form.save(commit=False)
-            item.service_order = service_order
-            item.save()
+        service_order.status = ServiceOrder.Status.CANCELED
+        service_order.finished_at = None
+        service_order.save()
 
-            messages.success(request, "Item adicionado com sucesso.")
+        create_service_order_history(
+            service_order=service_order,
+            changed_by=request.user,
+            old_instance=old_instance,
+        )
 
-            return redirect("service_orders:service_order_detail", pk=pk)
-    else:
-        form = ServiceOrderItemForm()
+        messages.warning(
+            request,
+            "Ordem de serviço cancelada com sucesso.",
+        )
+
+        return redirect(
+            "service_orders:service_order_detail",
+            pk=service_order.pk,
+        )
 
     return render(
         request,
-        "service_orders/service_order_item_form.html",
+        "service_orders/service_order_confirm_cancel.html",
         {
-            "form": form,
             "service_order": service_order,
         },
     )

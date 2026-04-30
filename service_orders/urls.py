@@ -37,13 +37,23 @@ urlpatterns = [
         name="service_order_cancel",
     ),
     path(
-        "ajax/veiculos-por-cliente/",
-        views.vehicles_by_customer_view,
-        name="vehicles_by_customer",
-    ),
-    path(
         "ordens/<int:pk>/itens/adicionar/",
         views.service_order_item_add_view,
         name="service_order_item_add",
+    ),
+    path(
+        "ordens/<int:pk>/itens/<int:item_pk>/editar/",
+        views.service_order_item_update_view,
+        name="service_order_item_update",
+    ),
+    path(
+        "ordens/<int:pk>/itens/<int:item_pk>/excluir/",
+        views.service_order_item_delete_view,
+        name="service_order_item_delete",
+    ),
+    path(
+        "ajax/veiculos-por-cliente/",
+        views.vehicles_by_customer_view,
+        name="vehicles_by_customer",
     ),
 ]
