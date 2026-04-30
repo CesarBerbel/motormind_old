@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load group_tags %}
+{% load currency %}
 
 {% block title %}
     Ordem de serviço #{{ service_order.pk }} - Sistema de Oficina
@@ -20,11 +21,11 @@
 
     <div>
         {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
-            <a href="{% url 'service_orders:service_order_update' service_order.pk %}" class="btn btn-outline-secondary">
-                Editar
-            </a>
-
             {% if service_order.status != "canceled" %}
+                <a href="{% url 'service_orders:service_order_update' service_order.pk %}" class="btn btn-outline-secondary">
+                    Editar
+                </a>
+
                 <a href="{% url 'service_orders:service_order_item_add' service_order.pk %}" class="btn btn-primary">
                     Adicionar item
                 </a>
@@ -32,9 +33,11 @@
         {% endif %}
 
         {% if request.user|has_group:"Administrador" or request.user|has_group:"Mecânico" %}
-            <a href="{% url 'service_orders:service_order_technical_update' service_order.pk %}" class="btn btn-outline-warning">
-                Atualizar técnico
-            </a>
+            {% if service_order.status != "canceled" %}
+                <a href="{% url 'service_orders:service_order_technical_update' service_order.pk %}" class="btn btn-outline-warning">
+                    Atualizar técnico
+                </a>
+            {% endif %}
         {% endif %}
     </div>
 </div>
@@ -74,29 +77,29 @@
 
                 <div class="d-flex justify-content-between">
                     <span>Itens da ordem:</span>
-                    <strong>€ {{ service_order.items_total }}</strong>
+                    <strong>{{ service_order.items_total|brl }}</strong>
                 </div>
 
                 <div class="d-flex justify-content-between">
                     <span>Mão de obra adicional:</span>
-                    <strong>€ {{ service_order.labor_cost }}</strong>
+                    <strong>{{ service_order.labor_cost|brl }}</strong>
                 </div>
 
                 <div class="d-flex justify-content-between">
                     <span>Peças adicionais:</span>
-                    <strong>€ {{ service_order.parts_cost }}</strong>
+                    <strong>{{ service_order.parts_cost|brl }}</strong>
                 </div>
 
                 <div class="d-flex justify-content-between text-danger">
                     <span>Desconto:</span>
-                    <strong>- € {{ service_order.discount }}</strong>
+                    <strong>- {{ service_order.discount|brl }}</strong>
                 </div>
 
                 <hr>
 
                 <div class="d-flex justify-content-between fs-5">
                     <span>Total:</span>
-                    <strong>€ {{ service_order.total_amount }}</strong>
+                    <strong>{{ service_order.total_amount|brl }}</strong>
                 </div>
 
             </div>
@@ -193,8 +196,8 @@
                             <td>{{ item.get_item_type_display }}</td>
                             <td>{{ item.description }}</td>
                             <td>{{ item.quantity }}</td>
-                            <td>€ {{ item.unit_price }}</td>
-                            <td>€ {{ item.total }}</td>
+                            <td>{{ item.unit_price|brl }}</td>
+                            <td>{{ item.total|brl }}</td>
                             <td class="text-end">
                                 {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
                                     {% if service_order.status != "canceled" %}
@@ -232,7 +235,7 @@
                             Subtotal dos itens:
                         </th>
                         <th colspan="2">
-                            € {{ service_order.items_total }}
+                            {{ service_order.items_total|brl }}
                         </th>
                     </tr>
                 </tfoot>
@@ -290,9 +293,11 @@
     </a>
 
     {% if request.user|has_group:"Administrador" %}
-        <a href="{% url 'service_orders:service_order_cancel' service_order.pk %}" class="btn btn-outline-danger">
-            Cancelar ordem de serviço
-        </a>
+        {% if service_order.status != "canceled" %}
+            <a href="{% url 'service_orders:service_order_cancel' service_order.pk %}" class="btn btn-outline-warning">
+                Cancelar ordem de serviço
+            </a>
+        {% endif %}
     {% endif %}
 </div>
 
