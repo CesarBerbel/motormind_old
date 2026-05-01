@@ -7,6 +7,7 @@ AUDITED_FIELDS = [
     "diagnosis",
     "solution",
     "status",
+    "priority",
     "labor_cost",
     "parts_cost",
     "discount",

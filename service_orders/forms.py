@@ -107,6 +107,7 @@ class ServiceOrderForm(forms.ModelForm):
             "customer",
             "vehicle",
             "assigned_mechanic",
+            "priority",
             "title",
             "description",
             "diagnosis",
@@ -132,6 +133,11 @@ class ServiceOrderForm(forms.ModelForm):
                 }
             ),
             "assigned_mechanic": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "priority": forms.Select(
                 attrs={
                     "class": "form-select",
                 }
@@ -181,6 +187,7 @@ class ServiceOrderForm(forms.ModelForm):
             "customer": "Cliente",
             "vehicle": "Veículo",
             "assigned_mechanic": "Mecânico responsável",
+            "priority": "Prioridade",
             "title": "Título",
             "description": "Descrição do problema",
             "diagnosis": "Diagnóstico técnico",
@@ -198,7 +205,6 @@ class ServiceOrderForm(forms.ModelForm):
         self.fields["vehicle"].queryset = Vehicle.objects.none()
 
         User = get_user_model()
-
         mechanic_group = Group.objects.filter(name="Mecânico").first()
 
         if mechanic_group:

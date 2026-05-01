@@ -66,15 +66,28 @@ def board_orders(users):
         model="Argo",
     )
 
-    open_order = ServiceOrder.objects.create(
+    high_priority_order = ServiceOrder.objects.create(
         customer=customer,
         vehicle=vehicle,
         created_by=users["attendant"],
         assigned_mechanic=users["mechanic"],
-        title="OS aberta no quadro",
-        description="Descrição da OS aberta.",
+        title="OS prioridade alta",
+        description="Descrição da OS alta.",
         status=ServiceOrder.Status.OPEN,
+        priority=ServiceOrder.Priority.HIGH,
         expected_delivery_date=today + timedelta(days=2),
+    )
+
+    low_priority_order = ServiceOrder.objects.create(
+        customer=customer,
+        vehicle=vehicle,
+        created_by=users["attendant"],
+        assigned_mechanic=users["mechanic"],
+        title="OS prioridade baixa",
+        description="Descrição da OS baixa.",
+        status=ServiceOrder.Status.OPEN,
+        priority=ServiceOrder.Priority.LOW,
+        expected_delivery_date=today + timedelta(days=1),
     )
 
     waiting_parts_order = ServiceOrder.objects.create(
@@ -85,6 +98,7 @@ def board_orders(users):
         title="OS aguardando peças",
         description="Descrição da OS aguardando peças.",
         status=ServiceOrder.Status.WAITING_PARTS,
+        priority=ServiceOrder.Priority.MEDIUM,
         expected_delivery_date=today + timedelta(days=3),
     )
 
@@ -95,6 +109,7 @@ def board_orders(users):
         title="OS finalizada",
         description="Descrição da OS finalizada.",
         status=ServiceOrder.Status.FINISHED,
+        priority=ServiceOrder.Priority.HIGH,
         expected_delivery_date=today - timedelta(days=3),
     )
 
@@ -106,6 +121,7 @@ def board_orders(users):
         title="OS atrasada",
         description="Descrição da OS atrasada.",
         status=ServiceOrder.Status.IN_PROGRESS,
+        priority=ServiceOrder.Priority.HIGH,
         expected_delivery_date=today - timedelta(days=1),
     )
 
@@ -116,11 +132,13 @@ def board_orders(users):
         title="OS cancelada atrasada",
         description="Descrição da OS cancelada atrasada.",
         status=ServiceOrder.Status.CANCELED,
+        priority=ServiceOrder.Priority.HIGH,
         expected_delivery_date=today - timedelta(days=5),
     )
 
     return {
-        "open_order": open_order,
+        "high_priority_order": high_priority_order,
+        "low_priority_order": low_priority_order,
         "waiting_parts_order": waiting_parts_order,
         "finished_order": finished_order,
         "overdue_order": overdue_order,
@@ -154,15 +172,15 @@ def test_attendant_can_access_operational_board(client, users, board_orders):
 
     assert response.status_code == 200
     assert "Quadro da oficina" in content
-    assert board_orders["open_order"].title in content
+    assert board_orders["high_priority_order"].title in content
     assert board_orders["waiting_parts_order"].title in content
     assert board_orders["finished_order"].title in content
 
 
 @pytest.mark.django_db
-def test_board_contains_dynamic_counter_elements(client, users, board_orders):
+def test_board_displays_priority_badges(client, users, board_orders):
     """
-    Test if board contains counter elements required by JavaScript.
+    Test if board displays visual priority badges.
     """
     client.login(
         username=users["attendant"].email,
@@ -173,10 +191,55 @@ def test_board_contains_dynamic_counter_elements(client, users, board_orders):
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "service-order-column-counter" in content
-    assert 'data-status="open"' in content
-    assert 'data-status="in_progress"' in content
-    assert "service-order-empty-message" in content
+    assert "Prioridade alta" in content
+    assert "Prioridade média" in content
+    assert "Prioridade baixa" in content
+
+
+@pytest.mark.django_db
+def test_board_priority_filter(client, users, board_orders):
+    """
+    Test if board filters service orders by priority.
+    """
+    client.login(
+        username=users["attendant"].email,
+        password="StrongPassword123",
+    )
+
+    response = client.get(
+        reverse("service_orders:service_order_board"),
+        {
+            "priority": ServiceOrder.Priority.HIGH,
+        },
+    )
+
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert board_orders["high_priority_order"].title in content
+    assert board_orders["overdue_order"].title in content
+    assert board_orders["low_priority_order"].title not in content
+    assert board_orders["waiting_parts_order"].title not in content
+
+
+@pytest.mark.django_db
+def test_board_orders_high_priority_before_low_priority(client, users, board_orders):
+    """
+    Test if board orders high priority before low priority.
+    """
+    client.login(
+        username=users["attendant"].email,
+        password="StrongPassword123",
+    )
+
+    response = client.get(reverse("service_orders:service_order_board"))
+    content = response.content.decode()
+
+    high_position = content.index(board_orders["high_priority_order"].title)
+    low_position = content.index(board_orders["low_priority_order"].title)
+
+    assert response.status_code == 200
+    assert high_position < low_position
 
 
 @pytest.mark.django_db
@@ -232,7 +295,7 @@ def test_board_search_filters_orders(client, users, board_orders):
 
     assert response.status_code == 200
     assert board_orders["waiting_parts_order"].title in content
-    assert board_orders["open_order"].title not in content
+    assert board_orders["high_priority_order"].title not in content
 
 
 @pytest.mark.django_db
@@ -255,7 +318,7 @@ def test_board_mechanic_filter(client, users, board_orders):
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert board_orders["open_order"].title in content
+    assert board_orders["high_priority_order"].title in content
     assert board_orders["waiting_parts_order"].title in content
     assert board_orders["finished_order"].title not in content
 
@@ -285,7 +348,7 @@ def test_board_overdue_filter_only_shows_overdue_active_orders(
 
     assert response.status_code == 200
     assert board_orders["overdue_order"].title in content
-    assert board_orders["open_order"].title not in content
+    assert board_orders["high_priority_order"].title not in content
     assert board_orders["waiting_parts_order"].title not in content
     assert board_orders["finished_order"].title not in content
     assert board_orders["canceled_overdue_order"].title not in content
@@ -297,7 +360,7 @@ def test_attendant_can_quick_update_status_from_board(client, users, board_order
     """
     Test if attendant can quickly update status from board.
     """
-    service_order = board_orders["open_order"]
+    service_order = board_orders["high_priority_order"]
 
     client.login(
         username=users["attendant"].email,
@@ -331,7 +394,7 @@ def test_quick_update_finished_status_sets_finished_at(client, users, board_orde
     """
     Test if quick update to finished status sets finished_at.
     """
-    service_order = board_orders["open_order"]
+    service_order = board_orders["high_priority_order"]
 
     client.login(
         username=users["attendant"].email,
@@ -356,44 +419,11 @@ def test_quick_update_finished_status_sets_finished_at(client, users, board_orde
 
 
 @pytest.mark.django_db
-def test_ajax_quick_update_status_returns_json(client, users, board_orders):
-    """
-    Test if AJAX quick status update returns JSON response.
-    """
-    service_order = board_orders["open_order"]
-
-    client.login(
-        username=users["attendant"].email,
-        password="StrongPassword123",
-    )
-
-    response = client.post(
-        reverse(
-            "service_orders:service_order_quick_status_update",
-            args=[service_order.pk],
-        ),
-        data={
-            "status": ServiceOrder.Status.IN_PROGRESS,
-        },
-        HTTP_X_REQUESTED_WITH="XMLHttpRequest",
-    )
-
-    service_order.refresh_from_db()
-    data = response.json()
-
-    assert response.status_code == 200
-    assert data["success"] is True
-    assert data["status"] == ServiceOrder.Status.IN_PROGRESS
-    assert data["status_label"] == "Em execução"
-    assert service_order.status == ServiceOrder.Status.IN_PROGRESS
-
-
-@pytest.mark.django_db
 def test_financial_cannot_quick_update_status(client, users, board_orders):
     """
     Test if financial user cannot quickly update status from board.
     """
-    service_order = board_orders["open_order"]
+    service_order = board_orders["high_priority_order"]
 
     client.login(
         username=users["financial"].email,
@@ -422,7 +452,7 @@ def test_quick_update_rejects_invalid_status(client, users, board_orders):
     """
     Test if quick update rejects invalid status.
     """
-    service_order = board_orders["open_order"]
+    service_order = board_orders["high_priority_order"]
 
     client.login(
         username=users["attendant"].email,

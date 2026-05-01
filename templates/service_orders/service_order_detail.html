@@ -55,6 +55,18 @@
                 <p><strong>Cliente:</strong> {{ service_order.customer.name }}</p>
                 <p><strong>Veículo:</strong> {{ service_order.vehicle.plate }} - {{ service_order.vehicle.brand }} {{ service_order.vehicle.model }}</p>
                 <p><strong>Status:</strong> {{ service_order.get_status_display }}</p>
+
+                <p>
+                    <strong>Prioridade:</strong>
+                    {% if service_order.priority == "high" %}
+                        <span class="badge text-bg-danger">Alta</span>
+                    {% elif service_order.priority == "medium" %}
+                        <span class="badge text-bg-warning">Média</span>
+                    {% else %}
+                        <span class="badge text-bg-success">Baixa</span>
+                    {% endif %}
+                </p>
+
                 <p><strong>Criado por:</strong> {{ service_order.created_by.email }}</p>
 
                 <p>
@@ -173,11 +185,9 @@
 <div class="card shadow-sm mb-4">
     <div class="card-body">
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h5 mb-0">
-                Observações internas
-            </h2>
-        </div>
+        <h2 class="h5 mb-3">
+            Observações internas
+        </h2>
 
         {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" or request.user|has_group:"Mecânico" %}
             {% if service_order.status != "canceled" %}
@@ -224,19 +234,9 @@
 <div class="card shadow-sm mb-4">
     <div class="card-body">
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h5 mb-0">
-                Itens da ordem de serviço
-            </h2>
-
-            {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
-                {% if service_order.status != "canceled" %}
-                    <a href="{% url 'service_orders:service_order_item_add' service_order.pk %}" class="btn btn-sm btn-primary">
-                        Adicionar item
-                    </a>
-                {% endif %}
-            {% endif %}
-        </div>
+        <h2 class="h5 mb-3">
+            Itens da ordem de serviço
+        </h2>
 
         <div class="table-responsive">
             <table class="table table-hover align-middle">

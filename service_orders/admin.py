@@ -75,6 +75,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         "assigned_mechanic",
         "title",
         "status",
+        "priority",
         "total_amount",
         "created_by",
         "created_at",
@@ -82,6 +83,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
 
     list_filter = (
         "status",
+        "priority",
         "assigned_mechanic",
         "created_at",
         "expected_delivery_date",
@@ -128,6 +130,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
                     "assigned_mechanic",
                     "title",
                     "status",
+                    "priority",
                 )
             },
         ),
