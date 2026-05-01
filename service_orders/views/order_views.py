@@ -16,12 +16,12 @@ from service_orders.forms import (
 )
 from service_orders.models import ServiceOrder
 from service_orders.selectors import (
+    calculate_inventory_parts_total,
     filter_service_orders_by_search,
+    get_all_inventory_parts_for_service_order,
     get_service_orders_for_list,
 )
-from service_orders.services import (
-    cancel_service_order as cancel_service_order_service,
-)
+from service_orders.services import cancel_service_order as cancel_service_order_service
 from service_orders.services import (
     create_service_order_from_form,
     update_service_order_from_form,
@@ -125,6 +125,7 @@ def service_order_detail_view(request, pk):
             "notes",
             "history",
             "time_entries",
+            "inventory_parts",
         ),
         pk=pk,
     )
@@ -139,16 +140,22 @@ def service_order_detail_view(request, pk):
         ended_at__isnull=True,
     ).first()
 
-    inventory_parts = service_order.inventory_parts.select_related(
-        "part",
-        "created_by",
-    ).all()
+    inventory_parts = get_all_inventory_parts_for_service_order(service_order)
+    inventory_parts_total = calculate_inventory_parts_total(service_order)
 
-    inventory_parts_total = sum(
-        inventory_part.total
-        for inventory_part in inventory_parts
-        if inventory_part.status in ["reserved", "used"]
+    manual_items_total = sum(item.total for item in items)
+
+    financial_subtotal = (
+        service_order.labor_cost
+        + service_order.parts_cost
+        + manual_items_total
+        + inventory_parts_total
     )
+
+    financial_total = financial_subtotal - service_order.discount
+
+    if financial_total < 0:
+        financial_total = 0
 
     return render(
         request,
@@ -160,9 +167,12 @@ def service_order_detail_view(request, pk):
             "histories": histories,
             "time_entries": time_entries,
             "open_time_entry": open_time_entry,
-            "note_form": ServiceOrderNoteForm(),
             "inventory_parts": inventory_parts,
             "inventory_parts_total": inventory_parts_total,
+            "manual_items_total": manual_items_total,
+            "financial_subtotal": financial_subtotal,
+            "financial_total": financial_total,
+            "note_form": ServiceOrderNoteForm(),
         },
     )
 

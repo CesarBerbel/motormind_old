@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db.models import Case, IntegerField, Q, Value, When
@@ -178,3 +180,40 @@ def get_closed_time_entries_for_period(start_datetime, end_datetime):
             "-started_at",
         )
     )
+
+
+def get_billable_inventory_parts(service_order):
+    """
+    Return inventory parts that must be included in service order financial total.
+    """
+    return service_order.inventory_parts.select_related(
+        "part",
+        "created_by",
+    ).filter(
+        status__in=[
+            "reserved",
+            "used",
+        ]
+    )
+
+
+def get_all_inventory_parts_for_service_order(service_order):
+    """
+    Return all inventory parts linked to a service order.
+    """
+    return service_order.inventory_parts.select_related(
+        "part",
+        "created_by",
+    ).all()
+
+
+def calculate_inventory_parts_total(service_order):
+    """
+    Calculate total amount of billable inventory parts.
+    """
+    total = Decimal("0.00")
+
+    for inventory_part in get_billable_inventory_parts(service_order):
+        total += inventory_part.total
+
+    return total

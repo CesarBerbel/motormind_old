@@ -89,44 +89,77 @@
         </div>
     </div>
 
-    <div class="col-md-6">
-        <div class="card shadow-sm h-100 border-primary">
-            <div class="card-body">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
 
-                <h2 class="h6">
-                    Resumo financeiro
-                </h2>
+            <h2 class="h5 mb-3">
+                Resumo financeiro
+            </h2>
 
-                <div class="d-flex justify-content-between">
-                    <span>Itens da ordem:</span>
-                    <strong>{{ service_order.items_total|brl }}</strong>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <tbody>
+                        <tr>
+                            <th>Mão de obra</th>
+                            <td class="text-end">
+                                R$ {{ service_order.labor_cost }}
+                            </td>
+                        </tr>
 
-                <div class="d-flex justify-content-between">
-                    <span>Mão de obra adicional:</span>
-                    <strong>{{ service_order.labor_cost|brl }}</strong>
-                </div>
+                        <tr>
+                            <th>Peças manuais</th>
+                            <td class="text-end">
+                                R$ {{ service_order.parts_cost }}
+                            </td>
+                        </tr>
 
-                <div class="d-flex justify-content-between">
-                    <span>Peças adicionais:</span>
-                    <strong>{{ service_order.parts_cost|brl }}</strong>
-                </div>
+                        <tr>
+                            <th>Itens manuais da OS</th>
+                            <td class="text-end">
+                                R$ {{ manual_items_total }}
+                            </td>
+                        </tr>
 
-                <div class="d-flex justify-content-between text-danger">
-                    <span>Desconto:</span>
-                    <strong>- {{ service_order.discount|brl }}</strong>
-                </div>
+                        <tr>
+                            <th>Peças do estoque</th>
+                            <td class="text-end">
+                                R$ {{ inventory_parts_total }}
+                            </td>
+                    </tr>
 
-                <hr>
+                    <tr>
+                        <th>Subtotal</th>
+                        <td class="text-end">
+                            R$ {{ financial_subtotal }}
+                        </td>
+                    </tr>
 
-                <div class="d-flex justify-content-between fs-5">
-                    <span>Total:</span>
-                    <strong>{{ service_order.total_amount|brl }}</strong>
-                </div>
+                    <tr>
+                        <th>Desconto geral</th>
+                        <td class="text-end text-danger">
+                            - R$ {{ service_order.discount }}
+                        </td>
+                    </tr>
 
-            </div>
+                    <tr class="table-dark">
+                        <th>Total geral da OS</th>
+                        <td class="text-end fw-bold">
+                            R$ {{ financial_total }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
+
+        <div class="alert alert-info mb-0">
+            Peças do estoque entram no total apenas quando estão com status
+            <strong>Reservada</strong> ou <strong>Usada</strong>.
+            Peças <strong>Canceladas</strong> ou <strong>Devolvidas</strong>
+            não entram no total.
+        </div>
+
     </div>
+</div>
 
 </div>
 
