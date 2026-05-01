@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
-from django.utils import timezone
 
 from accounts.permissions import (
     can_finish_time_entry,
@@ -10,6 +9,12 @@ from accounts.permissions import (
 )
 from service_orders.forms import ServiceOrderTimeEntryFinishForm
 from service_orders.models import ServiceOrder, ServiceOrderTimeEntry
+from service_orders.services import (
+    can_start_time_entry,
+    finish_time_entry_from_form,
+    mechanic_has_open_time_entry,
+    start_time_entry,
+)
 
 
 @login_required
@@ -23,7 +28,7 @@ def service_order_time_start_view(request, pk):
         pk=pk,
     )
 
-    if service_order.status == ServiceOrder.Status.CANCELED:
+    if not can_start_time_entry(service_order):
         messages.error(
             request,
             "Não é possível iniciar tempo em uma ordem cancelada.",
@@ -34,13 +39,10 @@ def service_order_time_start_view(request, pk):
             pk=service_order.pk,
         )
 
-    open_entry_exists = ServiceOrderTimeEntry.objects.filter(
+    if mechanic_has_open_time_entry(
         service_order=service_order,
         mechanic=request.user,
-        ended_at__isnull=True,
-    ).exists()
-
-    if open_entry_exists:
+    ):
         messages.warning(
             request,
             "Você já possui um apontamento de tempo em aberto para esta OS.",
@@ -51,10 +53,9 @@ def service_order_time_start_view(request, pk):
             pk=service_order.pk,
         )
 
-    ServiceOrderTimeEntry.objects.create(
+    start_time_entry(
         service_order=service_order,
         mechanic=request.user,
-        started_at=timezone.now(),
     )
 
     messages.success(
@@ -104,9 +105,7 @@ def service_order_time_finish_view(request, pk, entry_pk):
         )
 
         if form.is_valid():
-            finished_entry = form.save(commit=False)
-            finished_entry.ended_at = timezone.now()
-            finished_entry.save()
+            finish_time_entry_from_form(form)
 
             messages.success(
                 request,
