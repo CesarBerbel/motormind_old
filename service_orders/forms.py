@@ -6,7 +6,12 @@ from django.contrib.auth.models import Group
 
 from customers.models import Vehicle
 
-from .models import ServiceOrder, ServiceOrderItem, ServiceOrderNote
+from .models import (
+    ServiceOrder,
+    ServiceOrderItem,
+    ServiceOrderNote,
+    ServiceOrderTimeEntry,
+)
 
 
 class BRLDecimalField(forms.DecimalField):
@@ -395,4 +400,30 @@ class ServiceOrderNoteForm(forms.ModelForm):
         labels = {
             "note_type": "Tipo da observação",
             "text": "Observação",
+        }
+
+
+class ServiceOrderTimeEntryFinishForm(forms.ModelForm):
+    """
+    Form used to finish a mechanic time entry.
+    """
+
+    class Meta:
+        model = ServiceOrderTimeEntry
+        fields = [
+            "note",
+        ]
+
+        widgets = {
+            "note": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Descreva o que foi feito durante este período de trabalho",
+                    "rows": 3,
+                }
+            ),
+        }
+
+        labels = {
+            "note": "Observação do apontamento",
         }

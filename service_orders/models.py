@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from customers.models import Customer, Vehicle
 
@@ -374,3 +375,73 @@ class ServiceOrderNote(models.Model):
 
     def __str__(self):
         return f"OS #{self.service_order_id} - {self.get_note_type_display()}"
+
+
+class ServiceOrderTimeEntry(models.Model):
+    """
+    Model that stores mechanic time tracking entries for service orders.
+    """
+
+    service_order = models.ForeignKey(
+        ServiceOrder,
+        on_delete=models.CASCADE,
+        related_name="time_entries",
+        verbose_name="Ordem de serviço",
+    )
+
+    mechanic = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="service_order_time_entries",
+        verbose_name="Mecânico",
+    )
+
+    started_at = models.DateTimeField(
+        verbose_name="Iniciado em",
+    )
+
+    ended_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Encerrado em",
+    )
+
+    note = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Observação",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Criado em",
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Atualizado em",
+    )
+
+    class Meta:
+        verbose_name = "Apontamento de tempo da OS"
+        verbose_name_plural = "Apontamentos de tempo das OS"
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"OS #{self.service_order_id} - {self.mechanic.email}"
+
+    @property
+    def is_open(self):
+        """
+        Check if time entry is still running.
+        """
+        return self.ended_at is None
+
+    @property
+    def duration(self):
+        """
+        Return duration between start and end.
+        """
+        end = self.ended_at or timezone.now()
+
+        return end - self.started_at
