@@ -1,0 +1,134 @@
+from decimal import Decimal
+
+from django.db import transaction
+from django.utils import timezone
+
+from .models import (
+    CashFlowEntry,
+    CashFlowType,
+    Expense,
+    Payment,
+    PaymentStatus,
+    Receivable,
+)
+
+
+@transaction.atomic
+def create_receivable_from_service_order(service_order, created_by):
+    """
+    Create a receivable from a service order total.
+    """
+    original_amount = service_order.total_amount
+    discount_amount = service_order.discount
+    final_amount = original_amount - discount_amount
+
+    if final_amount < Decimal("0.00"):
+        final_amount = Decimal("0.00")
+
+    receivable = Receivable(
+        service_order=service_order,
+        customer=service_order.customer,
+        original_amount=original_amount,
+        discount_amount=discount_amount,
+        final_amount=final_amount,
+        created_by=created_by,
+    )
+
+    receivable.full_clean()
+    receivable.save()
+
+    return receivable
+
+
+@transaction.atomic
+def register_payment(receivable, amount, method, created_by, paid_at=None, notes=None):
+    """
+    Register a payment and create a cash flow income entry.
+    """
+    payment = Payment(
+        receivable=receivable,
+        amount=amount,
+        method=method,
+        paid_at=paid_at or timezone.now(),
+        notes=notes,
+        created_by=created_by,
+    )
+
+    payment.full_clean()
+    payment.save()
+
+    receivable.paid_amount += payment.amount
+
+    if receivable.paid_amount >= receivable.final_amount:
+        receivable.status = PaymentStatus.PAID
+    else:
+        receivable.status = PaymentStatus.PENDING
+
+    receivable.full_clean()
+    receivable.save(update_fields=["paid_amount", "status", "updated_at"])
+
+    CashFlowEntry.objects.create(
+        entry_type=CashFlowType.INCOME,
+        description=f"Pagamento da OS #{receivable.service_order_id}",
+        amount=payment.amount,
+        payment=payment,
+        created_by=created_by,
+    )
+
+    return payment
+
+
+@transaction.atomic
+def register_expense(description, amount, created_by, due_date=None, paid_at=None, notes=None):
+    """
+    Register an expense and optionally create a cash flow expense entry if already paid.
+    """
+    status = PaymentStatus.PAID if paid_at else PaymentStatus.PENDING
+
+    expense = Expense(
+        description=description,
+        amount=amount,
+        due_date=due_date,
+        paid_at=paid_at,
+        status=status,
+        notes=notes,
+        created_by=created_by,
+    )
+
+    expense.full_clean()
+    expense.save()
+
+    if paid_at:
+        CashFlowEntry.objects.create(
+            entry_type=CashFlowType.EXPENSE,
+            description=expense.description,
+            amount=expense.amount,
+            expense=expense,
+            created_by=created_by,
+        )
+
+    return expense
+
+
+@transaction.atomic
+def mark_expense_as_paid(expense, paid_at, user):
+    """
+    Mark an expense as paid and create a cash flow expense entry.
+    """
+    if expense.status == PaymentStatus.PAID:
+        return expense
+
+    expense.status = PaymentStatus.PAID
+    expense.paid_at = paid_at
+    expense.full_clean()
+    expense.save(update_fields=["status", "paid_at", "updated_at"])
+
+    CashFlowEntry.objects.create(
+        entry_type=CashFlowType.EXPENSE,
+        description=expense.description,
+        amount=expense.amount,
+        expense=expense,
+        created_by=user,
+    )
+
+    return expense

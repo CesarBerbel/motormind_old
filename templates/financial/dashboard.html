@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Financeiro</h1>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-success">
+                <div class="card-body">
+                    <h5 class="card-title">Entradas</h5>
+                    <p class="fs-4 text-success">
+                        R$ {{ summary.income|floatformat:2 }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h5 class="card-title">Saídas</h5>
+                    <p class="fs-4 text-danger">
+                        R$ {{ summary.expense|floatformat:2 }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Saldo</h5>
+                    <p class="fs-4 text-primary">
+                        R$ {{ summary.balance|floatformat:2 }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="h4">Contas a receber pendentes</h2>
+
+    <div class="table-responsive mb-4">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>OS</th>
+                    <th>Cliente</th>
+                    <th>Valor final</th>
+                    <th>Pago</th>
+                    <th>Restante</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for receivable in pending_receivables %}
+                    <tr>
+                        <td>#{{ receivable.service_order_id }}</td>
+                        <td>{{ receivable.customer.name }}</td>
+                        <td>R$ {{ receivable.final_amount|floatformat:2 }}</td>
+                        <td>R$ {{ receivable.paid_amount|floatformat:2 }}</td>
+                        <td>R$ {{ receivable.remaining_amount|floatformat:2 }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5">Nenhuma conta a receber pendente.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="h4">Despesas pendentes</h2>
+
+    <div class="table-responsive mb-4">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Vencimento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in pending_expenses %}
+                    <tr>
+                        <td>{{ expense.description }}</td>
+                        <td>R$ {{ expense.amount|floatformat:2 }}</td>
+                        <td>{{ expense.due_date|default:"-" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="3">Nenhuma despesa pendente.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="h4">Últimos lançamentos de caixa</h2>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in cash_flow_entries %}
+                    <tr>
+                        <td>{{ entry.get_entry_type_display }}</td>
+                        <td>{{ entry.description }}</td>
+                        <td>R$ {{ entry.amount|floatformat:2 }}</td>
+                        <td>{{ entry.created_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4">Nenhum lançamento de caixa encontrado.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -25,4 +25,5 @@ urlpatterns = [
         include("service_orders.urls"),
     ),
     path("estoque/", include("inventory.urls")),
+    path("financial/", include("financial.urls")),
 ]
