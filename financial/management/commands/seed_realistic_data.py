@@ -120,7 +120,7 @@ class Command(BaseCommand):
             admin_user.save()
             return admin_user
 
-        return User.objects.create_superuser(            
+        return User.objects.create_superuser(
             email="admin@admin.com",
             password="321654",
         )
@@ -156,7 +156,9 @@ class Command(BaseCommand):
             password="321654",
         )
 
-        self.stdout.write(self.style.SUCCESS("Database reset completed with new admin."))
+        self.stdout.write(
+            self.style.SUCCESS("Database reset completed with new admin.")
+        )
 
     def create_users_by_existing_groups(self):
         """
@@ -227,12 +229,42 @@ class Command(BaseCommand):
         Create realistic customers and vehicles.
         """
         customers_data = [
-            ("João Pereira", "(11) 98845-1200", "joao.pereira@example.com", [("Toyota", "Corolla", 2018, "Prata", "ABC1D23")]),
-            ("Maria Oliveira", "(21) 99714-8821", "maria.oliveira@example.com", [("Honda", "Civic", 2020, "Preto", "HJK7L89")]),
-            ("Carlos Mendes", "(31) 98420-7744", "carlos.mendes@example.com", [("Volkswagen", "Gol", 2015, "Branco", "MNO2P34")]),
-            ("Ana Costa", "(41) 99122-4410", "ana.costa@example.com", [("Chevrolet", "Onix", 2019, "Vermelho", "QRS5T67")]),
-            ("Roberto Lima", "(51) 98977-5533", "roberto.lima@example.com", [("Hyundai", "HB20", 2017, "Azul", "UVW8X90")]),
-            ("Fernanda Rocha", "(61) 99685-3301", "fernanda.rocha@example.com", [("Jeep", "Renegade", 2021, "Cinza", "YZA3B45")]),
+            (
+                "João Pereira",
+                "(11) 98845-1200",
+                "joao.pereira@example.com",
+                [("Toyota", "Corolla", 2018, "Prata", "ABC1D23")],
+            ),
+            (
+                "Maria Oliveira",
+                "(21) 99714-8821",
+                "maria.oliveira@example.com",
+                [("Honda", "Civic", 2020, "Preto", "HJK7L89")],
+            ),
+            (
+                "Carlos Mendes",
+                "(31) 98420-7744",
+                "carlos.mendes@example.com",
+                [("Volkswagen", "Gol", 2015, "Branco", "MNO2P34")],
+            ),
+            (
+                "Ana Costa",
+                "(41) 99122-4410",
+                "ana.costa@example.com",
+                [("Chevrolet", "Onix", 2019, "Vermelho", "QRS5T67")],
+            ),
+            (
+                "Roberto Lima",
+                "(51) 98977-5533",
+                "roberto.lima@example.com",
+                [("Hyundai", "HB20", 2017, "Azul", "UVW8X90")],
+            ),
+            (
+                "Fernanda Rocha",
+                "(61) 99685-3301",
+                "fernanda.rocha@example.com",
+                [("Jeep", "Renegade", 2021, "Cinza", "YZA3B45")],
+            ),
         ]
 
         customers = []
@@ -290,7 +322,11 @@ class Command(BaseCommand):
                     ("Filtro de ar", Decimal("1.00"), Decimal("58.00")),
                 ],
                 "services": [
-                    ("Mão de obra troca de óleo e filtros", Decimal("1.00"), Decimal("95.00")),
+                    (
+                        "Mão de obra troca de óleo e filtros",
+                        Decimal("1.00"),
+                        Decimal("95.00"),
+                    ),
                 ],
             },
             {
@@ -299,11 +335,19 @@ class Command(BaseCommand):
                 "diagnosis": "Pastilhas dianteiras desgastadas e fluido escurecido.",
                 "solution": "Troca das pastilhas e substituição do fluido de freio.",
                 "parts": [
-                    ("Jogo de pastilhas dianteiras", Decimal("1.00"), Decimal("190.00")),
+                    (
+                        "Jogo de pastilhas dianteiras",
+                        Decimal("1.00"),
+                        Decimal("190.00"),
+                    ),
                     ("Fluido de freio DOT 4", Decimal("1.00"), Decimal("52.00")),
                 ],
                 "services": [
-                    ("Mão de obra revisão de freios", Decimal("1.00"), Decimal("170.00")),
+                    (
+                        "Mão de obra revisão de freios",
+                        Decimal("1.00"),
+                        Decimal("170.00"),
+                    ),
                 ],
             },
             {
@@ -315,7 +359,11 @@ class Command(BaseCommand):
                     ("Bateria 60Ah", Decimal("1.00"), Decimal("440.00")),
                 ],
                 "services": [
-                    ("Instalação da bateria e teste de carga", Decimal("1.00"), Decimal("75.00")),
+                    (
+                        "Instalação da bateria e teste de carga",
+                        Decimal("1.00"),
+                        Decimal("75.00"),
+                    ),
                 ],
             },
             {
@@ -325,7 +373,11 @@ class Command(BaseCommand):
                 "solution": "Leitura com scanner, limpeza de conectores e teste de rodagem.",
                 "parts": [],
                 "services": [
-                    ("Diagnóstico com scanner automotivo", Decimal("1.00"), Decimal("150.00")),
+                    (
+                        "Diagnóstico com scanner automotivo",
+                        Decimal("1.00"),
+                        Decimal("150.00"),
+                    ),
                 ],
             },
         ]

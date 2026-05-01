@@ -93,7 +93,6 @@ class SeedRealisticDataCommandTests(TestCase):
 
         admin_user = User.objects.get(email="admin@admin.com")
 
-        self.assertEqual(admin_user.username, "admin")
         self.assertTrue(admin_user.is_superuser)
         self.assertTrue(admin_user.is_staff)
         self.assertTrue(admin_user.check_password("321654"))
@@ -158,7 +157,6 @@ class SeedRealisticDataCommandTests(TestCase):
         User = get_user_model()
 
         existing_user = User.objects.create_user(
-            username="existing_user",
             email="existing@example.com",
             password="old-password-123",
         )
@@ -178,17 +176,11 @@ class SeedRealisticDataCommandTests(TestCase):
 
         existing_user.refresh_from_db()
 
-        self.assertTrue(
-            existing_user.check_password("old-password-123")
-        )
+        self.assertTrue(existing_user.check_password("old-password-123"))
 
-        self.assertTrue(
-            User.objects.filter(email="existing@example.com").exists()
-        )
+        self.assertTrue(User.objects.filter(email="existing@example.com").exists())
 
-        self.assertTrue(
-            User.objects.filter(email="admin@admin.com").exists()
-        )
+        self.assertTrue(User.objects.filter(email="admin@admin.com").exists())
 
         self.assertEqual(
             group.user_set.count(),
