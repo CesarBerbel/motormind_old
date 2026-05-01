@@ -1,6 +1,7 @@
 from django.urls import path
 
-from . import calendar_views, views
+from . import calendar_views, time_tracking_views, views
+
 
 app_name = "service_orders"
 
@@ -45,6 +46,16 @@ urlpatterns = [
         "ordens/<int:pk>/status-rapido/",
         views.service_order_quick_status_update_view,
         name="service_order_quick_status_update",
+    ),
+    path(
+        "ordens/<int:pk>/tempo/iniciar/",
+        time_tracking_views.service_order_time_start_view,
+        name="service_order_time_start",
+    ),
+    path(
+        "ordens/<int:pk>/tempo/<int:entry_pk>/encerrar/",
+        time_tracking_views.service_order_time_finish_view,
+        name="service_order_time_finish",
     ),
     path(
         "ordens/<int:pk>/cancelar/",
