@@ -7,8 +7,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from accounts.permissions import groups_required
-
-from .models import ServiceOrder
+from service_orders.models import ServiceOrder
 
 
 def get_priority_ordering_annotation():

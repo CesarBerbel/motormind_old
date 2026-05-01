@@ -4,9 +4,9 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 
 from accounts.permissions import groups_required
-
-from .forms import ServiceOrderTimeEntryFinishForm
-from .models import ServiceOrder, ServiceOrderTimeEntry
+from accounts.utils import is_admin_user
+from service_orders.forms import ServiceOrderTimeEntryFinishForm
+from service_orders.models import ServiceOrder, ServiceOrderTimeEntry
 
 
 @login_required
@@ -83,7 +83,8 @@ def service_order_time_finish_view(request, pk, entry_pk):
         ended_at__isnull=True,
     )
 
-    if not request.user.groups.filter(name="Administrador").exists():
+    # ✅ agora usa helper centralizado
+    if not is_admin_user(request.user):
         if time_entry.mechanic != request.user:
             messages.error(
                 request,
