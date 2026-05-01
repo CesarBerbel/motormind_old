@@ -1,7 +1,15 @@
 from django.urls import path
 
-from . import calendar_views, reports_views, time_tracking_views
-from .views import ajax_views, board_views, item_views, note_views, order_views
+from .views import (
+    ajax_views,
+    board_views,
+    calendar_views,
+    item_views,
+    note_views,
+    order_views,
+    reports_views,
+    time_tracking_views,
+)
 
 app_name = "service_orders"
 

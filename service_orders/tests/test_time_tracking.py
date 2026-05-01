@@ -259,3 +259,42 @@ def test_canceled_service_order_cannot_start_time(client, users, service_order):
     assert not ServiceOrderTimeEntry.objects.filter(
         service_order=service_order,
     ).exists()
+
+
+@pytest.mark.django_db
+def test_superuser_can_finish_any_time_entry(client, users, service_order):
+    """
+    Superuser must be able to finish any time entry.
+    """
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    superuser = User.objects.create_superuser(
+        email="super@example.com",
+        password="StrongPassword123",
+    )
+
+    entry = ServiceOrderTimeEntry.objects.create(
+        service_order=service_order,
+        mechanic=users["mechanic"],
+        started_at="2026-05-01T10:00:00Z",
+    )
+
+    client.login(
+        username=superuser.email,
+        password="StrongPassword123",
+    )
+
+    response = client.post(
+        reverse(
+            "service_orders:service_order_time_finish",
+            args=[service_order.pk, entry.pk],
+        ),
+        data={"note": "Encerrado por superuser"},
+    )
+
+    entry.refresh_from_db()
+
+    assert response.status_code == 302
+    assert entry.ended_at is not None

@@ -6,8 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from accounts.permissions import groups_required
-
-from .models import ServiceOrderTimeEntry
+from service_orders.models import ServiceOrderTimeEntry
 
 
 def get_mechanic_queryset():

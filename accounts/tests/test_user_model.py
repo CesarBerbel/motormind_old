@@ -1,6 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
-
+from accounts.utils import is_admin_user
 
 @pytest.mark.django_db
 def test_create_user_with_email():
@@ -51,3 +51,16 @@ def test_create_user_without_email_raises_error():
             email="",
             password="StrongPassword123",
         )
+
+
+@pytest.mark.django_db
+def test_is_admin_user_with_superuser():
+
+    User = get_user_model()
+
+    superuser = User.objects.create_superuser(
+        email="admin@example.com",
+        password="StrongPassword123",
+    )
+
+    assert is_admin_user(superuser) is True
