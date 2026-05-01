@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Estoque - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-1">
+            Estoque
+        </h1>
+
+        <p class="text-muted mb-0">
+            Gerencie peças, saldos e alertas de estoque.
+        </p>
+    </div>
+
+    <a href="{% url 'inventory:part_create' %}" class="btn btn-primary">
+        Nova peça
+    </a>
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-4">
+    <div class="row g-2">
+
+        <div class="col-md-5">
+            <input
+                type="text"
+                name="search"
+                value="{{ search }}"
+                class="form-control"
+                placeholder="Buscar por nome, código, marca ou categoria"
+            >
+        </div>
+
+        <div class="col-md-3">
+            <select name="status" class="form-select">
+                <option value="">Todas</option>
+                <option value="active" {% if status == "active" %}selected{% endif %}>
+                    Ativas
+                </option>
+                <option value="inactive" {% if status == "inactive" %}selected{% endif %}>
+                    Inativas
+                </option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <select name="low_stock" class="form-select">
+                <option value="">Todo estoque</option>
+                <option value="1" {% if low_stock == "1" %}selected{% endif %}>
+                    Estoque baixo
+                </option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">
+                Filtrar
+            </button>
+        </div>
+
+    </div>
+
+    <div class="mt-3">
+        <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary btn-sm">
+            Limpar filtros
+        </a>
+    </div>
+</form>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Peça</th>
+                        <th>Marca</th>
+                        <th>Categoria</th>
+                        <th>Estoque</th>
+                        <th>Mínimo</th>
+                        <th>Status</th>
+                        <th>Ativa</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for part in parts %}
+                        <tr>
+                            <td>{{ part.internal_code }}</td>
+                            <td>{{ part.name }}</td>
+                            <td>{{ part.brand|default:"-" }}</td>
+                            <td>{{ part.category|default:"-" }}</td>
+                            <td>{{ part.current_stock }}</td>
+                            <td>{{ part.minimum_stock }}</td>
+                            <td>
+                                {% if part.is_low_stock %}
+                                    <span class="badge text-bg-danger">
+                                        Estoque baixo
+                                    </span>
+                                {% else %}
+                                    <span class="badge text-bg-success">
+                                        Normal
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if part.is_active %}
+                                    Sim
+                                {% else %}
+                                    Não
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'inventory:part_detail' part.pk %}" class="btn btn-sm btn-outline-primary">
+                                    Abrir
+                                </a>
+
+                                <a href="{% url 'inventory:stock_movement_create' part.pk %}" class="btn btn-sm btn-outline-success">
+                                    Movimentar
+                                </a>
+
+                                <a href="{% url 'inventory:part_update' part.pk %}" class="btn btn-sm btn-outline-secondary">
+                                    Editar
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                Nenhuma peça encontrada.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

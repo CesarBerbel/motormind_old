@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ page_title }} - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+    <h1 class="h4 mb-1">
+        {{ page_title }}
+    </h1>
+
+    <p class="text-muted mb-0">
+        Preencha os dados da peça com atenção.
+    </p>
+</div>
+
+<form method="post" class="card card-body shadow-sm">
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <div class="d-flex justify-content-between mt-3">
+        <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary">
+            Voltar
+        </a>
+
+        <button type="submit" class="btn btn-primary">
+            {{ button_text }}
+        </button>
+    </div>
+</form>
+
+{% endblock %}

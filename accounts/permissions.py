@@ -305,3 +305,44 @@ def groups_required(group_names):
         return wrapper
 
     return decorator
+
+
+def can_access_inventory(user):
+    """
+    Check if user can access inventory screens.
+    """
+    return has_any_group(
+        user,
+        [
+            ADMIN_GROUP,
+            ATTENDANT_GROUP,
+            MECHANIC_GROUP,
+            FINANCIAL_GROUP,
+        ],
+    )
+
+
+def can_manage_inventory(user):
+    """
+    Check if user can create and update inventory parts.
+    """
+    return has_any_group(
+        user,
+        [
+            ADMIN_GROUP,
+            ATTENDANT_GROUP,
+        ],
+    )
+
+
+def can_move_inventory_stock(user):
+    """
+    Check if user can create stock movements.
+    """
+    return has_any_group(
+        user,
+        [
+            ADMIN_GROUP,
+            ATTENDANT_GROUP,
+        ],
+    )

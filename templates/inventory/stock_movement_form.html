@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Movimentar estoque - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+    <h1 class="h4 mb-1">
+        Movimentar estoque
+    </h1>
+
+    <p class="text-muted mb-0">
+        Peça: {{ part.internal_code }} - {{ part.name }}
+    </p>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <p class="mb-1">
+            <strong>Estoque atual:</strong>
+            {{ part.current_stock }}
+        </p>
+
+        <p class="mb-0">
+            <strong>Estoque mínimo:</strong>
+            {{ part.minimum_stock }}
+        </p>
+    </div>
+</div>
+
+<form method="post" class="card card-body shadow-sm">
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <div class="alert alert-info">
+        Para saída, perda ou reserva, o sistema bloqueia automaticamente caso não exista estoque suficiente.
+    </div>
+
+    <div class="d-flex justify-content-between mt-3">
+        <a href="{% url 'inventory:part_detail' part.pk %}" class="btn btn-outline-secondary">
+            Voltar
+        </a>
+
+        <button type="submit" class="btn btn-success">
+            Registrar movimentação
+        </button>
+    </div>
+</form>
+
+{% endblock %}
