@@ -4,7 +4,13 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from accounts.permissions import groups_required
+from accounts.permissions import (
+    can_cancel_service_order,
+    can_manage_service_orders,
+    can_update_service_order_technical_data,
+    can_view_service_orders,
+    user_passes_permission,
+)
 from service_orders.forms import (
     ServiceOrderForm,
     ServiceOrderNoteForm,
@@ -18,7 +24,7 @@ from .common import redirect_if_canceled
 
 
 @login_required
-@groups_required(["Administrador", "Atendente", "Mecânico", "Financeiro"])
+@user_passes_permission(can_view_service_orders)
 def service_order_list_view(request):
     """
     List service orders with search, status and priority filter.
@@ -74,7 +80,7 @@ def service_order_list_view(request):
 
 
 @login_required
-@groups_required(["Administrador", "Atendente"])
+@user_passes_permission(can_manage_service_orders)
 def service_order_create_view(request):
     """
     Create a new service order.
@@ -117,7 +123,7 @@ def service_order_create_view(request):
 
 
 @login_required
-@groups_required(["Administrador", "Atendente", "Mecânico", "Financeiro"])
+@user_passes_permission(can_view_service_orders)
 def service_order_detail_view(request, pk):
     """
     Show service order details with items, notes, financial summary, time entries and history.
@@ -165,7 +171,7 @@ def service_order_detail_view(request, pk):
 
 
 @login_required
-@groups_required(["Administrador", "Atendente"])
+@user_passes_permission(can_manage_service_orders)
 def service_order_update_view(request, pk):
     """
     Update a service order by administrator or attendant.
@@ -238,7 +244,7 @@ def service_order_update_view(request, pk):
 
 
 @login_required
-@groups_required(["Administrador", "Mecânico"])
+@user_passes_permission(can_update_service_order_technical_data)
 def service_order_technical_update_view(request, pk):
     """
     Update technical fields by mechanic or administrator.
@@ -311,7 +317,7 @@ def service_order_technical_update_view(request, pk):
 
 
 @login_required
-@groups_required(["Administrador"])
+@user_passes_permission(can_cancel_service_order)
 def service_order_cancel_view(request, pk):
     """
     Cancel a service order instead of deleting it.

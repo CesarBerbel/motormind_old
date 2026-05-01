@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from accounts.permissions import groups_required
+from accounts.permissions import can_access_operational_board, user_passes_permission
 from service_orders.models import ServiceOrder
 from service_orders.services import create_service_order_history
 
@@ -62,7 +62,7 @@ def get_priority_ordering_annotation():
 
 
 @login_required
-@groups_required(["Administrador", "Atendente", "Mecânico"])
+@user_passes_permission(can_access_operational_board)
 def service_order_board_view(request):
     """
     Show an operational board grouped by service order status.
@@ -175,7 +175,7 @@ def service_order_board_view(request):
 
 
 @login_required
-@groups_required(["Administrador", "Atendente", "Mecânico"])
+@user_passes_permission(can_access_operational_board)
 def service_order_quick_status_update_view(request, pk):
     """
     Quickly update service order status from operational board.

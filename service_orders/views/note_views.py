@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 
-from accounts.permissions import groups_required
+from accounts.permissions import can_manage_service_order_notes, user_passes_permission
 from service_orders.forms import ServiceOrderNoteForm
 from service_orders.models import ServiceOrder
 
@@ -10,7 +10,7 @@ from .common import redirect_if_canceled
 
 
 @login_required
-@groups_required(["Administrador", "Atendente", "Mecânico"])
+@user_passes_permission(can_manage_service_order_notes)
 def service_order_note_create_view(request, pk):
     """
     Create an internal note for a service order.
