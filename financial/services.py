@@ -44,9 +44,18 @@ def create_receivable_from_service_order(service_order, created_by):
 def register_payment(receivable, amount, method, created_by, paid_at=None, notes=None):
     """
     Register a payment and create a cash flow income entry.
+
+    This function locks the receivable row to avoid concurrent payments
+    updating paid_amount with stale data.
     """
+    locked_receivable = (
+        Receivable.objects.select_for_update()
+        .select_related("service_order", "customer")
+        .get(pk=receivable.pk)
+    )
+
     payment = Payment(
-        receivable=receivable,
+        receivable=locked_receivable,
         amount=amount,
         method=method,
         paid_at=paid_at or timezone.now(),
@@ -57,19 +66,19 @@ def register_payment(receivable, amount, method, created_by, paid_at=None, notes
     payment.full_clean()
     payment.save()
 
-    receivable.paid_amount += payment.amount
+    locked_receivable.paid_amount += payment.amount
 
-    if receivable.paid_amount >= receivable.final_amount:
-        receivable.status = PaymentStatus.PAID
+    if locked_receivable.paid_amount >= locked_receivable.final_amount:
+        locked_receivable.status = PaymentStatus.PAID
     else:
-        receivable.status = PaymentStatus.PENDING
+        locked_receivable.status = PaymentStatus.PENDING
 
-    receivable.full_clean()
-    receivable.save(update_fields=["paid_amount", "status", "updated_at"])
+    locked_receivable.full_clean()
+    locked_receivable.save(update_fields=["paid_amount", "status", "updated_at"])
 
     CashFlowEntry.objects.create(
         entry_type=CashFlowType.INCOME,
-        description=f"Pagamento da OS #{receivable.service_order_id}",
+        description=f"Pagamento da OS #{locked_receivable.service_order_id}",
         amount=payment.amount,
         payment=payment,
         created_by=created_by,
@@ -116,21 +125,26 @@ def register_expense(
 def mark_expense_as_paid(expense, paid_at, user):
     """
     Mark an expense as paid and create a cash flow expense entry.
-    """
-    if expense.status == PaymentStatus.PAID:
-        return expense
 
-    expense.status = PaymentStatus.PAID
-    expense.paid_at = paid_at
-    expense.full_clean()
-    expense.save(update_fields=["status", "paid_at", "updated_at"])
+    This function locks the expense row to avoid two concurrent requests
+    creating duplicated cash flow entries for the same expense.
+    """
+    locked_expense = Expense.objects.select_for_update().get(pk=expense.pk)
+
+    if locked_expense.status == PaymentStatus.PAID:
+        return locked_expense
+
+    locked_expense.status = PaymentStatus.PAID
+    locked_expense.paid_at = paid_at
+    locked_expense.full_clean()
+    locked_expense.save(update_fields=["status", "paid_at", "updated_at"])
 
     CashFlowEntry.objects.create(
         entry_type=CashFlowType.EXPENSE,
-        description=expense.description,
-        amount=expense.amount,
-        expense=expense,
+        description=locked_expense.description,
+        amount=locked_expense.amount,
+        expense=locked_expense,
         created_by=user,
     )
 
-    return expense
+    return locked_expense
