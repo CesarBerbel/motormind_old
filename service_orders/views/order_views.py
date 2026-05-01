@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 
 from accounts.permissions import (
     can_cancel_service_order,
@@ -20,7 +19,14 @@ from service_orders.selectors import (
     filter_service_orders_by_search,
     get_service_orders_for_list,
 )
-from service_orders.services import create_service_order_history
+from service_orders.services import (
+    cancel_service_order as cancel_service_order_service,
+)
+from service_orders.services import (
+    create_service_order_from_form,
+    update_service_order_from_form,
+    update_service_order_technical_from_form,
+)
 
 from .common import redirect_if_canceled
 
@@ -68,9 +74,10 @@ def service_order_create_view(request):
         form = ServiceOrderForm(request.POST)
 
         if form.is_valid():
-            service_order = form.save(commit=False)
-            service_order.created_by = request.user
-            service_order.save()
+            service_order = create_service_order_from_form(
+                form=form,
+                created_by=request.user,
+            )
 
             messages.success(
                 request,
@@ -84,7 +91,7 @@ def service_order_create_view(request):
 
         messages.error(
             request,
-            "Erro ao criar ordem de serviço.",
+            "Não foi possível criar a ordem de serviço. Verifique os dados informados.",
         )
 
     else:
@@ -95,8 +102,8 @@ def service_order_create_view(request):
         "service_orders/service_order_form.html",
         {
             "form": form,
-            "page_title": "Nova ordem de serviço",
-            "button_text": "Salvar",
+            "page_title": "Criar ordem de serviço",
+            "button_text": "Salvar ordem de serviço",
         },
     )
 
@@ -122,11 +129,26 @@ def service_order_detail_view(request, pk):
         pk=pk,
     )
 
+    items = service_order.items.all()
+    notes = service_order.notes.select_related("created_by").all()
+    histories = service_order.history.select_related("changed_by").all()
+    time_entries = service_order.time_entries.select_related("mechanic").all()
+
+    open_time_entry = time_entries.filter(
+        mechanic=request.user,
+        ended_at__isnull=True,
+    ).first()
+
     return render(
         request,
         "service_orders/service_order_detail.html",
         {
             "service_order": service_order,
+            "items": items,
+            "notes": notes,
+            "histories": histories,
+            "time_entries": time_entries,
+            "open_time_entry": open_time_entry,
             "note_form": ServiceOrderNoteForm(),
         },
     )
@@ -138,41 +160,45 @@ def service_order_update_view(request, pk):
     """
     Update administrative data.
     """
-    service_order = get_object_or_404(ServiceOrder, pk=pk)
+    service_order = get_object_or_404(
+        ServiceOrder,
+        pk=pk,
+    )
 
     canceled_redirect = redirect_if_canceled(request, service_order)
+
     if canceled_redirect:
         return canceled_redirect
 
-    old_instance = ServiceOrder.objects.get(pk=pk)
+    old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
     if request.method == "POST":
-        form = ServiceOrderForm(request.POST, instance=service_order)
+        form = ServiceOrderForm(
+            request.POST,
+            instance=service_order,
+        )
 
         if form.is_valid():
-            updated = form.save(commit=False)
-
-            if updated.status == ServiceOrder.Status.FINISHED:
-                updated.finished_at = timezone.now()
-            else:
-                updated.finished_at = None
-
-            updated.save()
-
-            create_service_order_history(
-                service_order=updated,
+            updated_service_order = update_service_order_from_form(
+                form=form,
                 changed_by=request.user,
                 old_instance=old_instance,
             )
 
-            messages.success(request, "Ordem atualizada.")
+            messages.success(
+                request,
+                "Ordem de serviço atualizada com sucesso.",
+            )
 
             return redirect(
                 "service_orders:service_order_detail",
-                pk=pk,
+                pk=updated_service_order.pk,
             )
 
-        messages.error(request, "Erro ao atualizar.")
+        messages.error(
+            request,
+            "Não foi possível atualizar a ordem de serviço. Verifique os dados informados.",
+        )
 
     else:
         form = ServiceOrderForm(instance=service_order)
@@ -182,8 +208,8 @@ def service_order_update_view(request, pk):
         "service_orders/service_order_form.html",
         {
             "form": form,
-            "page_title": "Editar ordem",
-            "button_text": "Salvar",
+            "page_title": "Editar ordem de serviço",
+            "button_text": "Salvar alterações",
         },
     )
 
@@ -192,15 +218,19 @@ def service_order_update_view(request, pk):
 @user_passes_permission(can_update_service_order_technical_data)
 def service_order_technical_update_view(request, pk):
     """
-    Update technical data (mechanic).
+    Update technical data.
     """
-    service_order = get_object_or_404(ServiceOrder, pk=pk)
+    service_order = get_object_or_404(
+        ServiceOrder,
+        pk=pk,
+    )
 
     canceled_redirect = redirect_if_canceled(request, service_order)
+
     if canceled_redirect:
         return canceled_redirect
 
-    old_instance = ServiceOrder.objects.get(pk=pk)
+    old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
     if request.method == "POST":
         form = ServiceOrderTechnicalForm(
@@ -209,29 +239,26 @@ def service_order_technical_update_view(request, pk):
         )
 
         if form.is_valid():
-            updated = form.save(commit=False)
-
-            if updated.status == ServiceOrder.Status.FINISHED:
-                updated.finished_at = timezone.now()
-            else:
-                updated.finished_at = None
-
-            updated.save()
-
-            create_service_order_history(
-                service_order=updated,
+            updated_service_order = update_service_order_technical_from_form(
+                form=form,
                 changed_by=request.user,
                 old_instance=old_instance,
             )
 
-            messages.success(request, "Dados técnicos atualizados.")
+            messages.success(
+                request,
+                "Dados técnicos atualizados com sucesso.",
+            )
 
             return redirect(
                 "service_orders:service_order_detail",
-                pk=pk,
+                pk=updated_service_order.pk,
             )
 
-        messages.error(request, "Erro ao atualizar dados técnicos.")
+        messages.error(
+            request,
+            "Não foi possível atualizar os dados técnicos. Verifique os dados informados.",
+        )
 
     else:
         form = ServiceOrderTechnicalForm(instance=service_order)
@@ -241,8 +268,8 @@ def service_order_technical_update_view(request, pk):
         "service_orders/service_order_form.html",
         {
             "form": form,
-            "page_title": "Atualizar técnico",
-            "button_text": "Salvar",
+            "page_title": "Atualizar dados técnicos",
+            "button_text": "Salvar dados técnicos",
         },
     )
 
@@ -253,26 +280,25 @@ def service_order_cancel_view(request, pk):
     """
     Cancel service order.
     """
-    service_order = get_object_or_404(ServiceOrder, pk=pk)
+    service_order = get_object_or_404(
+        ServiceOrder,
+        pk=pk,
+    )
 
     if request.method == "POST":
-        old_instance = ServiceOrder.objects.get(pk=pk)
-
-        service_order.status = ServiceOrder.Status.CANCELED
-        service_order.finished_at = None
-        service_order.save()
-
-        create_service_order_history(
+        canceled_service_order = cancel_service_order_service(
             service_order=service_order,
             changed_by=request.user,
-            old_instance=old_instance,
         )
 
-        messages.warning(request, "Ordem cancelada.")
+        messages.warning(
+            request,
+            "Ordem de serviço cancelada com sucesso.",
+        )
 
         return redirect(
             "service_orders:service_order_detail",
-            pk=pk,
+            pk=canceled_service_order.pk,
         )
 
     return render(
