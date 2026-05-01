@@ -149,3 +149,13 @@ node_modules/
 # =========================
 
 # (nenhuma regra para migrations/)
+.env
+db.sqlite3
+test_db.sqlite3
+staticfiles/
+media/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
