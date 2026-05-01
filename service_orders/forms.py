@@ -6,7 +6,12 @@ from django.contrib.auth.models import Group
 
 from customers.models import Vehicle
 
-from .models import ServiceOrder, ServiceOrderItem, ServiceOrderNote, ServiceOrderTimeEntry
+from .models import (
+    ServiceOrder,
+    ServiceOrderItem,
+    ServiceOrderNote,
+    ServiceOrderTimeEntry,
+)
 
 
 class BRLDecimalField(forms.DecimalField):
@@ -396,6 +401,7 @@ class ServiceOrderNoteForm(forms.ModelForm):
             "note_type": "Tipo da observação",
             "text": "Observação",
         }
+
 
 class ServiceOrderTimeEntryFinishForm(forms.ModelForm):
     """

@@ -1,8 +1,9 @@
 from decimal import Decimal
-from django.utils import timezone
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from customers.models import Customer, Vehicle
 
@@ -374,6 +375,7 @@ class ServiceOrderNote(models.Model):
 
     def __str__(self):
         return f"OS #{self.service_order_id} - {self.get_note_type_display()}"
+
 
 class ServiceOrderTimeEntry(models.Model):
     """

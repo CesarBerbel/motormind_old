@@ -45,6 +45,7 @@ class ServiceOrderTimeEntryInline(admin.TabularInline):
         "updated_at",
     )
 
+
 class ServiceOrderHistoryInline(admin.TabularInline):
     """
     Inline admin to show service order audit history.
@@ -321,4 +322,4 @@ class ServiceOrderTimeEntryAdmin(admin.ModelAdmin):
     readonly_fields = (
         "created_at",
         "updated_at",
-    )    
+    )

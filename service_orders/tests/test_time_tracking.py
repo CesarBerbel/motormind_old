@@ -129,11 +129,14 @@ def test_mechanic_cannot_start_two_open_entries(client, users, service_order):
     )
 
     assert response.status_code == 302
-    assert ServiceOrderTimeEntry.objects.filter(
-        service_order=service_order,
-        mechanic=users["mechanic"],
-        ended_at__isnull=True,
-    ).count() == 1
+    assert (
+        ServiceOrderTimeEntry.objects.filter(
+            service_order=service_order,
+            mechanic=users["mechanic"],
+            ended_at__isnull=True,
+        ).count()
+        == 1
+    )
 
 
 @pytest.mark.django_db

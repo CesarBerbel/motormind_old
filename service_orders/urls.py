@@ -2,7 +2,6 @@ from django.urls import path
 
 from . import calendar_views, time_tracking_views, views
 
-
 app_name = "service_orders"
 
 
