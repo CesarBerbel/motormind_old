@@ -1,0 +1,66 @@
+.service-order-dropzone {
+    min-height: 220px;
+    transition: background-color 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.service-order-dropzone.is-drag-over {
+    background-color: #e7f1ff !important;
+    border: 2px dashed #0d6efd !important;
+    box-shadow: inset 0 0 0 2px rgba(13, 110, 253, 0.15);
+}
+
+.service-order-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.service-order-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12) !important;
+}
+
+.service-order-card.is-dragging {
+    opacity: 0.45;
+    transform: rotate(1deg) scale(0.98);
+}
+
+.service-order-drag-handle {
+    cursor: grab;
+    user-select: none;
+}
+
+.service-order-drag-handle:active {
+    cursor: grabbing;
+}
+
+.service-order-drop-hint {
+    display: none;
+    border: 2px dashed #0d6efd;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    text-align: center;
+    color: #0d6efd;
+    background-color: #f8fbff;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.service-order-dropzone.is-drag-over .service-order-drop-hint {
+    display: block;
+}
+
+.service-order-card.was-updated {
+    animation: serviceOrderUpdated 0.8s ease;
+}
+
+@keyframes serviceOrderUpdated {
+    0% {
+        background-color: #d1e7dd;
+        transform: scale(1.02);
+    }
+
+    100% {
+        background-color: #ffffff;
+        transform: scale(1);
+    }
+}

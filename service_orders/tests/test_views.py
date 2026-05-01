@@ -167,6 +167,7 @@ def test_attendant_can_create_service_order(
             "vehicle": order_data["vehicle"].pk,
             "title": "Alinhamento",
             "description": "Fazer alinhamento e balanceamento.",
+            "priority": ServiceOrder.Priority.MEDIUM,
             "diagnosis": "",
             "solution": "",
             "status": ServiceOrder.Status.OPEN,

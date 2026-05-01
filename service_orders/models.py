@@ -24,6 +24,15 @@ class ServiceOrder(models.Model):
         FINISHED = "finished", "Finalizada"
         CANCELED = "canceled", "Cancelada"
 
+    class Priority(models.TextChoices):
+        """
+        Controlled priority choices for operational workflow.
+        """
+
+        LOW = "low", "Baixa"
+        MEDIUM = "medium", "Média"
+        HIGH = "high", "Alta"
+
     customer = models.ForeignKey(
         Customer,
         on_delete=models.PROTECT,
@@ -82,6 +91,13 @@ class ServiceOrder(models.Model):
         verbose_name="Status",
     )
 
+    priority = models.CharField(
+        max_length=20,
+        choices=Priority.choices,
+        default=Priority.MEDIUM,
+        verbose_name="Prioridade",
+    )
+
     labor_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -137,7 +153,9 @@ class ServiceOrder(models.Model):
     class Meta:
         verbose_name = "Ordem de serviço"
         verbose_name_plural = "Ordens de serviço"
-        ordering = ["-created_at"]
+        ordering = [
+            "-created_at",
+        ]
 
     def __str__(self):
         return f"OS #{self.pk} - {self.customer.name}"
@@ -211,7 +229,9 @@ class ServiceOrderHistory(models.Model):
     class Meta:
         verbose_name = "Histórico da ordem de serviço"
         verbose_name_plural = "Históricos das ordens de serviço"
-        ordering = ["-created_at"]
+        ordering = [
+            "-created_at",
+        ]
 
     def __str__(self):
         return f"OS #{self.service_order_id} - {self.field_name}"
@@ -280,7 +300,9 @@ class ServiceOrderItem(models.Model):
     class Meta:
         verbose_name = "Item da ordem de serviço"
         verbose_name_plural = "Itens da ordem de serviço"
-        ordering = ["created_at"]
+        ordering = [
+            "created_at",
+        ]
 
     def __str__(self):
         return self.description
@@ -346,7 +368,10 @@ class ServiceOrderNote(models.Model):
     class Meta:
         verbose_name = "Nota interna da ordem de serviço"
         verbose_name_plural = "Notas internas das ordens de serviço"
-        ordering = ["-created_at"]
+        ordering = [
+            "-created_at",
+        ]
 
     def __str__(self):
         return f"OS #{self.service_order_id} - {self.get_note_type_display()}"
+    
