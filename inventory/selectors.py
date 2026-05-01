@@ -1,3 +1,7 @@
+from decimal import Decimal
+
+from django.db.models import Case, CharField, DecimalField, F, Value, When
+
 from inventory.models import Part
 
 
@@ -135,5 +139,39 @@ def get_critical_parts_with_priority():
             priority_order[row["priority"]["level"]],
             row["part"].current_stock,
             row["part"].name,
+        ),
+    )
+
+
+def get_parts_with_stock_logic_queryset():
+    """
+    Return a queryset annotated with stock priority and purchase suggestions.
+    This moves the logic from Python memory to the database (SQL).
+    """
+    return Part.objects.filter(is_active=True).annotate(
+        # Calculate current stock ratio relative to minimum stock
+        # To avoid division by zero, we treat 0 as a very small value or handle it via Case
+        restock_priority_level=Case(
+            When(current_stock__lte=0, then=Value("critical")),
+            When(
+                current_stock__lte=F("minimum_stock") * Decimal("0.5"),
+                then=Value("critical"),
+            ),
+            When(
+                current_stock__lte=F("minimum_stock") * Decimal("0.75"),
+                then=Value("high"),
+            ),
+            When(current_stock__lte=F("minimum_stock"), then=Value("medium")),
+            default=Value("normal"),
+            output_field=CharField(),
+        ),
+        # Suggestion: (Minimum * 2) - Current Stock, if below minimum.
+        purchase_suggestion_qty=Case(
+            When(
+                current_stock__lt=F("minimum_stock"),
+                then=(F("minimum_stock") * 2) - F("current_stock"),
+            ),
+            default=Value(0),
+            output_field=DecimalField(max_digits=10, decimal_places=2),
         ),
     )
