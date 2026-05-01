@@ -1,6 +1,7 @@
 from django.urls import path
 
-from . import calendar_views, reports_views, time_tracking_views, views
+from . import calendar_views, reports_views, time_tracking_views
+from .views import ajax_views, board_views, item_views, note_views, order_views
 
 app_name = "service_orders"
 
@@ -8,12 +9,12 @@ app_name = "service_orders"
 urlpatterns = [
     path(
         "ordens/",
-        views.service_order_list_view,
+        order_views.service_order_list_view,
         name="service_order_list",
     ),
     path(
         "quadro/",
-        views.service_order_board_view,
+        board_views.service_order_board_view,
         name="service_order_board",
     ),
     path(
@@ -28,27 +29,27 @@ urlpatterns = [
     ),
     path(
         "ordens/criar/",
-        views.service_order_create_view,
+        order_views.service_order_create_view,
         name="service_order_create",
     ),
     path(
         "ordens/<int:pk>/",
-        views.service_order_detail_view,
+        order_views.service_order_detail_view,
         name="service_order_detail",
     ),
     path(
         "ordens/<int:pk>/editar/",
-        views.service_order_update_view,
+        order_views.service_order_update_view,
         name="service_order_update",
     ),
     path(
         "ordens/<int:pk>/tecnico/",
-        views.service_order_technical_update_view,
+        order_views.service_order_technical_update_view,
         name="service_order_technical_update",
     ),
     path(
         "ordens/<int:pk>/status-rapido/",
-        views.service_order_quick_status_update_view,
+        board_views.service_order_quick_status_update_view,
         name="service_order_quick_status_update",
     ),
     path(
@@ -63,32 +64,32 @@ urlpatterns = [
     ),
     path(
         "ordens/<int:pk>/cancelar/",
-        views.service_order_cancel_view,
+        order_views.service_order_cancel_view,
         name="service_order_cancel",
     ),
     path(
         "ordens/<int:pk>/itens/adicionar/",
-        views.service_order_item_add_view,
+        item_views.service_order_item_add_view,
         name="service_order_item_add",
     ),
     path(
         "ordens/<int:pk>/itens/<int:item_pk>/editar/",
-        views.service_order_item_update_view,
+        item_views.service_order_item_update_view,
         name="service_order_item_update",
     ),
     path(
         "ordens/<int:pk>/itens/<int:item_pk>/excluir/",
-        views.service_order_item_delete_view,
+        item_views.service_order_item_delete_view,
         name="service_order_item_delete",
     ),
     path(
         "ordens/<int:pk>/observacoes/adicionar/",
-        views.service_order_note_create_view,
+        note_views.service_order_note_create_view,
         name="service_order_note_create",
     ),
     path(
         "ajax/veiculos-por-cliente/",
-        views.vehicles_by_customer_view,
+        ajax_views.vehicles_by_customer_view,
         name="vehicles_by_customer",
     ),
 ]
