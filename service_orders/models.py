@@ -374,4 +374,3 @@ class ServiceOrderNote(models.Model):
 
     def __str__(self):
         return f"OS #{self.service_order_id} - {self.get_note_type_display()}"
-    
