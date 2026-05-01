@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import calendar_views, views
 
 app_name = "service_orders"
 
@@ -15,6 +15,11 @@ urlpatterns = [
         "quadro/",
         views.service_order_board_view,
         name="service_order_board",
+    ),
+    path(
+        "agenda/",
+        calendar_views.workshop_agenda_view,
+        name="workshop_agenda",
     ),
     path(
         "ordens/criar/",
