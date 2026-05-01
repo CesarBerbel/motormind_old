@@ -53,5 +53,6 @@ def test_dashboard_shows_low_stock_parts_counter(client, user):
 
     assert response.status_code == 200
     assert "Peças com estoque baixo" in content
-    assert "Ver estoque baixo" in content
+    assert "Ver peças críticas" in content
+    assert reverse("inventory:critical_parts") in content
     assert ">1<" in content.replace("\n", "").replace(" ", "")

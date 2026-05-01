@@ -12,6 +12,7 @@ from accounts.permissions import (
 )
 from inventory.forms import PartForm, StockMovementForm
 from inventory.models import Part
+from inventory.selectors import get_critical_parts_with_priority
 from inventory.services import (
     adjust_stock,
     create_stock_entry,
@@ -61,6 +62,24 @@ def part_list_view(request):
             "search": search,
             "low_stock": low_stock,
             "status": status,
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_access_inventory)
+def critical_parts_view(request):
+    """
+    Show critical parts with restock priority.
+    """
+    critical_parts = get_critical_parts_with_priority()
+
+    return render(
+        request,
+        "inventory/critical_parts.html",
+        {
+            "critical_parts": critical_parts,
+            "critical_parts_count": len(critical_parts),
         },
     )
 
