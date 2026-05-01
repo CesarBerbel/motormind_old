@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Produtividade por mecânico - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-1">
+            Produtividade por mecânico
+        </h1>
+
+        <p class="text-muted mb-0">
+            Relatório baseado nos apontamentos de tempo encerrados.
+        </p>
+    </div>
+
+    <a href="{% url 'service_orders:service_order_board' %}" class="btn btn-outline-secondary">
+        Voltar ao quadro
+    </a>
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-4">
+    <div class="row g-2 align-items-end">
+
+        <div class="col-md-3">
+            <label class="form-label">
+                Data inicial
+            </label>
+
+            <input
+                type="date"
+                name="start_date"
+                value="{{ start_date|date:'Y-m-d' }}"
+                class="form-control"
+            >
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">
+                Data final
+            </label>
+
+            <input
+                type="date"
+                name="end_date"
+                value="{{ end_date|date:'Y-m-d' }}"
+                class="form-control"
+            >
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">
+                Mecânico
+            </label>
+
+            <select name="mechanic" class="form-select">
+                <option value="">Todos os mecânicos</option>
+
+                {% for mechanic in mechanics %}
+                    <option value="{{ mechanic.pk }}" {% if selected_mechanic == mechanic.pk|stringformat:"s" %}selected{% endif %}>
+                        {% if mechanic.first_name %}
+                            {{ mechanic.first_name }} {{ mechanic.last_name }} - {{ mechanic.email }}
+                        {% else %}
+                            {{ mechanic.email }}
+                        {% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">
+                Filtrar
+            </button>
+        </div>
+
+    </div>
+
+    <div class="mt-3">
+        <a href="{% url 'service_orders:mechanic_productivity_report' %}" class="btn btn-outline-secondary btn-sm">
+            Limpar filtros
+        </a>
+    </div>
+</form>
+
+<div class="row g-3 mb-4">
+
+    <div class="col-md-6">
+        <div class="card shadow-sm border-primary h-100">
+            <div class="card-body">
+                <h2 class="h6 text-primary">
+                    Tempo total trabalhado
+                </h2>
+
+                <p class="display-6 mb-0">
+                    {{ total_duration }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm border-success h-100">
+            <div class="card-body">
+                <h2 class="h6 text-success">
+                    Apontamentos encerrados
+                </h2>
+
+                <p class="display-6 mb-0">
+                    {{ total_entries }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% for row in report_rows %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <strong>
+                    {{ row.mechanic.email }}
+                </strong>
+
+                <span>
+                    {{ row.total_duration }} · {{ row.entries_count }} apontamento(s)
+                </span>
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Cliente</th>
+                            <th>Veículo</th>
+                            <th>Status</th>
+                            <th>Apontamentos</th>
+                            <th>Tempo total</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for order in row.orders %}
+                            <tr>
+                                <td>
+                                    #{{ order.service_order.pk }} - {{ order.service_order.title }}
+                                </td>
+
+                                <td>
+                                    {{ order.service_order.customer.name }}
+                                </td>
+
+                                <td>
+                                    {{ order.service_order.vehicle.plate }}
+                                    -
+                                    {{ order.service_order.vehicle.brand }}
+                                    {{ order.service_order.vehicle.model }}
+                                </td>
+
+                                <td>
+                                    {{ order.service_order.get_status_display }}
+                                </td>
+
+                                <td>
+                                    {{ order.entries_count }}
+                                </td>
+
+                                <td>
+                                    {{ order.total_duration }}
+                                </td>
+
+                                <td class="text-end">
+                                    <a href="{% url 'service_orders:service_order_detail' order.service_order.pk %}" class="btn btn-sm btn-outline-primary">
+                                        Abrir OS
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-3">
+                                    Nenhuma OS encontrada para este mecânico.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+{% empty %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center text-muted py-5">
+            Nenhum apontamento encerrado encontrado para o período informado.
+        </div>
+    </div>
+{% endfor %}
+
+{% endblock %}
