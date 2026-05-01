@@ -82,10 +82,10 @@
     </div>
 
     <div class="col-md-4">
-        <div class="card shadow-sm h-100 border-warning">
+        <div class="card shadow-sm h-100 border-success">
             <div class="card-body">
 
-                <h2 class="h6 text-warning">
+                <h2 class="h6 text-success">
                     Minhas ordens
                 </h2>
 
@@ -98,11 +98,29 @@
                 </p>
 
                 {% if request.user|has_group:"Mecânico" %}
-                    <a href="{% url 'service_orders:service_order_board' %}?mechanic={{ request.user.pk }}" class="btn btn-outline-warning btn-sm">
+                    <a href="{% url 'service_orders:service_order_board' %}?mechanic={{ request.user.pk }}" class="btn btn-outline-success btn-sm">
                         Ver minhas ordens
                     </a>
                 {% endif %}
 
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-warning h-100">
+            <div class="card-body">
+                <h2 class="h6 text-warning">
+                    Peças com estoque baixo
+                </h2>
+
+                <p class="display-6 mb-3">
+                    {{ low_stock_parts_count }}
+                </p>
+
+                <a href="{% url 'inventory:part_list' %}?low_stock=1" class="btn btn-outline-warning btn-sm">
+                    Ver estoque baixo
+                </a>
             </div>
         </div>
     </div>

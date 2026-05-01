@@ -294,4 +294,3 @@ def test_service_order_part_total_calculates_discount(users, service_order, part
 
     assert service_order_part.subtotal == Decimal("160.00")
     assert service_order_part.total == Decimal("145.00")
-

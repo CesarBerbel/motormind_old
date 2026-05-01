@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
+from inventory.selectors import count_low_stock_parts
 from service_orders.models import ServiceOrder
 
 from .forms import CustomUserCreationForm, EmailAuthenticationForm
@@ -86,7 +87,7 @@ def login_view(request):
 @login_required
 def dashboard_view(request):
     """
-    Show protected dashboard page with operational counters.
+    Show main dashboard with operational counters.
     """
     today = timezone.localdate()
 
@@ -98,17 +99,10 @@ def dashboard_view(request):
             status__in=[
                 ServiceOrder.Status.FINISHED,
                 ServiceOrder.Status.CANCELED,
-            ],
+            ]
         )
         .count()
     )
-
-    open_service_orders_count = ServiceOrder.objects.exclude(
-        status__in=[
-            ServiceOrder.Status.FINISHED,
-            ServiceOrder.Status.CANCELED,
-        ],
-    ).count()
 
     assigned_to_me_count = (
         ServiceOrder.objects.filter(
@@ -118,18 +112,20 @@ def dashboard_view(request):
             status__in=[
                 ServiceOrder.Status.FINISHED,
                 ServiceOrder.Status.CANCELED,
-            ],
+            ]
         )
         .count()
     )
+
+    low_stock_parts_count = count_low_stock_parts()
 
     return render(
         request,
         "accounts/dashboard.html",
         {
             "overdue_service_orders_count": overdue_service_orders_count,
-            "open_service_orders_count": open_service_orders_count,
             "assigned_to_me_count": assigned_to_me_count,
+            "low_stock_parts_count": low_stock_parts_count,
         },
     )
 
