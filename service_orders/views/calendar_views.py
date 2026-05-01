@@ -6,7 +6,8 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from accounts.permissions import groups_required
+from accounts.permissions import can_access_workshop_agenda, user_passes_permission
+
 from service_orders.models import ServiceOrder
 
 
@@ -24,7 +25,7 @@ def get_priority_ordering_annotation():
 
 
 @login_required
-@groups_required(["Administrador", "Atendente", "Mecânico"])
+@user_passes_permission(can_access_workshop_agenda)
 def workshop_agenda_view(request):
     """
     Show workshop agenda using expected delivery dates.

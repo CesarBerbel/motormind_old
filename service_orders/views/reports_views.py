@@ -5,7 +5,8 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from accounts.permissions import groups_required
+from accounts.permissions import can_access_productivity_report, user_passes_permission
+
 from service_orders.models import ServiceOrderTimeEntry
 
 
@@ -41,7 +42,7 @@ def seconds_to_hours_minutes(total_seconds):
 
 
 @login_required
-@groups_required(["Administrador", "Atendente"])
+@user_passes_permission(can_access_productivity_report)
 def mechanic_productivity_report_view(request):
     """
     Show mechanic productivity report based on closed time entries.
@@ -99,7 +100,6 @@ def mechanic_productivity_report_view(request):
         )
 
     mechanic_rows = {}
-
     total_seconds = 0
 
     for entry in time_entries:
