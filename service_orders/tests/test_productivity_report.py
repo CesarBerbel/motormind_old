@@ -164,7 +164,15 @@ def test_admin_can_access_productivity_report(client, users, productivity_data):
         password="StrongPassword123",
     )
 
-    response = client.get(reverse("service_orders:mechanic_productivity_report"))
+    today = timezone.localdate()
+
+    response = client.get(
+        reverse("service_orders:mechanic_productivity_report"),
+        {
+            "start_date": (today - timedelta(days=1)).strftime("%Y-%m-%d"),
+            "end_date": (today + timedelta(days=1)).strftime("%Y-%m-%d"),
+        },
+    )
     content = response.content.decode()
 
     assert response.status_code == 200
@@ -232,10 +240,14 @@ def test_productivity_report_filters_by_mechanic(client, users, productivity_dat
         password="StrongPassword123",
     )
 
+    today = timezone.localdate()
+
     response = client.get(
         reverse("service_orders:mechanic_productivity_report"),
         {
             "mechanic": users["mechanic"].pk,
+            "start_date": (today - timedelta(days=1)).strftime("%Y-%m-%d"),
+            "end_date": (today + timedelta(days=1)).strftime("%Y-%m-%d"),
         },
     )
 
