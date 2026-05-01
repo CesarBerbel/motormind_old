@@ -1,13 +1,10 @@
 {% extends "base.html" %}
-{% load static %}
 
 {% block title %}
     Quadro da oficina - Sistema de Oficina
 {% endblock %}
 
 {% block content %}
-
-<div id="dragDropMessage"></div>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -16,7 +13,7 @@
         </h1>
 
         <p class="text-muted mb-0">
-            Arraste uma ordem para outra coluna para alterar rapidamente o status.
+            Acompanhe as ordens de serviço agrupadas por status operacional.
         </p>
     </div>
 
@@ -28,7 +25,7 @@
 <form method="get" class="card card-body shadow-sm mb-4">
     <div class="row g-2">
 
-        <div class="col-md-5">
+        <div class="col-md-4">
             <input
                 type="text"
                 name="search"
@@ -55,6 +52,18 @@
         </div>
 
         <div class="col-md-2">
+            <select name="priority" class="form-select">
+                <option value="">Todas as prioridades</option>
+
+                {% for priority_value, priority_label in priority_choices %}
+                    <option value="{{ priority_value }}" {% if priority == priority_value %}selected{% endif %}>
+                        {{ priority_label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
             <select name="overdue" class="form-select">
                 <option value="">Todas as OS</option>
                 <option value="1" {% if overdue == "1" %}selected{% endif %}>
@@ -63,7 +72,7 @@
             </select>
         </div>
 
-        <div class="col-md-2">
+        <div class="col-md-1">
             <button type="submit" class="btn btn-primary w-100">
                 Filtrar
             </button>
@@ -90,28 +99,16 @@
                             {{ column.label }}
                         </span>
 
-                        <span
-                            class="badge text-bg-light service-order-column-counter"
-                            data-status="{{ column.value }}"
-                        >
+                        <span class="badge text-bg-light">
                             {{ column.orders|length }}
                         </span>
                     </div>
                 </div>
 
-                <div
-                    class="card-body bg-light service-order-dropzone"
-                    data-status="{{ column.value }}"
-                >
+                <div class="card-body bg-light">
 
                     {% for service_order in column.orders %}
-                        <div
-                            class="card shadow-sm mb-3 border-0 service-order-card"
-                            draggable="true"
-                            data-order-id="{{ service_order.pk }}"
-                            data-status="{{ service_order.status }}"
-                            data-update-url="{% url 'service_orders:service_order_quick_status_update' service_order.pk %}"
-                        >
+                        <div class="card shadow-sm mb-3 border-0">
                             <div class="card-body p-3">
 
                                 <div class="d-flex justify-content-between align-items-start mb-2">
@@ -120,12 +117,28 @@
                                     </strong>
 
                                     {% if service_order.expected_delivery_date and service_order.expected_delivery_date < today and service_order.status != "finished" and service_order.status != "canceled" %}
-                                        <span class="badge text-bg-danger service-order-status-badge">
+                                        <span class="badge text-bg-danger">
                                             Atrasada
                                         </span>
                                     {% else %}
-                                        <span class="badge text-bg-secondary service-order-status-badge">
+                                        <span class="badge text-bg-secondary">
                                             {{ service_order.get_status_display }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-2">
+                                    {% if service_order.priority == "high" %}
+                                        <span class="badge text-bg-danger">
+                                            Prioridade alta
+                                        </span>
+                                    {% elif service_order.priority == "medium" %}
+                                        <span class="badge text-bg-warning">
+                                            Prioridade média
+                                        </span>
+                                    {% else %}
+                                        <span class="badge text-bg-success">
+                                            Prioridade baixa
                                         </span>
                                     {% endif %}
                                 </div>
@@ -190,11 +203,11 @@
 
                             </div>
                         </div>
+                    {% empty %}
+                        <div class="text-center text-muted small py-3">
+                            Nenhuma OS neste status.
+                        </div>
                     {% endfor %}
-
-                    <div class="text-center text-muted small py-3 service-order-empty-message {% if column.orders|length > 0 %}d-none{% endif %}">
-                        Nenhuma OS neste status.
-                    </div>
 
                 </div>
             </div>
@@ -203,7 +216,5 @@
     {% endfor %}
 
 </div>
-
-<script src="{% static 'js/service_order_board_drag_drop.js' %}"></script>
 
 {% endblock %}

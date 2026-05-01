@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -79,20 +79,46 @@ def get_overdue_service_order_filter():
     )
 
 
+def get_priority_ordering_annotation():
+    """
+    Return priority ordering annotation.
+
+    High priority comes first, then medium, then low.
+    """
+    return Case(
+        When(priority=ServiceOrder.Priority.HIGH, then=Value(1)),
+        When(priority=ServiceOrder.Priority.MEDIUM, then=Value(2)),
+        When(priority=ServiceOrder.Priority.LOW, then=Value(3)),
+        default=Value(4),
+        output_field=IntegerField(),
+    )
+
+
 @login_required
 @groups_required(["Administrador", "Atendente", "Mecânico", "Financeiro"])
 def service_order_list_view(request):
     """
-    List service orders with search and status filter.
+    List service orders with search, status and priority filter.
     """
     search = request.GET.get("search", "")
     status = request.GET.get("status", "")
+    priority = request.GET.get("priority", "")
 
-    service_orders = ServiceOrder.objects.select_related(
-        "customer",
-        "vehicle",
-        "created_by",
-        "assigned_mechanic",
+    service_orders = (
+        ServiceOrder.objects.select_related(
+            "customer",
+            "vehicle",
+            "created_by",
+            "assigned_mechanic",
+        )
+        .annotate(
+            priority_order=get_priority_ordering_annotation(),
+        )
+        .order_by(
+            "priority_order",
+            "expected_delivery_date",
+            "-created_at",
+        )
     )
 
     if search:
@@ -107,6 +133,9 @@ def service_order_list_view(request):
     if status:
         service_orders = service_orders.filter(status=status)
 
+    if priority:
+        service_orders = service_orders.filter(priority=priority)
+
     return render(
         request,
         "service_orders/service_order_list.html",
@@ -114,7 +143,9 @@ def service_order_list_view(request):
             "service_orders": service_orders,
             "search": search,
             "status": status,
+            "priority": priority,
             "status_choices": ServiceOrder.Status.choices,
+            "priority_choices": ServiceOrder.Priority.choices,
         },
     )
 
@@ -128,15 +159,23 @@ def service_order_board_view(request):
     search = request.GET.get("search", "")
     mechanic_id = request.GET.get("mechanic", "")
     overdue = request.GET.get("overdue", "")
+    priority = request.GET.get("priority", "")
 
-    service_orders = ServiceOrder.objects.select_related(
-        "customer",
-        "vehicle",
-        "created_by",
-        "assigned_mechanic",
-    ).order_by(
-        "expected_delivery_date",
-        "created_at",
+    service_orders = (
+        ServiceOrder.objects.select_related(
+            "customer",
+            "vehicle",
+            "created_by",
+            "assigned_mechanic",
+        )
+        .annotate(
+            priority_order=get_priority_ordering_annotation(),
+        )
+        .order_by(
+            "priority_order",
+            "expected_delivery_date",
+            "created_at",
+        )
     )
 
     if search:
@@ -162,16 +201,19 @@ def service_order_board_view(request):
             get_overdue_service_order_filter(),
         )
 
+    if priority:
+        service_orders = service_orders.filter(
+            priority=priority,
+        )
+
     status_columns = []
 
     for status_value, status_label in ServiceOrder.Status.choices:
-        orders = service_orders.filter(status=status_value)
-
         status_columns.append(
             {
                 "value": status_value,
                 "label": status_label,
-                "orders": orders,
+                "orders": service_orders.filter(status=status_value),
             }
         )
 
@@ -184,8 +226,10 @@ def service_order_board_view(request):
             "mechanic_id": mechanic_id,
             "mechanics": get_mechanic_queryset(),
             "overdue": overdue,
+            "priority": priority,
             "today": timezone.localdate(),
             "status_choices": ServiceOrder.Status.choices,
+            "priority_choices": ServiceOrder.Priority.choices,
         },
     )
 
@@ -204,27 +248,9 @@ def service_order_quick_status_update_view(request, pk):
     canceled_redirect = redirect_if_canceled(request, service_order)
 
     if canceled_redirect:
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return JsonResponse(
-                {
-                    "success": False,
-                    "message": "Ordens canceladas não podem ser alteradas.",
-                },
-                status=400,
-            )
-
         return canceled_redirect
 
     if request.method != "POST":
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return JsonResponse(
-                {
-                    "success": False,
-                    "message": "Método inválido.",
-                },
-                status=405,
-            )
-
         messages.error(
             request,
             "Método inválido para alterar status.",
@@ -238,15 +264,6 @@ def service_order_quick_status_update_view(request, pk):
     ]
 
     if new_status not in valid_statuses:
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return JsonResponse(
-                {
-                    "success": False,
-                    "message": "Status informado é inválido.",
-                },
-                status=400,
-            )
-
         messages.error(
             request,
             "Status informado é inválido.",
@@ -270,15 +287,6 @@ def service_order_quick_status_update_view(request, pk):
         changed_by=request.user,
         old_instance=old_instance,
     )
-
-    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return JsonResponse(
-            {
-                "success": True,
-                "status": service_order.status,
-                "status_label": service_order.get_status_display(),
-            }
-        )
 
     messages.success(
         request,
