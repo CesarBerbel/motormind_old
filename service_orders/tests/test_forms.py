@@ -83,6 +83,7 @@ def test_service_order_form_valid_data(service_order_base_data):
             "customer": customer.pk,
             "vehicle": vehicle.pk,
             "title": "Troca de óleo",
+            "priority": ServiceOrder.Priority.MEDIUM,
             "description": "Trocar óleo e filtro.",
             "diagnosis": "",
             "solution": "",

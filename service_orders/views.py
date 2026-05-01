@@ -368,6 +368,11 @@ def service_order_detail_view(request, pk):
     notes = service_order.notes.select_related("created_by").all()
     histories = service_order.history.select_related("changed_by").all()
     note_form = ServiceOrderNoteForm()
+    time_entries = service_order.time_entries.select_related("mechanic").all()
+    open_time_entry = time_entries.filter(
+        mechanic=request.user,
+        ended_at__isnull=True,
+    ).first()
 
     return render(
         request,
@@ -378,6 +383,8 @@ def service_order_detail_view(request, pk):
             "notes": notes,
             "histories": histories,
             "note_form": note_form,
+            "time_entries": time_entries,
+            "open_time_entry": open_time_entry,
         },
     )
 

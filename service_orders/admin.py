@@ -5,6 +5,7 @@ from .models import (
     ServiceOrderHistory,
     ServiceOrderItem,
     ServiceOrderNote,
+    ServiceOrderTimeEntry,
 )
 
 
@@ -25,6 +26,21 @@ class ServiceOrderNoteInline(admin.TabularInline):
     model = ServiceOrderNote
     extra = 0
     readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+
+
+class ServiceOrderTimeEntryInline(admin.TabularInline):
+    """
+    Inline admin to show time entries.
+    """
+
+    model = ServiceOrderTimeEntry
+    extra = 0
+    readonly_fields = (
+        "started_at",
+        "ended_at",
         "created_at",
         "updated_at",
     )
@@ -117,6 +133,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         ServiceOrderItemInline,
         ServiceOrderNoteInline,
         ServiceOrderHistoryInline,
+        ServiceOrderTimeEntryInline,
     ]
 
     fieldsets = (
@@ -276,3 +293,36 @@ class ServiceOrderHistoryAdmin(admin.ModelAdmin):
         Disable manual history editing.
         """
         return False
+
+
+@admin.register(ServiceOrderTimeEntry)
+class ServiceOrderTimeEntryAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for service order time entries.
+    """
+
+    list_display = (
+        "service_order",
+        "mechanic",
+        "started_at",
+        "ended_at",
+        "is_open",
+    )
+
+    list_filter = (
+        "started_at",
+        "ended_at",
+        "mechanic",
+    )
+
+    search_fields = (
+        "service_order__title",
+        "service_order__customer__name",
+        "mechanic__email",
+        "note",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
