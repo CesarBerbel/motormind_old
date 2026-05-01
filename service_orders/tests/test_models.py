@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from customers.models import Customer, Vehicle
-from service_orders.models import ServiceOrder
+from service_orders.models import ServiceOrder, ServiceOrderItem
 
 
 @pytest.fixture
@@ -55,19 +55,42 @@ def test_service_order_string_representation(service_order_data):
 
 
 @pytest.mark.django_db
-def test_service_order_total_amount(service_order_data):
+def test_service_order_total_amount(django_user_model):
     """
-    Test service order total amount calculation.
+    Test service order total amount using service items and discount.
     """
+    user = django_user_model.objects.create_user(
+        email="admin@example.com",
+        password="testpass123",
+    )
+
+    customer = Customer.objects.create(
+        name="João Silva",
+        phone="11999999999",
+    )
+
+    vehicle = Vehicle.objects.create(
+        customer=customer,
+        plate="ABC1234",
+        brand="Volkswagen",
+        model="Gol",
+    )
+
     service_order = ServiceOrder.objects.create(
-        customer=service_order_data["customer"],
-        vehicle=service_order_data["vehicle"],
-        created_by=service_order_data["user"],
-        title="Revisão",
-        description="Revisão geral.",
-        labor_cost=Decimal("100.00"),
-        parts_cost=Decimal("50.00"),
+        customer=customer,
+        vehicle=vehicle,
+        created_by=user,
+        title="Troca de óleo",
+        description="Troca de óleo e revisão básica",
         discount=Decimal("20.00"),
+    )
+
+    ServiceOrderItem.objects.create(
+        service_order=service_order,
+        item_type=ServiceOrderItem.ItemType.SERVICE,
+        description="Mão de obra",
+        quantity=Decimal("1.00"),
+        unit_price=Decimal("150.00"),
     )
 
     assert service_order.total_amount == Decimal("130.00")

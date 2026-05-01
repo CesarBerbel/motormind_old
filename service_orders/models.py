@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import F, Sum
 from django.utils import timezone
 
 from customers.models import Customer, Vehicle
@@ -174,11 +175,25 @@ class ServiceOrder(models.Model):
         return total
 
     @property
+    def services_total(self):
+        return self.items.filter(item_type=ServiceOrderItem.ItemType.SERVICE).aggregate(
+            total=Sum(F("quantity") * F("unit_price"))
+        ).get("total") or Decimal("0.00")
+
+    @property
+    def parts_total(self):
+        return self.inventory_parts.aggregate(
+            total=Sum(F("quantity") * F("unit_price") - F("discount"))
+        ).get("total") or Decimal("0.00")
+
+    @property
     def total_amount(self):
         """
-        Calculate final total using legacy costs plus item totals.
+        Calculate final total using services and parts only.
+
+        This replaces legacy fields (labor_cost, parts_cost).
         """
-        total = self.labor_cost + self.parts_cost + self.items_total - self.discount
+        total = self.services_total + self.parts_total - self.discount
 
         if total < Decimal("0.00"):
             return Decimal("0.00")
