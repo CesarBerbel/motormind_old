@@ -48,6 +48,7 @@ def create_stock_movement(
     )
 
     with transaction.atomic():
+        # Select for update to prevent race conditions in stock levels
         locked_part = Part.objects.select_for_update().get(pk=part.pk)
 
         if movement_type in [
@@ -199,6 +200,9 @@ def reserve_part_for_service_order(*, service_order, form, created_by):
     """
     Reserve an inventory part for a service order and create ServiceOrderPart.
     """
+    if service_order.status == "canceled":
+        raise ValidationError("Não é possível adicionar peças a uma OS cancelada.")
+
     service_order_part = form.save(commit=False)
     service_order_part.service_order = service_order
     service_order_part.created_by = created_by
@@ -222,8 +226,6 @@ def reserve_part_for_service_order(*, service_order, form, created_by):
 def confirm_service_order_part_usage(*, service_order_part):
     """
     Mark a reserved service order part as used.
-
-    Stock was already reduced during reservation.
     """
     if service_order_part.status != ServiceOrderPart.Status.RESERVED:
         raise ValidationError(
@@ -266,6 +268,7 @@ def return_used_service_order_part(*, service_order_part, changed_by):
     if service_order_part.status != ServiceOrderPart.Status.USED:
         raise ValidationError("Somente peças usadas podem ser devolvidas ao estoque.")
 
+    # We call return_stock first, then update the ServiceOrderPart status
     return_stock(
         part=service_order_part.part,
         quantity=service_order_part.quantity,
