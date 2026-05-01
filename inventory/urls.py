@@ -1,6 +1,6 @@
 from django.urls import path
 
-from inventory.views import part_views
+from inventory.views import part_views, service_order_part_views
 
 app_name = "inventory"
 
@@ -30,5 +30,25 @@ urlpatterns = [
         "pecas/<int:pk>/movimentar/",
         part_views.stock_movement_create_view,
         name="stock_movement_create",
+    ),
+    path(
+        "ordens/<int:service_order_pk>/pecas/adicionar/",
+        service_order_part_views.service_order_part_add_view,
+        name="service_order_part_add",
+    ),
+    path(
+        "ordens/<int:service_order_pk>/pecas/<int:pk>/confirmar-uso/",
+        service_order_part_views.service_order_part_confirm_usage_view,
+        name="service_order_part_confirm_usage",
+    ),
+    path(
+        "ordens/<int:service_order_pk>/pecas/<int:pk>/cancelar/",
+        service_order_part_views.service_order_part_cancel_view,
+        name="service_order_part_cancel",
+    ),
+    path(
+        "ordens/<int:service_order_pk>/pecas/<int:pk>/devolver/",
+        service_order_part_views.service_order_part_return_view,
+        name="service_order_part_return",
     ),
 ]

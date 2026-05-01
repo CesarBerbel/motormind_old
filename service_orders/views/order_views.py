@@ -139,6 +139,17 @@ def service_order_detail_view(request, pk):
         ended_at__isnull=True,
     ).first()
 
+    inventory_parts = service_order.inventory_parts.select_related(
+        "part",
+        "created_by",
+    ).all()
+
+    inventory_parts_total = sum(
+        inventory_part.total
+        for inventory_part in inventory_parts
+        if inventory_part.status in ["reserved", "used"]
+    )
+
     return render(
         request,
         "service_orders/service_order_detail.html",
@@ -150,6 +161,8 @@ def service_order_detail_view(request, pk):
             "time_entries": time_entries,
             "open_time_entry": open_time_entry,
             "note_form": ServiceOrderNoteForm(),
+            "inventory_parts": inventory_parts,
+            "inventory_parts_total": inventory_parts_total,
         },
     )
 

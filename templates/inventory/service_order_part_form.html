@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Adicionar peça na OS - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+    <h1 class="h4 mb-1">
+        Adicionar peça na OS #{{ service_order.pk }}
+    </h1>
+
+    <p class="text-muted mb-0">
+        A peça será reservada automaticamente no estoque.
+    </p>
+</div>
+
+<form method="post" class="card card-body shadow-sm">
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <div class="alert alert-info">
+        Ao salvar, o sistema valida o estoque disponível, cria uma reserva e reduz o saldo atual da peça.
+    </div>
+
+    <div class="d-flex justify-content-between mt-3">
+        <a href="{% url 'service_orders:service_order_detail' service_order.pk %}" class="btn btn-outline-secondary">
+            Voltar
+        </a>
+
+        <button type="submit" class="btn btn-primary">
+            Reservar peça
+        </button>
+    </div>
+</form>
+
+{% endblock %}
