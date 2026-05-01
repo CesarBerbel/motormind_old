@@ -11,51 +11,26 @@ class Part(models.Model):
     Model that stores parts available in workshop inventory.
     """
 
-    name = models.CharField(
-        max_length=150,
-        verbose_name="Nome da peça",
-    )
-
+    name = models.CharField(max_length=150, verbose_name="Nome da peça")
     internal_code = models.CharField(
-        max_length=50,
-        unique=True,
-        verbose_name="Código interno",
+        max_length=50, unique=True, verbose_name="Código interno"
     )
-
     barcode = models.CharField(
-        max_length=80,
-        blank=True,
-        null=True,
-        verbose_name="Código de barras",
+        max_length=80, blank=True, null=True, verbose_name="Código de barras"
     )
-
-    brand = models.CharField(
-        max_length=80,
-        blank=True,
-        null=True,
-        verbose_name="Marca",
-    )
-
+    brand = models.CharField(max_length=80, blank=True, null=True, verbose_name="Marca")
     category = models.CharField(
-        max_length=80,
-        blank=True,
-        null=True,
-        verbose_name="Categoria",
+        max_length=80, blank=True, null=True, verbose_name="Categoria"
     )
-
     unit = models.CharField(
-        max_length=20,
-        default="un",
-        verbose_name="Unidade de medida",
+        max_length=20, default="un", verbose_name="Unidade de medida"
     )
 
     cost_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=Decimal("0.00"),
-        validators=[
-            MinValueValidator(Decimal("0.00")),
-        ],
+        validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Preço de custo",
     )
 
@@ -63,9 +38,7 @@ class Part(models.Model):
         max_digits=10,
         decimal_places=2,
         default=Decimal("0.00"),
-        validators=[
-            MinValueValidator(Decimal("0.00")),
-        ],
+        validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Preço de venda",
     )
 
@@ -73,9 +46,7 @@ class Part(models.Model):
         max_digits=10,
         decimal_places=2,
         default=Decimal("0.00"),
-        validators=[
-            MinValueValidator(Decimal("0.00")),
-        ],
+        validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Estoque atual",
     )
 
@@ -83,40 +54,21 @@ class Part(models.Model):
         max_digits=10,
         decimal_places=2,
         default=Decimal("0.00"),
-        validators=[
-            MinValueValidator(Decimal("0.00")),
-        ],
+        validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Estoque mínimo",
     )
 
     location = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        verbose_name="Localização no estoque",
+        max_length=100, blank=True, null=True, verbose_name="Localização"
     )
-
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name="Ativa",
-    )
-
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Criada em",
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name="Atualizada em",
-    )
+    is_active = models.BooleanField(default=True, verbose_name="Ativa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criada em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizada em")
 
     class Meta:
         verbose_name = "Peça"
         verbose_name_plural = "Peças"
-        ordering = [
-            "name",
-        ]
+        ordering = ["name"]
 
     def __str__(self):
         return f"{self.internal_code} - {self.name}"
@@ -145,10 +97,6 @@ class StockMovement(models.Model):
     """
 
     class MovementType(models.TextChoices):
-        """
-        Controlled movement types.
-        """
-
         IN = "in", "Entrada"
         OUT = "out", "Saída"
         ADJUST = "adjust", "Ajuste"
@@ -173,9 +121,7 @@ class StockMovement(models.Model):
     quantity = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        validators=[
-            MinValueValidator(Decimal("0.01")),
-        ],
+        validators=[MinValueValidator(Decimal("0.01"))],
         verbose_name="Quantidade",
     )
 
@@ -183,9 +129,7 @@ class StockMovement(models.Model):
         max_digits=10,
         decimal_places=2,
         default=Decimal("0.00"),
-        validators=[
-            MinValueValidator(Decimal("0.00")),
-        ],
+        validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Custo unitário",
     )
 
@@ -193,15 +137,11 @@ class StockMovement(models.Model):
         max_digits=10,
         decimal_places=2,
         default=Decimal("0.00"),
-        validators=[
-            MinValueValidator(Decimal("0.00")),
-        ],
+        validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Preço de venda unitário",
     )
 
-    reason = models.TextField(
-        verbose_name="Motivo",
-    )
+    reason = models.TextField(verbose_name="Motivo")
 
     service_order = models.ForeignKey(
         "service_orders.ServiceOrder",
@@ -219,17 +159,12 @@ class StockMovement(models.Model):
         verbose_name="Criado por",
     )
 
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Criada em",
-    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criada em")
 
     class Meta:
         verbose_name = "Movimentação de estoque"
         verbose_name_plural = "Movimentações de estoque"
-        ordering = [
-            "-created_at",
-        ]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.get_movement_type_display()} - {self.part.name}"
@@ -244,11 +179,7 @@ class StockMovement(models.Model):
             return
 
         if self.quantity <= Decimal("0.00"):
-            raise ValidationError(
-                {
-                    "quantity": "A quantidade deve ser maior que zero.",
-                }
-            )
+            raise ValidationError({"quantity": "A quantidade deve ser maior que zero."})
 
         reducing_types = [
             self.MovementType.OUT,
@@ -259,7 +190,111 @@ class StockMovement(models.Model):
         if self.movement_type in reducing_types and self.part_id:
             if self.quantity > self.part.current_stock:
                 raise ValidationError(
-                    {
-                        "quantity": "Estoque insuficiente para esta movimentação.",
-                    }
+                    {"quantity": "Estoque insuficiente para esta movimentação."}
                 )
+
+
+class ServiceOrderPart(models.Model):
+    """
+    Model that links inventory parts to service orders.
+    """
+
+    class Status(models.TextChoices):
+        RESERVED = "reserved", "Reservada"
+        USED = "used", "Usada"
+        RETURNED = "returned", "Devolvida"
+        CANCELED = "canceled", "Cancelada"
+
+    service_order = models.ForeignKey(
+        "service_orders.ServiceOrder",
+        on_delete=models.CASCADE,
+        related_name="inventory_parts",
+        verbose_name="Ordem de serviço",
+    )
+
+    part = models.ForeignKey(
+        Part,
+        on_delete=models.PROTECT,
+        related_name="service_order_parts",
+        verbose_name="Peça",
+    )
+
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+        verbose_name="Quantidade",
+    )
+
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        verbose_name="Preço unitário",
+    )
+
+    discount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+        verbose_name="Desconto",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.RESERVED,
+        verbose_name="Status",
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="created_service_order_parts",
+        verbose_name="Criado por",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criada em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizada em")
+
+    class Meta:
+        verbose_name = "Peça da ordem de serviço"
+        verbose_name_plural = "Peças das ordens de serviço"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"OS #{self.service_order_id} - {self.part.name}"
+
+    @property
+    def subtotal(self):
+        """
+        Calculate subtotal without discount.
+        """
+        return self.quantity * self.unit_price
+
+    @property
+    def total(self):
+        """
+        Calculate total after discount.
+        """
+        total = self.subtotal - self.discount
+
+        if total < Decimal("0.00"):
+            return Decimal("0.00")
+
+        return total
+
+    def clean(self):
+        """
+        Validate service order part.
+        """
+        super().clean()
+
+        if self.part_id and not self.part.is_active:
+            raise ValidationError({"part": "Não é possível usar uma peça inativa."})
+
+        if self.discount > self.subtotal:
+            raise ValidationError(
+                {"discount": "O desconto não pode ser maior que o subtotal."}
+            )

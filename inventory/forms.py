@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django import forms
 
-from inventory.models import Part
+from inventory.models import Part, ServiceOrderPart
 
 
 class PartForm(forms.ModelForm):
@@ -27,103 +27,6 @@ class PartForm(forms.ModelForm):
             "is_active",
         ]
 
-        widgets = {
-            "name": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Digite o nome da peça",
-                }
-            ),
-            "internal_code": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: BRK-001",
-                }
-            ),
-            "barcode": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Digite o código de barras",
-                }
-            ),
-            "brand": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Digite a marca",
-                }
-            ),
-            "category": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: Freio, Motor, Suspensão",
-                }
-            ),
-            "unit": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: un, lt, kg",
-                }
-            ),
-            "cost_price": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "min": "0",
-                    "placeholder": "Ex: 80,00",
-                }
-            ),
-            "sale_price": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "min": "0",
-                    "placeholder": "Ex: 150,00",
-                }
-            ),
-            "current_stock": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "min": "0",
-                    "placeholder": "Ex: 10",
-                }
-            ),
-            "minimum_stock": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "min": "0",
-                    "placeholder": "Ex: 3",
-                }
-            ),
-            "location": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: Prateleira A1",
-                }
-            ),
-            "is_active": forms.CheckboxInput(
-                attrs={
-                    "class": "form-check-input",
-                }
-            ),
-        }
-
-        labels = {
-            "name": "Nome da peça",
-            "internal_code": "Código interno",
-            "barcode": "Código de barras",
-            "brand": "Marca",
-            "category": "Categoria",
-            "unit": "Unidade",
-            "cost_price": "Preço de custo",
-            "sale_price": "Preço de venda",
-            "current_stock": "Estoque atual",
-            "minimum_stock": "Estoque mínimo",
-            "location": "Localização",
-            "is_active": "Ativa",
-        }
-
 
 class StockMovementForm(forms.Form):
     """
@@ -141,11 +44,7 @@ class StockMovementForm(forms.Form):
             ("release", "Liberação de reserva"),
             ("adjust", "Ajuste"),
         ],
-        widget=forms.Select(
-            attrs={
-                "class": "form-select",
-            }
-        ),
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     quantity = forms.DecimalField(
@@ -173,3 +72,83 @@ class StockMovementForm(forms.Form):
             }
         ),
     )
+
+
+class ServiceOrderPartForm(forms.ModelForm):
+    """
+    Form used to reserve an inventory part for a service order.
+    """
+
+    class Meta:
+        model = ServiceOrderPart
+        fields = [
+            "part",
+            "quantity",
+            "unit_price",
+            "discount",
+        ]
+
+        widgets = {
+            "part": forms.Select(attrs={"class": "form-select"}),
+            "quantity": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "min": "0.01",
+                    "placeholder": "Digite a quantidade",
+                }
+            ),
+            "unit_price": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "min": "0",
+                    "placeholder": "Preço unitário",
+                }
+            ),
+            "discount": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "min": "0",
+                    "placeholder": "Desconto",
+                }
+            ),
+        }
+
+        labels = {
+            "part": "Peça",
+            "quantity": "Quantidade",
+            "unit_price": "Preço unitário",
+            "discount": "Desconto",
+        }
+
+    def __init__(self, *args, **kwargs):
+        """
+        Limit parts to active parts.
+        """
+        super().__init__(*args, **kwargs)
+
+        self.fields["part"].queryset = Part.objects.filter(is_active=True).order_by(
+            "name"
+        )
+
+    def clean(self):
+        """
+        Validate discount against subtotal.
+        """
+        cleaned_data = super().clean()
+
+        quantity = cleaned_data.get("quantity")
+        unit_price = cleaned_data.get("unit_price")
+        discount = cleaned_data.get("discount") or Decimal("0.00")
+
+        if quantity and unit_price:
+            subtotal = quantity * unit_price
+
+            if discount > subtotal:
+                raise forms.ValidationError(
+                    "O desconto não pode ser maior que o subtotal da peça."
+                )
+
+        return cleaned_data

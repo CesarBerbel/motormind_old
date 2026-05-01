@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from inventory.models import Part, StockMovement
+from inventory.models import Part, ServiceOrderPart, StockMovement
 
 
 def validate_positive_quantity(quantity):
@@ -11,11 +11,7 @@ def validate_positive_quantity(quantity):
     Validate if quantity is greater than zero.
     """
     if quantity <= Decimal("0.00"):
-        raise ValidationError(
-            {
-                "quantity": "A quantidade deve ser maior que zero.",
-            }
-        )
+        raise ValidationError({"quantity": "A quantidade deve ser maior que zero."})
 
 
 def validate_available_stock(part, quantity):
@@ -24,9 +20,7 @@ def validate_available_stock(part, quantity):
     """
     if quantity > part.current_stock:
         raise ValidationError(
-            {
-                "quantity": "Estoque insuficiente para esta movimentação.",
-            }
+            {"quantity": "Estoque insuficiente para esta movimentação."}
         )
 
 
@@ -61,11 +55,7 @@ def create_stock_movement(
             StockMovement.MovementType.LOSS,
             StockMovement.MovementType.RESERVE,
         ]:
-            validate_available_stock(
-                part=locked_part,
-                quantity=quantity,
-            )
-
+            validate_available_stock(part=locked_part, quantity=quantity)
             locked_part.current_stock -= quantity
 
         elif movement_type in [
@@ -78,12 +68,7 @@ def create_stock_movement(
         elif movement_type == StockMovement.MovementType.ADJUST:
             locked_part.current_stock = quantity
 
-        locked_part.save(
-            update_fields=[
-                "current_stock",
-                "updated_at",
-            ]
-        )
+        locked_part.save(update_fields=["current_stock", "updated_at"])
 
         movement = StockMovement.objects.create(
             part=locked_part,
@@ -100,13 +85,7 @@ def create_stock_movement(
 
 
 def create_stock_entry(
-    *,
-    part,
-    quantity,
-    created_by,
-    reason,
-    unit_cost=None,
-    unit_sale_price=None,
+    *, part, quantity, created_by, reason, unit_cost=None, unit_sale_price=None
 ):
     """
     Create stock input movement.
@@ -147,13 +126,7 @@ def create_stock_output(
     )
 
 
-def create_stock_loss(
-    *,
-    part,
-    quantity,
-    created_by,
-    reason,
-):
+def create_stock_loss(*, part, quantity, created_by, reason):
     """
     Create stock loss movement.
     """
@@ -166,14 +139,7 @@ def create_stock_loss(
     )
 
 
-def reserve_stock(
-    *,
-    part,
-    quantity,
-    created_by,
-    reason,
-    service_order=None,
-):
+def reserve_stock(*, part, quantity, created_by, reason, service_order=None):
     """
     Reserve stock for a service order.
     """
@@ -187,14 +153,7 @@ def reserve_stock(
     )
 
 
-def release_reserved_stock(
-    *,
-    part,
-    quantity,
-    created_by,
-    reason,
-    service_order=None,
-):
+def release_reserved_stock(*, part, quantity, created_by, reason, service_order=None):
     """
     Release reserved stock back to inventory.
     """
@@ -208,14 +167,7 @@ def release_reserved_stock(
     )
 
 
-def return_stock(
-    *,
-    part,
-    quantity,
-    created_by,
-    reason,
-    service_order=None,
-):
+def return_stock(*, part, quantity, created_by, reason, service_order=None):
     """
     Return stock to inventory.
     """
@@ -229,13 +181,7 @@ def return_stock(
     )
 
 
-def adjust_stock(
-    *,
-    part,
-    new_quantity,
-    created_by,
-    reason,
-):
+def adjust_stock(*, part, new_quantity, created_by, reason):
     """
     Adjust stock to an exact quantity.
     """
@@ -246,3 +192,89 @@ def adjust_stock(
         created_by=created_by,
         reason=reason,
     )
+
+
+@transaction.atomic
+def reserve_part_for_service_order(*, service_order, form, created_by):
+    """
+    Reserve an inventory part for a service order and create ServiceOrderPart.
+    """
+    service_order_part = form.save(commit=False)
+    service_order_part.service_order = service_order
+    service_order_part.created_by = created_by
+    service_order_part.status = ServiceOrderPart.Status.RESERVED
+
+    reserve_stock(
+        part=service_order_part.part,
+        quantity=service_order_part.quantity,
+        created_by=created_by,
+        reason=f"Reserva para OS #{service_order.pk}.",
+        service_order=service_order,
+    )
+
+    service_order_part.full_clean()
+    service_order_part.save()
+
+    return service_order_part
+
+
+@transaction.atomic
+def confirm_service_order_part_usage(*, service_order_part):
+    """
+    Mark a reserved service order part as used.
+
+    Stock was already reduced during reservation.
+    """
+    if service_order_part.status != ServiceOrderPart.Status.RESERVED:
+        raise ValidationError(
+            "Somente peças reservadas podem ser confirmadas como usadas."
+        )
+
+    service_order_part.status = ServiceOrderPart.Status.USED
+    service_order_part.save(update_fields=["status", "updated_at"])
+
+    return service_order_part
+
+
+@transaction.atomic
+def cancel_reserved_service_order_part(*, service_order_part, changed_by):
+    """
+    Cancel a reserved part and release stock back to inventory.
+    """
+    if service_order_part.status != ServiceOrderPart.Status.RESERVED:
+        raise ValidationError("Somente peças reservadas podem ser canceladas.")
+
+    release_reserved_stock(
+        part=service_order_part.part,
+        quantity=service_order_part.quantity,
+        created_by=changed_by,
+        reason=f"Cancelamento da reserva da OS #{service_order_part.service_order_id}.",
+        service_order=service_order_part.service_order,
+    )
+
+    service_order_part.status = ServiceOrderPart.Status.CANCELED
+    service_order_part.save(update_fields=["status", "updated_at"])
+
+    return service_order_part
+
+
+@transaction.atomic
+def return_used_service_order_part(*, service_order_part, changed_by):
+    """
+    Return a used part back to stock.
+    """
+    if service_order_part.status != ServiceOrderPart.Status.USED:
+        raise ValidationError("Somente peças usadas podem ser devolvidas ao estoque.")
+
+    return_stock(
+        part=service_order_part.part,
+        quantity=service_order_part.quantity,
+        created_by=changed_by,
+        reason=f"Devolução da peça da OS #{service_order_part.service_order_id}.",
+        service_order=service_order_part.service_order,
+    )
+
+    service_order_part.status = ServiceOrderPart.Status.RETURNED
+    service_order_part.save(update_fields=["status", "updated_at"])
+
+    return service_order_part
