@@ -152,14 +152,18 @@ class Receivable(models.Model):
 
         if self.discount_amount > self.original_amount:
             raise ValidationError(
-                {"discount_amount": "O desconto não pode ser maior que o valor original."}
+                {
+                    "discount_amount": "O desconto não pode ser maior que o valor original."
+                }
             )
 
         expected_final_amount = self.original_amount - self.discount_amount
 
         if self.final_amount != expected_final_amount:
             raise ValidationError(
-                {"final_amount": "O valor final deve ser igual ao valor original menos o desconto."}
+                {
+                    "final_amount": "O valor final deve ser igual ao valor original menos o desconto."
+                }
             )
 
         if self.paid_amount > self.final_amount:

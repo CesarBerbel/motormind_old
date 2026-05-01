@@ -163,9 +163,9 @@ def test_attendant_can_create_customer(client, create_user_with_group):
         reverse("customers:customer_create"),
         data={
             "name": "Novo Cliente",
-            "phone": "+351 910 111 222",
+            "phone": "12996296417",
             "email": "novo@example.com",
-            "document": "123456789",
+            "document": "26380784098",
             "address": "Rua Nova",
             "notes": "",
             "is_active": "on",

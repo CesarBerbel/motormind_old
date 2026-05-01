@@ -12,9 +12,9 @@ def test_customer_form_valid_data():
     form = CustomerForm(
         data={
             "name": "Cliente Teste",
-            "phone": "+351 910 000 000",
+            "phone": "12996296417",
             "email": "cliente@example.com",
-            "document": "123456789",
+            "document": "26380784098",
             "address": "Rua Teste",
             "notes": "Cliente importante",
             "is_active": "on",

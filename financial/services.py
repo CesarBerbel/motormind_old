@@ -79,7 +79,9 @@ def register_payment(receivable, amount, method, created_by, paid_at=None, notes
 
 
 @transaction.atomic
-def register_expense(description, amount, created_by, due_date=None, paid_at=None, notes=None):
+def register_expense(
+    description, amount, created_by, due_date=None, paid_at=None, notes=None
+):
     """
     Register an expense and optionally create a cash flow expense entry if already paid.
     """

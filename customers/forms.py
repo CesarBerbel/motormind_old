@@ -1,9 +1,11 @@
 import re
+
 from django import forms
 from django.core.exceptions import ValidationError
-from validate_docbr import CPF, CNPJ
+from validate_docbr import CNPJ, CPF
 
 from .models import Customer, Vehicle
+
 
 class CustomerForm(forms.ModelForm):
     """
@@ -33,7 +35,7 @@ class CustomerForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "placeholder": "(00) 00000-0000",
-                    "id": "phone_mask", # Hook for future JS mask
+                    "id": "phone_mask",  # Hook for future JS mask
                 }
             ),
             "email": forms.EmailInput(
@@ -46,7 +48,7 @@ class CustomerForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "placeholder": "000.000.000-00",
-                    "id": "cpf_mask", # Hook for future JS mask
+                    "id": "cpf_mask",  # Hook for future JS mask
                 }
             ),
             "address": forms.TextInput(
@@ -91,13 +93,13 @@ class CustomerForm(forms.ModelForm):
             validator = CPF()
             if not validator.validate(digits):
                 raise ValidationError("CPF inválido.")
-        
+
         # Lógica para CNPJ (14 dígitos)
         elif len(digits) == 14:
             validator = CNPJ()
             if not validator.validate(digits):
                 raise ValidationError("CNPJ inválido.")
-        
+
         else:
             raise ValidationError("O documento deve ter 11 (CPF) ou 14 (CNPJ) dígitos.")
 
@@ -105,9 +107,11 @@ class CustomerForm(forms.ModelForm):
         query = Customer.objects.filter(document=digits)
         if self.instance.pk:
             query = query.exclude(pk=self.instance.pk)
-        
+
         if query.exists():
-            raise ValidationError("Este documento já está cadastrado para outro cliente.")
+            raise ValidationError(
+                "Este documento já está cadastrado para outro cliente."
+            )
 
         return digits
 
@@ -144,7 +148,9 @@ class CustomerForm(forms.ModelForm):
 
         # Brazilian numbers have 10 (fixed) or 11 (mobile) digits
         if len(phone_digits) < 10 or len(phone_digits) > 11:
-            raise ValidationError("O telefone deve ter entre 10 e 11 dígitos (incluindo o DDD).")
+            raise ValidationError(
+                "O telefone deve ter entre 10 e 11 dígitos (incluindo o DDD)."
+            )
 
         return phone_digits
 
@@ -254,4 +260,3 @@ class VehicleForm(forms.ModelForm):
             return plate.upper().strip()
 
         return plate
-    
