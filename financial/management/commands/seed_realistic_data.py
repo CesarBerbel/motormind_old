@@ -116,13 +116,13 @@ class Command(BaseCommand):
             admin_user.is_staff = True
             admin_user.is_superuser = True
             admin_user.is_active = True
-            admin_user.set_password("160803")
+            admin_user.set_password("321654")
             admin_user.save()
             return admin_user
 
         return User.objects.create_superuser(            
             email="admin@admin.com",
-            password="160803",
+            password="321654",
         )
 
     def reset_database(self):
@@ -153,7 +153,7 @@ class Command(BaseCommand):
         # Recreate admin
         self.admin_user = User.objects.create_superuser(
             email="admin@admin.com",
-            password="160803",
+            password="321654",
         )
 
         self.stdout.write(self.style.SUCCESS("Database reset completed with new admin."))
