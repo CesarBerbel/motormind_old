@@ -1,12 +1,5 @@
-def is_admin_user(user):
-    """
-    Check if user is admin.
+from accounts.permissions import is_admin_user
 
-    Admin is defined as:
-    - superuser
-    - OR member of 'Administrador' group
-    """
-    if not user or not user.is_authenticated:
-        return False
-
-    return user.is_superuser or user.groups.filter(name="Administrador").exists()
+__all__ = [
+    "is_admin_user",
+]
