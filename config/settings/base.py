@@ -1,31 +1,44 @@
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+import environ
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+env = environ.Env(
+    DEBUG=(bool, False),
+    SECRET_KEY=(str, ""),
+    ALLOWED_HOSTS=(list, []),
+    CSRF_TRUSTED_ORIGINS=(list, []),
+)
+
+ENV_FILE = BASE_DIR / ".env"
+
+if ENV_FILE.exists():
+    environ.Env.read_env(ENV_FILE)
 
 
-SECRET_KEY = "django-insecure-change-this-secret-key"
+SECRET_KEY = env("SECRET_KEY")
 
+DEBUG = env("DEBUG")
 
-DEBUG = True
+ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
-
-ALLOWED_HOSTS = []
+CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
 
 INSTALLED_APPS = [
-    "accounts",
-    "customers",
-    "service_orders",
-    "crispy_forms",
-    "crispy_bootstrap5",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "crispy_forms",
+    "crispy_bootstrap5",
+    "accounts",
+    "customers",
+    "service_orders",
 ]
-
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -38,9 +51,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-
 ROOT_URLCONF = "config.urls"
-
 
 TEMPLATES = [
     {
@@ -51,6 +62,7 @@ TEMPLATES = [
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
+                "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
@@ -59,88 +71,58 @@ TEMPLATES = [
     },
 ]
 
-
 WSGI_APPLICATION = "config.wsgi.application"
 
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": env.db(
+        "DATABASE_URL",
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+    )
 }
 
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-        "OPTIONS": {
-            "user_attributes": (
-                "email",
-                "first_name",
-                "last_name",
-            ),
-        },
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {
-            "min_length": 8,
-        },
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
-]
+# AUTH_PASSWORD_VALIDATORS = [
+#     {
+#         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+#     },
+#     {
+#         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+#     },
+#     {
+#         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+#     },
+#     {
+#         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+#     },
+# ]
 
 
 LANGUAGE_CODE = "pt-br"
 
-
 TIME_ZONE = "America/Sao_Paulo"
-
 
 USE_I18N = True
 
-
 USE_TZ = True
 
-
 DATE_FORMAT = "d/m/Y"
-
-
 DATETIME_FORMAT = "d/m/Y H:i"
-
-
-SHORT_DATE_FORMAT = "d/m/Y"
-
-
-SHORT_DATETIME_FORMAT = "d/m/Y H:i"
-
-
 DECIMAL_SEPARATOR = ","
-
-
 THOUSAND_SEPARATOR = "."
-
-
 USE_THOUSAND_SEPARATOR = True
 
 
-LOCALE_PATHS = [
-    BASE_DIR / "locale",
-]
-
-
 STATIC_URL = "static/"
-
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -148,26 +130,21 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.CustomUser"
 
-
 LOGIN_URL = "accounts:login"
-
-
 LOGIN_REDIRECT_URL = "accounts:dashboard"
-
-
 LOGOUT_REDIRECT_URL = "accounts:login"
 
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-
-
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 
-MESSAGE_TAGS = {
-    10: "secondary",
-    20: "info",
-    25: "success",
-    30: "warning",
-    40: "danger",
-}
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.console.EmailBackend",
+)
+
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL",
+    default="MotorMind <no-reply@localhost>",
+)
