@@ -1,11 +1,13 @@
+import re
 from django import forms
+from django.core.exceptions import ValidationError
+from validate_docbr import CPF, CNPJ
 
 from .models import Customer, Vehicle
 
-
 class CustomerForm(forms.ModelForm):
     """
-    Form used to create and update customers.
+    Form used to create and update customers with strict validation.
     """
 
     class Meta:
@@ -30,7 +32,8 @@ class CustomerForm(forms.ModelForm):
             "phone": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Digite o telefone do cliente",
+                    "placeholder": "(00) 00000-0000",
+                    "id": "phone_mask", # Hook for future JS mask
                 }
             ),
             "email": forms.EmailInput(
@@ -42,7 +45,8 @@ class CustomerForm(forms.ModelForm):
             "document": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Digite o documento fiscal",
+                    "placeholder": "000.000.000-00",
+                    "id": "cpf_mask", # Hook for future JS mask
                 }
             ),
             "address": forms.TextInput(
@@ -69,11 +73,80 @@ class CustomerForm(forms.ModelForm):
             "name": "Nome",
             "phone": "Telefone",
             "email": "Email",
-            "document": "Documento",
+            "document": "CPF",
             "address": "Endereço",
             "notes": "Observações",
             "is_active": "Cliente ativo",
         }
+
+    def clean_document(self):
+        document = self.cleaned_data.get("document")
+        if not document:
+            return document
+
+        digits = re.sub(r"\D", "", document)
+
+        # Lógica para CPF (11 dígitos)
+        if len(digits) == 11:
+            validator = CPF()
+            if not validator.validate(digits):
+                raise ValidationError("CPF inválido.")
+        
+        # Lógica para CNPJ (14 dígitos)
+        elif len(digits) == 14:
+            validator = CNPJ()
+            if not validator.validate(digits):
+                raise ValidationError("CNPJ inválido.")
+        
+        else:
+            raise ValidationError("O documento deve ter 11 (CPF) ou 14 (CNPJ) dígitos.")
+
+        # Verificação de duplicidade
+        query = Customer.objects.filter(document=digits)
+        if self.instance.pk:
+            query = query.exclude(pk=self.instance.pk)
+        
+        if query.exists():
+            raise ValidationError("Este documento já está cadastrado para outro cliente.")
+
+        return digits
+
+    def clean_email(self):
+        """
+        Normalize email to lowercase and check uniqueness.
+        """
+        email = self.cleaned_data.get("email")
+        if not email:
+            return email
+
+        email = email.strip().lower()
+
+        # Uniqueness check
+        query = Customer.objects.filter(email=email)
+        if self.instance.pk:
+            query = query.exclude(pk=self.instance.pk)
+
+        if query.exists():
+            raise ValidationError("Este e-mail já está em uso por outro cliente.")
+
+        return email
+
+    def clean_phone(self):
+        """
+        Validate Brazilian phone format (DDD + number).
+        """
+        phone = self.cleaned_data.get("phone")
+        if not phone:
+            return phone
+
+        # Remove non-digit characters
+        phone_digits = re.sub(r"\D", "", phone)
+
+        # Brazilian numbers have 10 (fixed) or 11 (mobile) digits
+        if len(phone_digits) < 10 or len(phone_digits) > 11:
+            raise ValidationError("O telefone deve ter entre 10 e 11 dígitos (incluindo o DDD).")
+
+        return phone_digits
 
 
 class VehicleForm(forms.ModelForm):
@@ -181,3 +254,4 @@ class VehicleForm(forms.ModelForm):
             return plate.upper().strip()
 
         return plate
+    
