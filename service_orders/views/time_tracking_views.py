@@ -3,8 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 
-from accounts.permissions import groups_required
-from accounts.utils import is_admin_user
+from accounts.permissions import can_finish_time_entry, groups_required
 from service_orders.forms import ServiceOrderTimeEntryFinishForm
 from service_orders.models import ServiceOrder, ServiceOrderTimeEntry
 
@@ -83,18 +82,16 @@ def service_order_time_finish_view(request, pk, entry_pk):
         ended_at__isnull=True,
     )
 
-    # ✅ agora usa helper centralizado
-    if not is_admin_user(request.user):
-        if time_entry.mechanic != request.user:
-            messages.error(
-                request,
-                "Você não pode encerrar apontamentos de outro mecânico.",
-            )
+    if not can_finish_time_entry(request.user, time_entry):
+        messages.error(
+            request,
+            "Você não pode encerrar apontamentos de outro mecânico.",
+        )
 
-            return redirect(
-                "service_orders:service_order_detail",
-                pk=service_order.pk,
-            )
+        return redirect(
+            "service_orders:service_order_detail",
+            pk=service_order.pk,
+        )
 
     if request.method == "POST":
         form = ServiceOrderTimeEntryFinishForm(
