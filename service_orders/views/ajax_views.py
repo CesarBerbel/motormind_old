@@ -1,12 +1,12 @@
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 
-from accounts.permissions import groups_required
+from accounts.permissions import can_manage_service_orders, user_passes_permission
 from customers.models import Vehicle
 
 
 @login_required
-@groups_required(["Administrador", "Atendente"])
+@user_passes_permission(can_manage_service_orders)
 def vehicles_by_customer_view(request):
     """
     Return active vehicles from a selected customer as JSON.

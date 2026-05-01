@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from accounts.permissions import groups_required
+from accounts.permissions import can_manage_service_order_items, user_passes_permission
 from service_orders.forms import ServiceOrderItemForm
 from service_orders.models import ServiceOrder, ServiceOrderItem
 
@@ -10,7 +10,7 @@ from .common import redirect_if_canceled
 
 
 @login_required
-@groups_required(["Administrador", "Atendente"])
+@user_passes_permission(can_manage_service_order_items)
 def service_order_item_add_view(request, pk):
     """
     Add an item to a service order.
@@ -64,7 +64,7 @@ def service_order_item_add_view(request, pk):
 
 
 @login_required
-@groups_required(["Administrador", "Atendente"])
+@user_passes_permission(can_manage_service_order_items)
 def service_order_item_update_view(request, pk, item_pk):
     """
     Update an item from a service order.
@@ -126,7 +126,7 @@ def service_order_item_update_view(request, pk, item_pk):
 
 
 @login_required
-@groups_required(["Administrador", "Atendente"])
+@user_passes_permission(can_manage_service_order_items)
 def service_order_item_delete_view(request, pk, item_pk):
     """
     Delete an item from a service order.

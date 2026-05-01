@@ -3,13 +3,17 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 
-from accounts.permissions import can_finish_time_entry, groups_required
+from accounts.permissions import (
+    can_finish_time_entry,
+    can_track_service_order_time,
+    user_passes_permission,
+)
 from service_orders.forms import ServiceOrderTimeEntryFinishForm
 from service_orders.models import ServiceOrder, ServiceOrderTimeEntry
 
 
 @login_required
-@groups_required(["Administrador", "Mecânico"])
+@user_passes_permission(can_track_service_order_time)
 def service_order_time_start_view(request, pk):
     """
     Start a time entry for the current mechanic.
@@ -65,7 +69,7 @@ def service_order_time_start_view(request, pk):
 
 
 @login_required
-@groups_required(["Administrador", "Mecânico"])
+@user_passes_permission(can_track_service_order_time)
 def service_order_time_finish_view(request, pk, entry_pk):
     """
     Finish a time entry for the current mechanic.
