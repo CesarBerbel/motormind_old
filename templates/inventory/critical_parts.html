@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Peças críticas - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-1">
+            Peças críticas
+        </h1>
+
+        <p class="text-muted mb-0">
+            Peças ativas com estoque igual ou abaixo do mínimo, ordenadas por prioridade de reposição.
+        </p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary">
+            Estoque
+        </a>
+
+        <a href="{% url 'inventory:part_create' %}" class="btn btn-primary">
+            Nova peça
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-danger h-100">
+            <div class="card-body">
+                <h2 class="h6 text-danger">
+                    Total de peças críticas
+                </h2>
+
+                <p class="display-6 mb-0">
+                    {{ critical_parts_count }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Prioridade</th>
+                        <th>Código</th>
+                        <th>Peça</th>
+                        <th>Marca</th>
+                        <th>Categoria</th>
+                        <th>Estoque atual</th>
+                        <th>Estoque mínimo</th>
+                        <th>Sugestão de compra</th>
+                        <th>Localização</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for row in critical_parts %}
+                        <tr>
+                            <td>
+                                <span class="badge text-bg-{{ row.priority.css_class }}">
+                                    {{ row.priority.label }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ row.part.internal_code }}
+                            </td>
+
+                            <td>
+                                {{ row.part.name }}
+                            </td>
+
+                            <td>
+                                {{ row.part.brand|default:"-" }}
+                            </td>
+
+                            <td>
+                                {{ row.part.category|default:"-" }}
+                            </td>
+
+                            <td>
+                                {{ row.part.current_stock }}
+                            </td>
+
+                            <td>
+                                {{ row.part.minimum_stock }}
+                            </td>
+
+                            <td>
+                                {{ row.suggestion_quantity }}
+                            </td>
+
+                            <td>
+                                {{ row.part.location|default:"-" }}
+                            </td>
+
+                            <td class="text-end">
+                                <a href="{% url 'inventory:part_detail' row.part.pk %}" class="btn btn-sm btn-outline-primary">
+                                    Abrir
+                                </a>
+
+                                <a href="{% url 'inventory:stock_movement_create' row.part.pk %}" class="btn btn-sm btn-outline-success">
+                                    Movimentar
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-4">
+                                Nenhuma peça crítica encontrada.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

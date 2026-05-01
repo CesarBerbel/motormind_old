@@ -12,6 +12,11 @@ urlpatterns = [
         name="part_list",
     ),
     path(
+        "pecas/criticas/",
+        part_views.critical_parts_view,
+        name="critical_parts",
+    ),
+    path(
         "pecas/criar/",
         part_views.part_create_view,
         name="part_create",

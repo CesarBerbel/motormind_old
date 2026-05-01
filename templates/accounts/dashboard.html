@@ -118,8 +118,8 @@
                     {{ low_stock_parts_count }}
                 </p>
 
-                <a href="{% url 'inventory:part_list' %}?low_stock=1" class="btn btn-outline-warning btn-sm">
-                    Ver estoque baixo
+                <a href="{% url 'inventory:critical_parts' %}" class="btn btn-outline-warning btn-sm">
+                    Ver peças críticas
                 </a>
             </div>
         </div>
