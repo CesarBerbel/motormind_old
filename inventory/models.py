@@ -269,9 +269,12 @@ class ServiceOrderPart(models.Model):
     @property
     def subtotal(self):
         """
-        Calculate subtotal without discount.
+        Return subtotal safely, even when admin form is creating a new object.
         """
-        return self.quantity * self.unit_price
+        quantity = self.quantity or Decimal("0.00")
+        unit_price = self.unit_price or Decimal("0.00")
+
+        return quantity * unit_price
 
     @property
     def total(self):

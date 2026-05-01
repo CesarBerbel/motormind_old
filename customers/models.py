@@ -1,6 +1,8 @@
 from django.core.validators import RegexValidator
 from django.db import models
 
+from core.validators import only_digits, validate_document
+
 
 class Customer(models.Model):
     """
@@ -35,6 +37,7 @@ class Customer(models.Model):
         null=True,
         verbose_name="Documento",
         help_text="CPF, CNPJ, NIF ou outro documento fiscal.",
+        validators=[validate_document],
     )
 
     address = models.CharField(
@@ -69,6 +72,10 @@ class Customer(models.Model):
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
         ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        self.document = only_digits(self.document)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
