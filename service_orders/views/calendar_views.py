@@ -1,27 +1,12 @@
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Case, IntegerField, Value, When
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from accounts.permissions import can_access_workshop_agenda, user_passes_permission
-
-from service_orders.models import ServiceOrder
-
-
-def get_priority_ordering_annotation():
-    """
-    Return priority ordering annotation.
-    """
-    return Case(
-        When(priority=ServiceOrder.Priority.HIGH, then=Value(1)),
-        When(priority=ServiceOrder.Priority.MEDIUM, then=Value(2)),
-        When(priority=ServiceOrder.Priority.LOW, then=Value(3)),
-        default=Value(4),
-        output_field=IntegerField(),
-    )
+from service_orders.selectors import get_agenda_service_orders
 
 
 @login_required
@@ -50,27 +35,9 @@ def workshop_agenda_view(request):
         start_date = selected_date - timedelta(days=selected_date.weekday())
         end_date = start_date + timedelta(days=6)
 
-    service_orders = (
-        ServiceOrder.objects.select_related(
-            "customer",
-            "vehicle",
-            "assigned_mechanic",
-        )
-        .annotate(
-            priority_order=get_priority_ordering_annotation(),
-        )
-        .filter(
-            expected_delivery_date__gte=start_date,
-            expected_delivery_date__lte=end_date,
-        )
-        .exclude(
-            status=ServiceOrder.Status.CANCELED,
-        )
-        .order_by(
-            "expected_delivery_date",
-            "priority_order",
-            "created_at",
-        )
+    service_orders = get_agenda_service_orders(
+        start_date=start_date,
+        end_date=end_date,
     )
 
     agenda_days = []

@@ -1,64 +1,21 @@
 from django.contrib import messages
-from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import Group
-from django.db.models import Case, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from accounts.permissions import can_access_operational_board, user_passes_permission
 from service_orders.models import ServiceOrder
+from service_orders.selectors import (
+    filter_service_orders_by_search,
+    get_board_status_columns,
+    get_mechanic_queryset,
+    get_overdue_service_order_filter,
+    get_service_orders_for_board,
+)
 from service_orders.services import create_service_order_history
 
 from .common import redirect_if_canceled
-
-
-def get_mechanic_queryset():
-    """
-    Return active users from mechanic group.
-    """
-    User = get_user_model()
-
-    mechanic_group = Group.objects.filter(name="Mecânico").first()
-
-    if not mechanic_group:
-        return User.objects.none()
-
-    return User.objects.filter(
-        groups=mechanic_group,
-        is_active=True,
-    ).order_by(
-        "first_name",
-        "email",
-    )
-
-
-def get_overdue_service_order_filter():
-    """
-    Return filter for overdue service orders.
-    """
-    today = timezone.localdate()
-
-    return Q(expected_delivery_date__lt=today) & ~Q(
-        status__in=[
-            ServiceOrder.Status.FINISHED,
-            ServiceOrder.Status.CANCELED,
-        ]
-    )
-
-
-def get_priority_ordering_annotation():
-    """
-    Return priority ordering annotation.
-    """
-    return Case(
-        When(priority=ServiceOrder.Priority.HIGH, then=Value(1)),
-        When(priority=ServiceOrder.Priority.MEDIUM, then=Value(2)),
-        When(priority=ServiceOrder.Priority.LOW, then=Value(3)),
-        default=Value(4),
-        output_field=IntegerField(),
-    )
 
 
 @login_required
@@ -77,35 +34,8 @@ def service_order_board_view(request):
     delivery_start_date = parse_date(delivery_start) if delivery_start else None
     delivery_end_date = parse_date(delivery_end) if delivery_end else None
 
-    service_orders = (
-        ServiceOrder.objects.select_related(
-            "customer",
-            "vehicle",
-            "created_by",
-            "assigned_mechanic",
-        )
-        .annotate(
-            priority_order=get_priority_ordering_annotation(),
-        )
-        .order_by(
-            "priority_order",
-            "expected_delivery_date",
-            "created_at",
-        )
-    )
-
-    if search:
-        service_orders = service_orders.filter(
-            Q(customer__name__icontains=search)
-            | Q(vehicle__plate__icontains=search)
-            | Q(vehicle__brand__icontains=search)
-            | Q(vehicle__model__icontains=search)
-            | Q(title__icontains=search)
-            | Q(description__icontains=search)
-            | Q(assigned_mechanic__email__icontains=search)
-            | Q(assigned_mechanic__first_name__icontains=search)
-            | Q(assigned_mechanic__last_name__icontains=search)
-        )
+    service_orders = get_service_orders_for_board()
+    service_orders = filter_service_orders_by_search(service_orders, search)
 
     if mechanic_id:
         service_orders = service_orders.filter(
@@ -144,22 +74,11 @@ def service_order_board_view(request):
             expected_delivery_date__lte=delivery_end_date,
         )
 
-    status_columns = []
-
-    for status_value, status_label in ServiceOrder.Status.choices:
-        status_columns.append(
-            {
-                "value": status_value,
-                "label": status_label,
-                "orders": service_orders.filter(status=status_value),
-            }
-        )
-
     return render(
         request,
         "service_orders/service_order_board.html",
         {
-            "status_columns": status_columns,
+            "status_columns": get_board_status_columns(service_orders),
             "search": search,
             "mechanic_id": mechanic_id,
             "mechanics": get_mechanic_queryset(),

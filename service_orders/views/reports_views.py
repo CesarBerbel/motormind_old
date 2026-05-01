@@ -6,7 +6,6 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from accounts.permissions import can_access_productivity_report, user_passes_permission
-
 from service_orders.models import ServiceOrderTimeEntry
 
 
