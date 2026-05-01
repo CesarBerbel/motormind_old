@@ -131,6 +131,14 @@
                         </li>
                     {% endif %}
 
+                    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" or request.user|has_group:"Mecânico" or request.user|has_group:"Financeiro" %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inventory:part_list' %}">
+                                Estoque
+                            </a>
+                        </li>
+                    {% endif %}
+
                 {% endif %}
 
             </ul>
