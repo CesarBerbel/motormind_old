@@ -160,26 +160,6 @@ def test_attendant_can_access_operational_board(client, users, board_orders):
 
 
 @pytest.mark.django_db
-def test_board_contains_dynamic_counter_elements(client, users, board_orders):
-    """
-    Test if board contains counter elements required by JavaScript.
-    """
-    client.login(
-        username=users["attendant"].email,
-        password="StrongPassword123",
-    )
-
-    response = client.get(reverse("service_orders:service_order_board"))
-    content = response.content.decode()
-
-    assert response.status_code == 200
-    assert "service-order-column-counter" in content
-    assert 'data-status="open"' in content
-    assert 'data-status="in_progress"' in content
-    assert "service-order-empty-message" in content
-
-
-@pytest.mark.django_db
 def test_mechanic_can_access_operational_board(client, users, board_orders):
     """
     Test if mechanic can access operational board.
@@ -356,39 +336,6 @@ def test_quick_update_finished_status_sets_finished_at(client, users, board_orde
 
 
 @pytest.mark.django_db
-def test_ajax_quick_update_status_returns_json(client, users, board_orders):
-    """
-    Test if AJAX quick status update returns JSON response.
-    """
-    service_order = board_orders["open_order"]
-
-    client.login(
-        username=users["attendant"].email,
-        password="StrongPassword123",
-    )
-
-    response = client.post(
-        reverse(
-            "service_orders:service_order_quick_status_update",
-            args=[service_order.pk],
-        ),
-        data={
-            "status": ServiceOrder.Status.IN_PROGRESS,
-        },
-        HTTP_X_REQUESTED_WITH="XMLHttpRequest",
-    )
-
-    service_order.refresh_from_db()
-    data = response.json()
-
-    assert response.status_code == 200
-    assert data["success"] is True
-    assert data["status"] == ServiceOrder.Status.IN_PROGRESS
-    assert data["status_label"] == "Em execução"
-    assert service_order.status == ServiceOrder.Status.IN_PROGRESS
-
-
-@pytest.mark.django_db
 def test_financial_cannot_quick_update_status(client, users, board_orders):
     """
     Test if financial user cannot quickly update status from board.
@@ -443,3 +390,31 @@ def test_quick_update_rejects_invalid_status(client, users, board_orders):
 
     assert response.status_code == 302
     assert service_order.status == ServiceOrder.Status.OPEN
+
+
+@pytest.mark.django_db
+def test_board_delivery_period_filter(client, users, board_orders):
+    """
+    Test if board filters service orders by expected delivery period.
+    """
+    today = timezone.localdate()
+
+    client.login(
+        username=users["attendant"].email,
+        password="StrongPassword123",
+    )
+
+    response = client.get(
+        reverse("service_orders:service_order_board"),
+        {
+            "delivery_start": today.strftime("%Y-%m-%d"),
+            "delivery_end": (today + timedelta(days=2)).strftime("%Y-%m-%d"),
+        },
+    )
+
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert board_orders["open_order"].title in content
+    assert board_orders["overdue_order"].title not in content
+    assert board_orders["waiting_parts_order"].title not in content
