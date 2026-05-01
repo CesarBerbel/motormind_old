@@ -2,13 +2,11 @@ from decimal import Decimal
 
 from django import forms
 
-from inventory.models import Part, ServiceOrderPart
+from .models import Part, ServiceOrderPart, StockMovement
 
 
 class PartForm(forms.ModelForm):
-    """
-    Form used to create and update inventory parts.
-    """
+    """Form to create and update parts."""
 
     class Meta:
         model = Part
@@ -21,57 +19,48 @@ class PartForm(forms.ModelForm):
             "unit",
             "cost_price",
             "sale_price",
-            "current_stock",
             "minimum_stock",
             "location",
             "is_active",
         ]
+        widgets = {
+            # Standard Bootstrap classes for all fields
+            field: forms.TextInput(attrs={"class": "form-control"})
+            for field in fields
+        }
 
 
-class StockMovementForm(forms.Form):
+class StockMovementForm(forms.ModelForm):
     """
-    Form used to create stock movements.
+    Form for manual stock adjustments and movements.
+    Enforces audit reasoning.
     """
 
-    movement_type = forms.ChoiceField(
-        label="Tipo de movimentação",
-        choices=[
-            ("in", "Entrada"),
-            ("out", "Saída"),
-            ("loss", "Perda"),
-            ("return", "Devolução"),
-            ("reserve", "Reserva"),
-            ("release", "Liberação de reserva"),
-            ("adjust", "Ajuste"),
-        ],
-        widget=forms.Select(attrs={"class": "form-select"}),
-    )
+    class Meta:
+        model = StockMovement
+        fields = ["movement_type", "quantity", "reason"]
+        widgets = {
+            "movement_type": forms.Select(attrs={"class": "form-select"}),
+            "quantity": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.01"}
+            ),
+            "reason": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Descreva detalhadamente o motivo (Ex: Contagem física, Peça avariada...)",
+                }
+            ),
+        }
 
-    quantity = forms.DecimalField(
-        label="Quantidade",
-        min_value=Decimal("0.01"),
-        max_digits=10,
-        decimal_places=2,
-        widget=forms.NumberInput(
-            attrs={
-                "class": "form-control",
-                "step": "0.01",
-                "min": "0.01",
-                "placeholder": "Digite a quantidade",
-            }
-        ),
-    )
-
-    reason = forms.CharField(
-        label="Motivo",
-        widget=forms.Textarea(
-            attrs={
-                "class": "form-control",
-                "placeholder": "Descreva o motivo da movimentação",
-                "rows": 3,
-            }
-        ),
-    )
+    def clean_reason(self):
+        """Mandatory 5-character reason check."""
+        reason = self.cleaned_data.get("reason")
+        if not reason or len(reason.strip()) < 5:
+            raise forms.ValidationError(
+                "Para auditoria, a justificativa deve ter no mínimo 5 caracteres."
+            )
+        return reason
 
 
 class ServiceOrderPartForm(forms.ModelForm):
