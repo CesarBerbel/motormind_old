@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import calendar_views, time_tracking_views, views
+from . import calendar_views, reports_views, time_tracking_views, views
 
 app_name = "service_orders"
 
@@ -20,6 +20,11 @@ urlpatterns = [
         "agenda/",
         calendar_views.workshop_agenda_view,
         name="workshop_agenda",
+    ),
+    path(
+        "relatorios/produtividade-mecanicos/",
+        reports_views.mechanic_productivity_report_view,
+        name="mechanic_productivity_report",
     ),
     path(
         "ordens/criar/",
