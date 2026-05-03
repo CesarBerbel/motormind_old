@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from accounts.permissions import (
+from core.permissions import (
     can_access_inventory,
     can_manage_inventory,
     can_move_inventory_stock,

@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from accounts.permissions import (
+from core.permissions import (
     can_cancel_service_order,
     can_manage_service_orders,
     can_update_service_order_technical_data,

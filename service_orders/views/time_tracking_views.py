@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 
-from accounts.permissions import (
+from core.permissions import (
     can_finish_time_entry,
     can_track_service_order_time,
     user_passes_permission,

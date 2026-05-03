@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 
-from accounts.permissions import can_move_inventory_stock, user_passes_permission
+from core.permissions import can_move_inventory_stock, user_passes_permission
 from inventory.forms import ServiceOrderPartForm
 from inventory.models import ServiceOrderPart
 from inventory.services import (

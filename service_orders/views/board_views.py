@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from accounts.permissions import can_access_operational_board, user_passes_permission
+from core.permissions import can_access_operational_board, user_passes_permission
 from service_orders.models import ServiceOrder
 from service_orders.selectors import (
     filter_service_orders_by_search,

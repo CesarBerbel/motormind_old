@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 
-from accounts.permissions import can_manage_service_orders, user_passes_permission
+from core.permissions import can_manage_service_orders, user_passes_permission
 from customers.models import Vehicle
 
 

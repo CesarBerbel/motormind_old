@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 
-from accounts.permissions import can_manage_service_order_notes, user_passes_permission
+from core.permissions import can_manage_service_order_notes, user_passes_permission
 from service_orders.forms import ServiceOrderNoteForm
 from service_orders.models import ServiceOrder
 

@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from accounts.permissions import can_access_workshop_agenda, user_passes_permission
+from core.permissions import can_access_workshop_agenda, user_passes_permission
 from service_orders.selectors import get_agenda_service_orders
 
 

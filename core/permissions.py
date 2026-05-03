@@ -48,6 +48,20 @@ def user_in_any_group(user, group_names):
     return user.groups.filter(name__in=group_names).exists()
 
 
+def has_group(user, group_name):
+    """
+    Compatibility alias for user_in_group.
+    """
+    return user_in_group(user, group_name)
+
+
+def has_any_group(user, group_names):
+    """
+    Compatibility alias for user_in_any_group.
+    """
+    return user_in_any_group(user, group_names)
+
+
 def is_admin(user):
     """
     Check whether the user has administrator access.
@@ -74,6 +88,34 @@ def is_financial(user):
     Check whether the user belongs to the financial profile.
     """
     return user_in_group(user, FINANCIAL_GROUP)
+
+
+def is_admin_user(user):
+    """
+    Compatibility alias for is_admin.
+    """
+    return is_admin(user)
+
+
+def is_attendant_user(user):
+    """
+    Compatibility alias for is_attendant.
+    """
+    return is_attendant(user)
+
+
+def is_mechanic_user(user):
+    """
+    Compatibility alias for is_mechanic.
+    """
+    return is_mechanic(user)
+
+
+def is_financial_user(user):
+    """
+    Compatibility alias for is_financial.
+    """
+    return is_financial(user)
 
 
 def can_access_customers(user):
@@ -142,6 +184,13 @@ def can_update_service_order_technical_data(user):
             MECHANIC_GROUP,
         ],
     )
+
+
+def can_update_service_order_technical(user):
+    """
+    Compatibility alias for can_update_service_order_technical_data.
+    """
+    return can_update_service_order_technical_data(user)
 
 
 def can_cancel_service_order(user):
