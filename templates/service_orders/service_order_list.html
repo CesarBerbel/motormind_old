@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load group_tags %}
+{% load currency %}
 
 {% block title %}
     Ordens de serviço - Sistema de Oficina
@@ -90,7 +91,7 @@
                                     {{ service_order.get_status_display }}
                                 </span>
                             </td>
-                            <td>€ {{ service_order.total_amount }}</td>
+                            <td>{{ service_order.total_amount|brl }}</td>
                             <td>{{ service_order.created_at|date:"d/m/Y H:i" }}</td>
                             <td class="text-end">
 

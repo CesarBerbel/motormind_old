@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load group_tags %}
+{% load l10n %}
 
 {% block title %}
     Veículos - Sistema de Oficina
@@ -69,7 +70,7 @@
                             <td>{{ vehicle.customer.name }}</td>
                             <td>{{ vehicle.brand }}</td>
                             <td>{{ vehicle.model }}</td>
-                            <td>{{ vehicle.year|default:"-" }}</td>
+                            <td>{{ vehicle.year|unlocalize|default:"-" }}</td>
                             <td>
                                 {% if vehicle.is_active %}
                                     <span class="badge text-bg-success">Ativo</span>

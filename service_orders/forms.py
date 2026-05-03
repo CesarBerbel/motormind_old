@@ -221,9 +221,9 @@ class ServiceOrderForm(forms.ModelForm):
             self.fields["assigned_mechanic"].queryset = User.objects.none()
 
         self.fields["assigned_mechanic"].required = False
-        self.fields[
-            "assigned_mechanic"
-        ].empty_label = "Selecione o mecânico responsável"
+        self.fields["assigned_mechanic"].empty_label = (
+            "Selecione o mecânico responsável"
+        )
 
         if "customer" in self.data:
             try:

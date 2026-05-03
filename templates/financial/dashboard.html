@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load currency %}
 
 {% block content %}
 <div class="container py-4">
@@ -10,7 +11,7 @@
                 <div class="card-body">
                     <h5 class="card-title">Entradas</h5>
                     <p class="fs-4 text-success">
-                        R$ {{ summary.income|floatformat:2 }}
+                        {{ summary.income|brl }}
                     </p>
                 </div>
             </div>
@@ -21,7 +22,7 @@
                 <div class="card-body">
                     <h5 class="card-title">Saídas</h5>
                     <p class="fs-4 text-danger">
-                        R$ {{ summary.expense|floatformat:2 }}
+                        {{ summary.expense|brl }}
                     </p>
                 </div>
             </div>
@@ -32,7 +33,7 @@
                 <div class="card-body">
                     <h5 class="card-title">Saldo</h5>
                     <p class="fs-4 text-primary">
-                        R$ {{ summary.balance|floatformat:2 }}
+                        {{ summary.balance|brl }}
                     </p>
                 </div>
             </div>
@@ -57,9 +58,9 @@
                     <tr>
                         <td>#{{ receivable.service_order_id }}</td>
                         <td>{{ receivable.customer.name }}</td>
-                        <td>R$ {{ receivable.final_amount|floatformat:2 }}</td>
-                        <td>R$ {{ receivable.paid_amount|floatformat:2 }}</td>
-                        <td>R$ {{ receivable.remaining_amount|floatformat:2 }}</td>
+                        <td>{{ receivable.final_amount|brl }}</td>
+                        <td>{{ receivable.paid_amount|brl }}</td>
+                        <td>{{ receivable.remaining_amount|brl }}</td>
                     </tr>
                 {% empty %}
                     <tr>
@@ -85,7 +86,7 @@
                 {% for expense in pending_expenses %}
                     <tr>
                         <td>{{ expense.description }}</td>
-                        <td>R$ {{ expense.amount|floatformat:2 }}</td>
+                        <td>{{ expense.amount|brl }}</td>
                         <td>{{ expense.due_date|default:"-" }}</td>
                     </tr>
                 {% empty %}
@@ -114,7 +115,7 @@
                     <tr>
                         <td>{{ entry.get_entry_type_display }}</td>
                         <td>{{ entry.description }}</td>
-                        <td>R$ {{ entry.amount|floatformat:2 }}</td>
+                        <td>{{ entry.amount|brl }}</td>
                         <td>{{ entry.created_at|date:"d/m/Y H:i" }}</td>
                     </tr>
                 {% empty %}

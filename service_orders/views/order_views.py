@@ -16,9 +16,9 @@ from service_orders.forms import (
 )
 from service_orders.models import ServiceOrder
 from service_orders.selectors import (
-    calculate_inventory_parts_total,
     filter_service_orders_by_search,
     get_all_inventory_parts_for_service_order,
+    get_service_order_financial_summary,
     get_service_orders_for_list,
 )
 from service_orders.services import cancel_service_order as cancel_service_order_service
@@ -141,21 +141,12 @@ def service_order_detail_view(request, pk):
     ).first()
 
     inventory_parts = get_all_inventory_parts_for_service_order(service_order)
-    inventory_parts_total = calculate_inventory_parts_total(service_order)
+    financial_summary = get_service_order_financial_summary(service_order)
 
-    manual_items_total = sum(item.total for item in items)
-
-    financial_subtotal = (
-        service_order.labor_cost
-        + service_order.parts_cost
-        + manual_items_total
-        + inventory_parts_total
-    )
-
-    financial_total = financial_subtotal - service_order.discount
-
-    if financial_total < 0:
-        financial_total = 0
+    inventory_parts_total = financial_summary["inventory_parts_total"]
+    manual_items_total = financial_summary["manual_items_total"]
+    financial_subtotal = financial_summary["gross_total"]
+    financial_total = financial_summary["net_total"]
 
     return render(
         request,
@@ -172,6 +163,7 @@ def service_order_detail_view(request, pk):
             "manual_items_total": manual_items_total,
             "financial_subtotal": financial_subtotal,
             "financial_total": financial_total,
+            "financial_summary": financial_summary,
             "note_form": ServiceOrderNoteForm(),
         },
     )
