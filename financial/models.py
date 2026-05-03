@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Q
 
 
 class PaymentMethod(models.TextChoices):
@@ -360,18 +361,38 @@ class CashFlowEntry(models.Model):
         verbose_name="Criado em",
     )
 
+    from django.db import models
+    from django.db.models import Q
+
     class Meta:
-        verbose_name = "Lançamento de caixa"
-        verbose_name_plural = "Lançamentos de caixa"
-        ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                name="cash_flow_has_exactly_one_source",
+                condition=(
+                    Q(payment__isnull=False, expense__isnull=True)
+                    | Q(payment__isnull=True, expense__isnull=False)
+                ),
+            ),
+            models.CheckConstraint(
+                name="cash_flow_income_requires_payment",
+                condition=(
+                    ~Q(entry_type=CashFlowType.INCOME)
+                    | Q(payment__isnull=False, expense__isnull=True)
+                ),
+            ),
+            models.CheckConstraint(
+                name="cash_flow_expense_requires_expense",
+                condition=(
+                    ~Q(entry_type=CashFlowType.EXPENSE)
+                    | Q(expense__isnull=False, payment__isnull=True)
+                ),
+            ),
+        ]
 
     def __str__(self):
         return f"{self.get_entry_type_display()} - {self.amount}"
 
     def clean(self):
-        """
-        Validate cash flow source consistency.
-        """
         super().clean()
 
         if self.payment and self.expense:
@@ -382,4 +403,14 @@ class CashFlowEntry(models.Model):
         if not self.payment and not self.expense:
             raise ValidationError(
                 "Um lançamento de caixa precisa estar ligado a um pagamento ou despesa."
+            )
+
+        if self.entry_type == CashFlowType.INCOME and not self.payment:
+            raise ValidationError(
+                "Um lançamento de entrada precisa estar ligado a um pagamento."
+            )
+
+        if self.entry_type == CashFlowType.EXPENSE and not self.expense:
+            raise ValidationError(
+                "Um lançamento de saída precisa estar ligado a uma despesa."
             )

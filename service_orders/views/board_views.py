@@ -99,6 +99,7 @@ def service_order_quick_status_update_view(request, pk):
     """
     Quickly update service order status from operational board.
     """
+    print("Pelo menos a cabecinha " + str(pk) + " entrou")
     service_order = get_object_or_404(
         ServiceOrder,
         pk=pk,

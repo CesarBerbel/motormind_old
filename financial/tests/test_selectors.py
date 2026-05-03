@@ -2,12 +2,15 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from customers.models import Customer, Vehicle
 from financial.models import (
     CashFlowEntry,
     CashFlowType,
     Expense,
+    Payment,
+    PaymentMethod,
     PaymentStatus,
     Receivable,
 )
@@ -79,17 +82,47 @@ def test_get_pending_expenses_returns_only_pending(user):
 
 
 @pytest.mark.django_db
-def test_get_cash_flow_summary_calculates_income_expense_and_balance(user):
+def test_get_cash_flow_summary_calculates_income_expense_and_balance(order, user):
+
+    receivable = Receivable.objects.create(
+        service_order=order,
+        customer=order.customer,
+        original_amount=Decimal("100.00"),
+        discount_amount=Decimal("0.00"),
+        final_amount=Decimal("100.00"),
+        paid_amount=Decimal("100.00"),
+        status=PaymentStatus.PAID,
+        created_by=user,
+    )
+
+    payment = Payment.objects.create(
+        receivable=receivable,
+        amount=Decimal("100.00"),
+        method=PaymentMethod.PIX,
+        paid_at=timezone.now(),
+        created_by=user,
+    )
+
     CashFlowEntry.objects.create(
         entry_type=CashFlowType.INCOME,
         description="Entrada",
         amount=Decimal("100.00"),
+        payment=payment,
         created_by=user,
     )
+    expense = Expense.objects.create(
+        description="Despesa teste",
+        amount=Decimal("40.00"),
+        status=PaymentStatus.PAID,
+        paid_at=timezone.now(),
+        created_by=user,
+    )
+
     CashFlowEntry.objects.create(
         entry_type=CashFlowType.EXPENSE,
         description="Saída",
         amount=Decimal("40.00"),
+        expense=expense,
         created_by=user,
     )
 

@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from accounts.permissions import (
     can_cancel_service_order,
@@ -16,10 +18,9 @@ from service_orders.forms import (
 )
 from service_orders.models import ServiceOrder
 from service_orders.selectors import (
-    get_service_order_financial_summary,
-    calculate_inventory_parts_total,
     filter_service_orders_by_search,
     get_all_inventory_parts_for_service_order,
+    get_service_order_financial_summary,
     get_service_orders_for_list,
 )
 from service_orders.services import cancel_service_order as cancel_service_order_service
@@ -35,9 +36,6 @@ from .common import redirect_if_canceled
 @login_required
 @user_passes_permission(can_view_service_orders)
 def service_order_list_view(request):
-    """
-    List service orders with filters.
-    """
     search = request.GET.get("search", "")
     status = request.GET.get("status", "")
     priority = request.GET.get("priority", "")
@@ -68,9 +66,6 @@ def service_order_list_view(request):
 @login_required
 @user_passes_permission(can_manage_service_orders)
 def service_order_create_view(request):
-    """
-    Create a new service order.
-    """
     if request.method == "POST":
         form = ServiceOrderForm(request.POST)
 
@@ -80,10 +75,7 @@ def service_order_create_view(request):
                 created_by=request.user,
             )
 
-            messages.success(
-                request,
-                "Ordem de serviço criada com sucesso.",
-            )
+            messages.success(request, "Ordem de serviço criada com sucesso.")
 
             return redirect(
                 "service_orders:service_order_detail",
@@ -94,7 +86,6 @@ def service_order_create_view(request):
             request,
             "Não foi possível criar a ordem de serviço. Verifique os dados informados.",
         )
-
     else:
         form = ServiceOrderForm()
 
@@ -112,9 +103,6 @@ def service_order_create_view(request):
 @login_required
 @user_passes_permission(can_view_service_orders)
 def service_order_detail_view(request, pk):
-    """
-    Show service order details.
-    """
     service_order = get_object_or_404(
         ServiceOrder.objects.select_related(
             "customer",
@@ -144,11 +132,6 @@ def service_order_detail_view(request, pk):
     inventory_parts = get_all_inventory_parts_for_service_order(service_order)
     financial_summary = get_service_order_financial_summary(service_order)
 
-    inventory_parts_total = financial_summary["inventory_parts_total"]
-    manual_items_total = financial_summary["manual_items_total"]
-    financial_subtotal = financial_summary["gross_total"]
-    financial_total = financial_summary["net_total"]
-
     return render(
         request,
         "service_orders/service_order_detail.html",
@@ -160,10 +143,10 @@ def service_order_detail_view(request, pk):
             "time_entries": time_entries,
             "open_time_entry": open_time_entry,
             "inventory_parts": inventory_parts,
-            "inventory_parts_total": inventory_parts_total,
-            "manual_items_total": manual_items_total,
-            "financial_subtotal": financial_subtotal,
-            "financial_total": financial_total,
+            "inventory_parts_total": financial_summary["inventory_parts_total"],
+            "manual_items_total": financial_summary["manual_items_total"],
+            "financial_subtotal": financial_summary["gross_total"],
+            "financial_total": financial_summary["net_total"],
             "financial_summary": financial_summary,
             "note_form": ServiceOrderNoteForm(),
         },
@@ -173,13 +156,7 @@ def service_order_detail_view(request, pk):
 @login_required
 @user_passes_permission(can_manage_service_orders)
 def service_order_update_view(request, pk):
-    """
-    Update administrative data.
-    """
-    service_order = get_object_or_404(
-        ServiceOrder,
-        pk=pk,
-    )
+    service_order = get_object_or_404(ServiceOrder, pk=pk)
 
     canceled_redirect = redirect_if_canceled(request, service_order)
 
@@ -189,10 +166,7 @@ def service_order_update_view(request, pk):
     old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
     if request.method == "POST":
-        form = ServiceOrderForm(
-            request.POST,
-            instance=service_order,
-        )
+        form = ServiceOrderForm(request.POST, instance=service_order)
 
         if form.is_valid():
             updated_service_order = update_service_order_from_form(
@@ -201,10 +175,7 @@ def service_order_update_view(request, pk):
                 old_instance=old_instance,
             )
 
-            messages.success(
-                request,
-                "Ordem de serviço atualizada com sucesso.",
-            )
+            messages.success(request, "Ordem de serviço atualizada com sucesso.")
 
             return redirect(
                 "service_orders:service_order_detail",
@@ -215,7 +186,6 @@ def service_order_update_view(request, pk):
             request,
             "Não foi possível atualizar a ordem de serviço. Verifique os dados informados.",
         )
-
     else:
         form = ServiceOrderForm(instance=service_order)
 
@@ -233,13 +203,7 @@ def service_order_update_view(request, pk):
 @login_required
 @user_passes_permission(can_update_service_order_technical_data)
 def service_order_technical_update_view(request, pk):
-    """
-    Update technical data.
-    """
-    service_order = get_object_or_404(
-        ServiceOrder,
-        pk=pk,
-    )
+    service_order = get_object_or_404(ServiceOrder, pk=pk)
 
     canceled_redirect = redirect_if_canceled(request, service_order)
 
@@ -249,10 +213,7 @@ def service_order_technical_update_view(request, pk):
     old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
     if request.method == "POST":
-        form = ServiceOrderTechnicalForm(
-            request.POST,
-            instance=service_order,
-        )
+        form = ServiceOrderTechnicalForm(request.POST, instance=service_order)
 
         if form.is_valid():
             updated_service_order = update_service_order_technical_from_form(
@@ -261,10 +222,7 @@ def service_order_technical_update_view(request, pk):
                 old_instance=old_instance,
             )
 
-            messages.success(
-                request,
-                "Dados técnicos atualizados com sucesso.",
-            )
+            messages.success(request, "Dados técnicos atualizados com sucesso.")
 
             return redirect(
                 "service_orders:service_order_detail",
@@ -275,7 +233,6 @@ def service_order_technical_update_view(request, pk):
             request,
             "Não foi possível atualizar os dados técnicos. Verifique os dados informados.",
         )
-
     else:
         form = ServiceOrderTechnicalForm(instance=service_order)
 
@@ -293,13 +250,7 @@ def service_order_technical_update_view(request, pk):
 @login_required
 @user_passes_permission(can_cancel_service_order)
 def service_order_cancel_view(request, pk):
-    """
-    Cancel service order.
-    """
-    service_order = get_object_or_404(
-        ServiceOrder,
-        pk=pk,
-    )
+    service_order = get_object_or_404(ServiceOrder, pk=pk)
 
     if request.method == "POST":
         canceled_service_order = cancel_service_order_service(
@@ -307,10 +258,7 @@ def service_order_cancel_view(request, pk):
             changed_by=request.user,
         )
 
-        messages.warning(
-            request,
-            "Ordem de serviço cancelada com sucesso.",
-        )
+        messages.warning(request, "Ordem de serviço cancelada com sucesso.")
 
         return redirect(
             "service_orders:service_order_detail",
@@ -324,3 +272,52 @@ def service_order_cancel_view(request, pk):
             "service_order": service_order,
         },
     )
+
+
+@login_required
+@user_passes_permission(can_manage_service_orders)
+@require_POST
+def service_order_quick_status_update_view(request, pk):
+    service_order = get_object_or_404(ServiceOrder, pk=pk)
+
+    new_status = request.POST.get("status")
+    valid_statuses = dict(ServiceOrder._meta.get_field("status").choices)
+
+    if new_status not in valid_statuses:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "Status inválido.",
+            },
+            status=400,
+        )
+
+    if service_order.status == ServiceOrder.Status.CANCELED:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "Ordens canceladas não podem ser alteradas.",
+            },
+            status=400,
+        )
+
+    service_order.status = new_status
+    service_order.save(update_fields=["status", "updated_at"])
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse(
+            {
+                "ok": True,
+                "status": service_order.status,
+                "status_label": service_order.get_status_display(),
+            }
+        )
+
+    messages.success(request, "Status da ordem atualizado com sucesso.")
+
+    next_url = request.POST.get("next")
+
+    if next_url:
+        return redirect(next_url)
+
+    return redirect("service_orders:service_order_board")

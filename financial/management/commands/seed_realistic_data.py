@@ -142,7 +142,7 @@ class Command(BaseCommand):
         User.objects.all().delete()
 
         self.admin_user = User.objects.create_superuser(
-            email="adm@adm.com",
+            email="admin@admin.com",
             password="321654",
         )
 
@@ -176,13 +176,13 @@ class Command(BaseCommand):
         """
         User = get_user_model()
 
-        admin_user = User.objects.filter(email="adm@adm.com").first()
+        admin_user = User.objects.filter(email="admin@admin.com").first()
 
         if admin_user:
             return admin_user
 
         return User.objects.create_superuser(
-            email="adm@adm.com",
+            email="admin@admin.com",
             password="321654",
         )
 
@@ -213,7 +213,7 @@ class Command(BaseCommand):
             group_slug = group.name.lower().replace(" ", "_").replace("-", "_")
 
             for index, (first_name, last_name) in enumerate(people_names, start=1):
-                email = f"{group_slug}{index}@adm.com"
+                email = f"{group_slug}{index}@motormind.test"
 
                 user, created = User.objects.get_or_create(
                     email=email,

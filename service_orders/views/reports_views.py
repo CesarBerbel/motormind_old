@@ -128,9 +128,9 @@ def mechanic_productivity_report_view(request):
             }
 
         mechanic_rows[mechanic_key]["orders"][order_key]["entries_count"] += 1
-        mechanic_rows[mechanic_key]["orders"][order_key][
-            "total_seconds"
-        ] += duration_seconds
+        mechanic_rows[mechanic_key]["orders"][order_key]["total_seconds"] += (
+            duration_seconds
+        )
 
     report_rows = []
 
