@@ -94,8 +94,8 @@ def validate_positive_decimal(value):
     """
     try:
         decimal_value = Decimal(str(value))
-    except (InvalidOperation, TypeError, ValueError):
-        raise ValidationError("Informe um número válido.")
+    except (InvalidOperation, TypeError, ValueError) as err:
+        raise ValidationError("Informe um número válido.") from err
 
     if decimal_value <= Decimal("0.00"):
         raise ValidationError("O valor deve ser maior que zero.")
@@ -107,8 +107,8 @@ def validate_non_negative_decimal(value):
     """
     try:
         decimal_value = Decimal(str(value))
-    except (InvalidOperation, TypeError, ValueError):
-        raise ValidationError("Informe um número válido.")
+    except (InvalidOperation, TypeError, ValueError) as err:
+        raise ValidationError("Informe um número válido.") from err
 
     if decimal_value < Decimal("0.00"):
         raise ValidationError("O valor não pode ser negativo.")

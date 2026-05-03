@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from customers.models import Customer, Vehicle
-from financial.exceptions import FinancialError
 from financial.models import (
     CashFlowEntry,
     CashFlowType,
@@ -69,6 +68,7 @@ def test_create_receivable_from_service_order_uses_gross_discount_and_net_once(
     assert receivable.original_amount == Decimal("170.00")
     assert receivable.discount_amount == Decimal("15.00")
     assert receivable.final_amount == Decimal("155.00")
+
 
 @pytest.mark.django_db
 def test_register_partial_payment_keeps_receivable_pending(service_order, user):

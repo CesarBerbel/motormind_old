@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from accounts.templatetags.currency import brl
+from core.templatetags.core_formatters import brl
 
 
 def test_brl_formats_decimal_value():

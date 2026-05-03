@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from accounts.permissions import groups_required
+from core.permissions import groups_required
 
 from .forms import CustomerForm, VehicleForm
 from .models import Customer, Vehicle

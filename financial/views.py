@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
-from accounts.permissions import can_view_financial, user_passes_permission
+from core.permissions import can_view_financial, user_passes_permission
 
 from .selectors import (
     get_cash_flow_entries,

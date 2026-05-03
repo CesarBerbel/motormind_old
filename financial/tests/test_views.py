@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.urls import reverse
 
-from accounts.permissions import (
+from core.permissions import (
     ADMIN_GROUP,
     ATTENDANT_GROUP,
     FINANCIAL_GROUP,
