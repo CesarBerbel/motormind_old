@@ -1,127 +1,63 @@
 from decimal import Decimal
 
-from django.db.models import Case, CharField, DecimalField, F, Value, When
+from django.db.models import Case, CharField, DecimalField, F, Sum, Value, When
+from django.db.models.functions import Coalesce
 
-from inventory.models import Part
+from inventory.models import Part, ServiceOrderPart
 
 
 def get_active_parts():
-    """
-    Return active inventory parts.
-    """
-    return Part.objects.filter(
-        is_active=True,
-    ).order_by(
-        "name",
-    )
+    return Part.objects.filter(is_active=True).order_by("name")
 
 
 def get_low_stock_parts():
-    """
-    Return active parts with current stock less than or equal to minimum stock.
-    """
-    return [part for part in get_active_parts() if part.is_low_stock]
+    return get_active_parts().filter(current_stock__lte=F("minimum_stock"))
 
 
 def count_low_stock_parts():
-    """
-    Count active parts with low stock.
-    """
-    return len(get_low_stock_parts())
+    return get_low_stock_parts().count()
 
 
 def get_restock_priority(part):
-    """
-    Return restock priority based on current stock and minimum stock.
-
-    Critical:
-    - current stock is zero
-    - or current stock is less than 50% of minimum stock
-
-    High:
-    - current stock is below minimum stock
-
-    Medium:
-    - current stock is equal to minimum stock
-
-    Normal:
-    - current stock is above minimum stock
-    """
     if part.minimum_stock <= 0:
-        return {
-            "level": "normal",
-            "label": "Normal",
-            "css_class": "success",
-        }
+        return {"level": "normal", "label": "Normal", "css_class": "success"}
 
     if part.current_stock <= 0:
-        return {
-            "level": "critical",
-            "label": "Crítica",
-            "css_class": "danger",
-        }
+        return {"level": "critical", "label": "Crítica", "css_class": "danger"}
 
-    if part.current_stock < (part.minimum_stock / 2):
-        return {
-            "level": "critical",
-            "label": "Crítica",
-            "css_class": "danger",
-        }
+    if part.current_stock < (part.minimum_stock / Decimal("2")):
+        return {"level": "critical", "label": "Crítica", "css_class": "danger"}
 
     if part.current_stock < part.minimum_stock:
-        return {
-            "level": "high",
-            "label": "Alta",
-            "css_class": "warning",
-        }
+        return {"level": "high", "label": "Alta", "css_class": "warning"}
 
     if part.current_stock == part.minimum_stock:
-        return {
-            "level": "medium",
-            "label": "Média",
-            "css_class": "info",
-        }
+        return {"level": "medium", "label": "Média", "css_class": "info"}
 
-    return {
-        "level": "normal",
-        "label": "Normal",
-        "css_class": "success",
-    }
+    return {"level": "normal", "label": "Normal", "css_class": "success"}
 
 
 def get_restock_suggestion_quantity(part):
-    """
-    Return suggested quantity to buy.
-
-    Suggestion rule:
-    - buy enough to reach twice the minimum stock
-    - if minimum stock is zero, suggest zero
-    """
     if part.minimum_stock <= 0:
-        return 0
+        return Decimal("0.00")
 
-    target_stock = part.minimum_stock * 2
+    target_stock = part.minimum_stock * Decimal("2")
     suggestion = target_stock - part.current_stock
 
     if suggestion <= 0:
-        return 0
+        return Decimal("0.00")
 
     return suggestion
 
 
 def get_critical_parts_with_priority():
-    """
-    Return low stock parts enriched with restock priority information.
-    """
-    critical_parts = []
+    rows = []
 
     for part in get_low_stock_parts():
-        priority = get_restock_priority(part)
-
-        critical_parts.append(
+        rows.append(
             {
                 "part": part,
-                "priority": priority,
+                "priority": get_restock_priority(part),
                 "suggestion_quantity": get_restock_suggestion_quantity(part),
             }
         )
@@ -134,7 +70,7 @@ def get_critical_parts_with_priority():
     }
 
     return sorted(
-        critical_parts,
+        rows,
         key=lambda row: (
             priority_order[row["priority"]["level"]],
             row["part"].current_stock,
@@ -144,34 +80,72 @@ def get_critical_parts_with_priority():
 
 
 def get_parts_with_stock_logic_queryset():
-    """
-    Return a queryset annotated with stock priority and purchase suggestions.
-    This moves the logic from Python memory to the database (SQL).
-    """
     return Part.objects.filter(is_active=True).annotate(
-        # Calculate current stock ratio relative to minimum stock
-        # To avoid division by zero, we treat 0 as a very small value or handle it via Case
         restock_priority_level=Case(
             When(current_stock__lte=0, then=Value("critical")),
             When(
-                current_stock__lte=F("minimum_stock") * Decimal("0.5"),
+                current_stock__lt=F("minimum_stock") * Decimal("0.50"),
                 then=Value("critical"),
             ),
-            When(
-                current_stock__lte=F("minimum_stock") * Decimal("0.75"),
-                then=Value("high"),
-            ),
-            When(current_stock__lte=F("minimum_stock"), then=Value("medium")),
+            When(current_stock__lt=F("minimum_stock"), then=Value("high")),
+            When(current_stock=F("minimum_stock"), then=Value("medium")),
             default=Value("normal"),
             output_field=CharField(),
         ),
-        # Suggestion: (Minimum * 2) - Current Stock, if below minimum.
         purchase_suggestion_qty=Case(
             When(
                 current_stock__lt=F("minimum_stock"),
-                then=(F("minimum_stock") * 2) - F("current_stock"),
+                then=(F("minimum_stock") * Decimal("2")) - F("current_stock"),
             ),
-            default=Value(0),
+            default=Value(Decimal("0.00")),
             output_field=DecimalField(max_digits=10, decimal_places=2),
         ),
     )
+
+
+def get_billable_parts_for_service_order(order_id):
+    return (
+        ServiceOrderPart.objects.select_related("part", "service_order")
+        .filter(
+            service_order_id=order_id,
+            status__in=[
+                ServiceOrderPart.Status.RESERVED,
+                ServiceOrderPart.Status.USED,
+            ],
+        )
+        .order_by("created_at")
+    )
+
+
+def get_parts_total_for_service_order(order_id):
+    total = get_billable_parts_for_service_order(order_id).aggregate(
+        total=Coalesce(
+            Sum(F("quantity") * F("unit_price") - F("discount")),
+            Decimal("0.00"),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        )
+    )["total"]
+
+    if total < Decimal("0.00"):
+        return Decimal("0.00")
+
+    return total
+
+
+def count_billable_parts_for_service_order(order_id):
+    return get_billable_parts_for_service_order(order_id).count()
+
+
+def get_restock_suggestions():
+    suggestions = []
+
+    for part in get_low_stock_parts():
+        suggestions.append(
+            {
+                "part": part,
+                "priority": get_restock_priority(part),
+                "suggestion_quantity": get_restock_suggestion_quantity(part),
+            }
+        )
+
+    return suggestions
