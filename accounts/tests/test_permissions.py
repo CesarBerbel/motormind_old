@@ -12,8 +12,10 @@ from accounts.permissions import (
     can_access_productivity_report,
     can_cancel_service_order,
     can_finish_time_entry,
+    can_manage_financial,
     can_manage_service_orders,
     can_track_service_order_time,
+    can_view_financial,
     can_view_service_orders,
     has_any_group,
     has_group,
@@ -238,3 +240,27 @@ def test_can_access_productivity_report(users):
     assert can_access_productivity_report(users["attendant"]) is True
     assert can_access_productivity_report(users["mechanic"]) is False
     assert can_access_productivity_report(users["financial"]) is False
+
+
+@pytest.mark.django_db
+def test_can_view_financial(users):
+    """
+    Test financial dashboard view permissions.
+    """
+    assert can_view_financial(users["admin"]) is True
+    assert can_view_financial(users["financial"]) is True
+    assert can_view_financial(users["attendant"]) is False
+    assert can_view_financial(users["mechanic"]) is False
+    assert can_view_financial(users["plain_user"]) is False
+
+
+@pytest.mark.django_db
+def test_can_manage_financial(users):
+    """
+    Test financial write permissions.
+    """
+    assert can_manage_financial(users["admin"]) is True
+    assert can_manage_financial(users["financial"]) is True
+    assert can_manage_financial(users["attendant"]) is False
+    assert can_manage_financial(users["mechanic"]) is False
+    assert can_manage_financial(users["plain_user"]) is False

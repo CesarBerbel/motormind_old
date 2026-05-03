@@ -189,7 +189,7 @@ class ServiceOrder(models.Model):
     @property
     def total_amount(self):
         """
-        Return the net total from the service order financial summary.
+        Return the net total from the single financial summary contract.
         """
         from service_orders.selectors import get_service_order_financial_summary
 

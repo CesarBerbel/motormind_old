@@ -1,6 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from accounts.permissions import can_view_financial, user_passes_permission
+
 from .selectors import (
     get_cash_flow_entries,
     get_cash_flow_summary,
@@ -10,6 +12,7 @@ from .selectors import (
 
 
 @login_required
+@user_passes_permission(can_view_financial)
 def dashboard(request):
     """
     Render financial dashboard.

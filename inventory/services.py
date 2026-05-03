@@ -272,10 +272,7 @@ def return_used_service_order_part(*, service_order_part, changed_by):
         part=locked_service_order_part.part,
         quantity=locked_service_order_part.quantity,
         created_by=changed_by,
-        reason=(
-            "Devolução da peça da OS "
-            f"#{locked_service_order_part.service_order_id}."
-        ),
+        reason=f"Devolução da peça da OS #{locked_service_order_part.service_order_id}.",
         service_order=locked_service_order_part.service_order,
     )
 

@@ -16,9 +16,10 @@ from service_orders.forms import (
 )
 from service_orders.models import ServiceOrder
 from service_orders.selectors import (
+    get_service_order_financial_summary,
+    calculate_inventory_parts_total,
     filter_service_orders_by_search,
     get_all_inventory_parts_for_service_order,
-    get_service_order_financial_summary,
     get_service_orders_for_list,
 )
 from service_orders.services import cancel_service_order as cancel_service_order_service

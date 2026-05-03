@@ -1,11 +1,11 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.utils import timezone
 
-from service_orders.models import ServiceOrder, ServiceOrderItem, ServiceOrderTimeEntry
+from service_orders.models import ServiceOrder, ServiceOrderTimeEntry
 
 
 def get_mechanic_queryset():
@@ -219,23 +219,27 @@ def calculate_inventory_parts_total(service_order):
     return total
 
 
-def _money(value):
-    """Return a Decimal normalized to currency scale."""
-    return value.quantize(Decimal("0.01"))
+def money(value):
+    """Normalize monetary values to the database scale used by DecimalField.
 
-
-def get_service_order_financial_summary(service_order_or_id):
+    Multiplying DecimalField values such as Decimal("1.00") * Decimal("100.00")
+    can produce Decimal("100.0000"). Django validates decimal_places before
+    saving financial models, so all public financial totals must be quantized
+    to exactly two decimal places.
     """
-    Return the single financial source of truth for a service order.
+    if value is None:
+        value = Decimal("0.00")
+    return Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    Gross total is composed by manual service items, manual part items,
-    billable inventory parts and the legacy cost fields. The order discount
-    is applied exactly once to produce net_total.
+
+def get_service_order_financial_summary(service_order):
     """
-    if isinstance(service_order_or_id, ServiceOrder):
-        service_order = service_order_or_id
-    else:
-        service_order = ServiceOrder.objects.get(pk=service_order_or_id)
+    Return the single financial summary contract for a service order.
+
+    All templates and financial services must use this selector instead of
+    recalculating totals independently.
+    """
+    from service_orders.models import ServiceOrderItem
 
     manual_services_total = Decimal("0.00")
     manual_parts_total = Decimal("0.00")
@@ -246,38 +250,42 @@ def get_service_order_financial_summary(service_order_or_id):
         elif item.item_type == ServiceOrderItem.ItemType.PART:
             manual_parts_total += item.total
 
-    manual_services_total = _money(manual_services_total)
-    manual_parts_total = _money(manual_parts_total)
-    inventory_parts_total = _money(calculate_inventory_parts_total(service_order))
-    labor_cost = _money(service_order.labor_cost or Decimal("0.00"))
-    extra_parts_cost = _money(service_order.parts_cost or Decimal("0.00"))
-    discount = _money(service_order.discount or Decimal("0.00"))
+    manual_services_total = money(manual_services_total)
+    manual_parts_total = money(manual_parts_total)
+    manual_items_total = money(manual_services_total + manual_parts_total)
+    inventory_parts_total = money(calculate_inventory_parts_total(service_order))
+    labor_cost = money(service_order.labor_cost)
+    extra_parts_cost = money(service_order.parts_cost)
+    discount = money(service_order.discount)
 
-    gross_total = _money(
+    gross_total = money(
         manual_services_total
         + manual_parts_total
         + inventory_parts_total
         + labor_cost
         + extra_parts_cost
     )
-    net_total = _money(gross_total - discount)
+    net_total = money(gross_total - discount)
 
     if net_total < Decimal("0.00"):
         net_total = Decimal("0.00")
-
-    billable_inventory_parts = list(get_billable_inventory_parts(service_order))
 
     return {
         "order_id": service_order.pk,
         "manual_services_total": manual_services_total,
         "manual_parts_total": manual_parts_total,
-        "manual_items_total": manual_services_total + manual_parts_total,
+        "manual_items_total": manual_items_total,
         "inventory_parts_total": inventory_parts_total,
         "labor_cost": labor_cost,
         "extra_parts_cost": extra_parts_cost,
+        "parts_cost": extra_parts_cost,
         "gross_total": gross_total,
+        "financial_subtotal": gross_total,
         "discount": discount,
         "net_total": net_total,
-        "billable_inventory_parts_count": len(billable_inventory_parts),
+        "financial_total": net_total,
+        "billable_inventory_parts_count": get_billable_inventory_parts(
+            service_order
+        ).count(),
         "generated_at": timezone.now(),
     }

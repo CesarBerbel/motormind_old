@@ -16,14 +16,9 @@ from .models import (
 @transaction.atomic
 def create_receivable_from_service_order(service_order, created_by):
     """
-    Create a receivable from the service order financial summary.
-
-    The service order summary is the single source of truth. The discount
-    received from the summary is stored once and is not applied again to an
-    already-net order total.
+    Create a receivable from a service order total.
     """
     summary = get_service_order_financial_summary(service_order)
-
     original_amount = summary["gross_total"]
     discount_amount = summary["discount"]
     final_amount = summary["net_total"]
