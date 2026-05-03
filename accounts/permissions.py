@@ -247,6 +247,32 @@ def can_access_productivity_report(user):
     )
 
 
+def can_view_financial(user):
+    """
+    Check if user can view financial screens and dashboards.
+    """
+    return has_any_group(
+        user,
+        [
+            ADMIN_GROUP,
+            FINANCIAL_GROUP,
+        ],
+    )
+
+
+def can_manage_financial(user):
+    """
+    Check if user can create financial records and register payments/expenses.
+    """
+    return has_any_group(
+        user,
+        [
+            ADMIN_GROUP,
+            FINANCIAL_GROUP,
+        ],
+    )
+
+
 def user_passes_permission(permission_check, message=None):
     """
     Decorator factory for permission checks.

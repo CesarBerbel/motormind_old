@@ -253,56 +253,6 @@ def test_return_used_service_order_part_returns_stock(service_order, part, users
 
     assert service_order_part.status == ServiceOrderPart.Status.RETURNED
     assert part.current_stock == Decimal("10.00")
-    assert StockMovement.objects.filter(
-        part=part,
-        service_order=service_order,
-        movement_type=StockMovement.MovementType.RETURN,
-        quantity=Decimal("2.00"),
-    ).exists()
-
-
-@pytest.mark.django_db
-def test_return_used_service_order_part_cannot_return_twice(service_order, part, users):
-    """
-    Test if a returned used part cannot be returned again and duplicate stock.
-    """
-    form = ServiceOrderPartForm(
-        data={
-            "part": part.pk,
-            "quantity": "2.00",
-            "unit_price": "45.00",
-            "discount": "0.00",
-        }
-    )
-
-    assert form.is_valid()
-
-    service_order_part = reserve_part_for_service_order(
-        service_order=service_order,
-        form=form,
-        created_by=users["attendant"],
-    )
-    confirm_service_order_part_usage(service_order_part=service_order_part)
-
-    return_used_service_order_part(
-        service_order_part=service_order_part,
-        changed_by=users["attendant"],
-    )
-
-    with pytest.raises(ValidationError):
-        return_used_service_order_part(
-            service_order_part=service_order_part,
-            changed_by=users["attendant"],
-        )
-
-    part.refresh_from_db()
-
-    assert part.current_stock == Decimal("10.00")
-    assert StockMovement.objects.filter(
-        part=part,
-        service_order=service_order,
-        movement_type=StockMovement.MovementType.RETURN,
-    ).count() == 1
 
 
 @pytest.mark.django_db
@@ -365,3 +315,90 @@ def test_mechanic_cannot_add_part_to_service_order(client, service_order, part, 
     assert response.status_code == 302
     assert reverse("accounts:dashboard") in response.url
     assert part.current_stock == Decimal("10.00")
+
+
+@pytest.mark.django_db
+def test_return_used_service_order_part_creates_return_movement(
+    service_order, part, users
+):
+    """
+    Test if returning a used part records an auditable return movement.
+    """
+    form = ServiceOrderPartForm(
+        data={
+            "part": part.pk,
+            "quantity": "2.00",
+            "unit_price": "45.00",
+            "discount": "0.00",
+        }
+    )
+
+    assert form.is_valid()
+
+    service_order_part = reserve_part_for_service_order(
+        service_order=service_order,
+        form=form,
+        created_by=users["attendant"],
+    )
+    confirm_service_order_part_usage(service_order_part=service_order_part)
+
+    return_used_service_order_part(
+        service_order_part=service_order_part,
+        changed_by=users["attendant"],
+    )
+
+    assert StockMovement.objects.filter(
+        part=part,
+        service_order=service_order,
+        movement_type=StockMovement.MovementType.RETURN,
+        quantity=Decimal("2.00"),
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_return_used_service_order_part_blocks_duplicate_return(
+    service_order, part, users
+):
+    """
+    Test if a returned part cannot be returned twice.
+    """
+    form = ServiceOrderPartForm(
+        data={
+            "part": part.pk,
+            "quantity": "2.00",
+            "unit_price": "45.00",
+            "discount": "0.00",
+        }
+    )
+
+    assert form.is_valid()
+
+    service_order_part = reserve_part_for_service_order(
+        service_order=service_order,
+        form=form,
+        created_by=users["attendant"],
+    )
+    confirm_service_order_part_usage(service_order_part=service_order_part)
+
+    returned_part = return_used_service_order_part(
+        service_order_part=service_order_part,
+        changed_by=users["attendant"],
+    )
+
+    with pytest.raises(ValidationError):
+        return_used_service_order_part(
+            service_order_part=returned_part,
+            changed_by=users["attendant"],
+        )
+
+    part.refresh_from_db()
+
+    assert part.current_stock == Decimal("10.00")
+    assert (
+        StockMovement.objects.filter(
+            part=part,
+            service_order=service_order,
+            movement_type=StockMovement.MovementType.RETURN,
+        ).count()
+        == 1
+    )
