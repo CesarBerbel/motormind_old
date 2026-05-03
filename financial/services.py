@@ -1,7 +1,7 @@
-from decimal import Decimal
-
 from django.db import transaction
 from django.utils import timezone
+
+from service_orders.selectors import get_service_order_financial_summary
 
 from .models import (
     CashFlowEntry,
@@ -16,14 +16,17 @@ from .models import (
 @transaction.atomic
 def create_receivable_from_service_order(service_order, created_by):
     """
-    Create a receivable from a service order total.
-    """
-    original_amount = service_order.total_amount
-    discount_amount = service_order.discount
-    final_amount = original_amount - discount_amount
+    Create a receivable from the service order financial summary.
 
-    if final_amount < Decimal("0.00"):
-        final_amount = Decimal("0.00")
+    The service order summary is the single source of truth. The discount
+    received from the summary is stored once and is not applied again to an
+    already-net order total.
+    """
+    summary = get_service_order_financial_summary(service_order)
+
+    original_amount = summary["gross_total"]
+    discount_amount = summary["discount"]
+    final_amount = summary["net_total"]
 
     receivable = Receivable(
         service_order=service_order,

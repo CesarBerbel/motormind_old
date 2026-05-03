@@ -259,18 +259,27 @@ def cancel_reserved_service_order_part(*, service_order_part, changed_by):
 
 @transaction.atomic
 def return_used_service_order_part(*, service_order_part, changed_by):
-    if service_order_part.status != ServiceOrderPart.Status.USED:
+    locked_service_order_part = (
+        ServiceOrderPart.objects.select_for_update()
+        .select_related("part", "service_order")
+        .get(pk=service_order_part.pk)
+    )
+
+    if locked_service_order_part.status != ServiceOrderPart.Status.USED:
         raise ValidationError("Somente peças usadas podem ser devolvidas ao estoque.")
 
     return_stock(
-        part=service_order_part.part,
-        quantity=service_order_part.quantity,
+        part=locked_service_order_part.part,
+        quantity=locked_service_order_part.quantity,
         created_by=changed_by,
-        reason=f"Devolução da peça da OS #{service_order_part.service_order_id}.",
-        service_order=service_order_part.service_order,
+        reason=(
+            "Devolução da peça da OS "
+            f"#{locked_service_order_part.service_order_id}."
+        ),
+        service_order=locked_service_order_part.service_order,
     )
 
-    service_order_part.status = ServiceOrderPart.Status.RETURNED
-    service_order_part.save(update_fields=["status", "updated_at"])
+    locked_service_order_part.status = ServiceOrderPart.Status.RETURNED
+    locked_service_order_part.save(update_fields=["status", "updated_at"])
 
-    return service_order_part
+    return locked_service_order_part

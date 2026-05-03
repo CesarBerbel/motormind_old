@@ -1,0 +1,1974 @@
+ESPECIFICACAO TECNICA E REGRAS DE NEGOCIO - MOTORMIND
+Versao do documento: 1.0
+Data-base: 2026-05-01
+
+Objetivo
+========
+
+Este documento descreve o sistema MotorMind a partir do estado atual do projeto
+e organiza as especificacoes para uma recriacao totalmente modular.
+
+A meta da nova versao e permitir que cada modulo possa ser desenvolvido,
+testado e evoluido isoladamente, com contratos claros entre modulos e sem
+dependencias cruzadas desnecessarias.
+
+O sistema e uma aplicacao web para gestao de oficina mecanica, cobrindo:
+
+- autenticacao e perfis de acesso;
+- clientes e veiculos;
+- ordens de servico;
+- estoque de pecas;
+- integracao entre estoque e ordens;
+- financeiro basico;
+- dashboards e relatorios operacionais.
+
+
+1. Visao geral do produto
+=========================
+
+1.1 Publico-alvo
+----------------
+
+O sistema atende oficinas mecanicas pequenas e medias que precisam registrar
+clientes, veiculos, servicos, pecas, estoque, produtividade mecanica e fluxo
+financeiro basico.
+
+1.2 Perfis de usuario
+---------------------
+
+Perfis existentes:
+
+- Administrador
+- Atendente
+- Mecanico
+- Financeiro
+
+1.3 Principais fluxos
+---------------------
+
+Fluxo comercial/operacional:
+
+1. Usuario acessa o sistema.
+2. Atendente cadastra cliente.
+3. Atendente cadastra veiculo do cliente.
+4. Atendente cria ordem de servico.
+5. Mecanico registra diagnostico, solucao, tempo e observacoes tecnicas.
+6. Atendente ou administrador adiciona servicos manuais e pecas.
+7. Estoque reserva, confirma, cancela ou devolve pecas vinculadas a ordem.
+8. Ordem e finalizada.
+9. Financeiro gera conta a receber a partir do total final.
+10. Financeiro registra pagamentos.
+11. Sistema registra entradas/saidas no fluxo de caixa.
+
+Fluxo de estoque:
+
+1. Usuario autorizado cadastra peca.
+2. Usuario autorizado registra entrada, saida, ajuste, perda, reserva,
+   liberacao ou devolucao.
+3. O sistema valida estoque disponivel nas movimentacoes que reduzem saldo.
+4. O sistema lista pecas criticas quando o estoque atual esta abaixo ou igual
+   ao minimo.
+
+Fluxo financeiro:
+
+1. Ordem finalizada ou aprovada gera uma conta a receber.
+2. Conta a receber guarda valor original, desconto, valor final, valor pago e
+   status.
+3. Pagamentos reduzem saldo em aberto.
+4. Pagamento gera entrada no fluxo de caixa.
+5. Despesas pagas geram saida no fluxo de caixa.
+
+
+2. Stack tecnica atual recomendada
+==================================
+
+2.1 Backend
+-----------
+
+- Python
+- Django 5.2.x
+- Django ORM
+- Django Templates
+- django-environ para configuracao por ambiente
+- django-crispy-forms e crispy-bootstrap5 para formularios
+- WhiteNoise para arquivos estaticos em producao
+
+2.2 Banco de dados
+------------------
+
+Ambiente local atual:
+
+- SQLite via DATABASE_URL
+
+Recomendacao para nova arquitetura:
+
+- SQLite em desenvolvimento e testes simples.
+- PostgreSQL em homologacao/producao.
+- Usar migrations por modulo.
+- Evitar logica financeira em floats; usar Decimal em todos os valores
+  monetarios.
+
+2.3 Testes e qualidade
+----------------------
+
+Ferramentas atuais/recomendadas:
+
+- pytest
+- pytest-django
+- pytest-cov
+- model_bakery
+- freezegun
+- ruff
+- coverage HTML
+
+Configuracao atual observada:
+
+- DJANGO_SETTINGS_MODULE=config.settings.test
+- pytest com --nomigrations
+- cobertura atual focada em accounts, customers, service_orders e inventory
+
+Recomendacao:
+
+- Incluir financial na cobertura.
+- Criar testes por modulo e testes de integracao apenas para contratos entre
+  modulos.
+- Cada modulo deve conseguir rodar seus testes sem depender de telas de outro
+  modulo.
+
+2.4 Configuracoes
+-----------------
+
+Estrutura atual:
+
+- config/settings/base.py
+- config/settings/local.py
+- config/settings/test.py
+- config/settings/production.py
+
+Configuracoes importantes:
+
+- LANGUAGE_CODE=pt-br
+- TIME_ZONE=America/Sao_Paulo
+- USE_TZ=True
+- Login URL: accounts:login
+- Static files via STATIC_URL e STATIC_ROOT
+- Media files via MEDIA_URL e MEDIA_ROOT
+- Email backend console por padrao
+
+Recomendacoes:
+
+- Separar claramente variaveis obrigatorias por ambiente.
+- Reativar validadores de senha em ambientes nao locais.
+- Criar validacao de settings no startup para variaveis criticas.
+
+
+3. Arquitetura modular proposta
+===============================
+
+3.1 Principios
+--------------
+
+Cada modulo deve ter responsabilidade clara e fronteira publica explicita.
+
+Regra principal:
+
+Nenhum modulo deve escrever diretamente nos dados de outro modulo. Quando uma
+acao precisar afetar outro modulo, ela deve chamar um servico publico do modulo
+dono dos dados.
+
+Padrao recomendado por modulo:
+
+- models.py: persistencia, relacionamentos e invariantes simples.
+- services.py: regras de negocio, transacoes e escrita.
+- selectors.py: consultas e leitura otimizada.
+- forms.py: validacao de entrada de telas.
+- permissions.py: regras de autorizacao do modulo.
+- views.py ou views/: views finas, chamando services/selectors.
+- urls.py: rotas do modulo.
+- tests/: testes do modulo.
+- templates/<modulo>/: telas do modulo.
+
+3.2 Modulos recomendados
+------------------------
+
+Modulo: core
+
+Responsabilidade:
+
+- utilitarios compartilhados;
+- validadores genericos;
+- formatacao de dinheiro/data;
+- exceptions de dominio;
+- helpers de auditoria;
+- mixins de models;
+- contratos base para services/selectors;
+- middlewares comuns;
+- helpers de permissao.
+
+Dependencias:
+
+- nao deve depender de nenhum modulo de negocio.
+
+Modulo: accounts
+
+Responsabilidade:
+
+- usuario customizado;
+- autenticacao;
+- grupos/perfis;
+- dashboard inicial por perfil;
+- permissoes globais.
+
+Dependencias:
+
+- pode depender de core.
+- nao deve depender diretamente de service_orders, inventory ou financial para
+  regras. Para dashboards, usar selectors publicos dos modulos.
+
+Modulo: customers
+
+Responsabilidade:
+
+- clientes;
+- dados cadastrais;
+- validacao de documento/telefone;
+- historico basico de relacionamento.
+
+Dependencias:
+
+- pode depender de core e accounts para usuario criador/alterador se necessario.
+- nao deve depender de service_orders.
+
+Modulo: vehicles
+
+Responsabilidade:
+
+- veiculos;
+- placa, marca, modelo, ano, quilometragem;
+- vinculo com cliente.
+
+Observacao:
+
+- Hoje veiculos estao dentro de customers. Na nova versao podem continuar no
+  modulo customers ou virar modulo separado. Se a oficina for crescer em
+  historico tecnico por veiculo, recomenda-se separar vehicles.
+
+Modulo: service_orders
+
+Responsabilidade:
+
+- ordens de servico;
+- status e prioridade;
+- diagnostico e solucao;
+- servicos manuais;
+- notas internas/publicas;
+- historico/auditoria;
+- apontamento de tempo;
+- quadro operacional;
+- agenda;
+- relatorio de produtividade.
+
+Dependencias:
+
+- pode depender de customers/vehicles para cliente e veiculo.
+- pode depender de accounts para usuarios envolvidos.
+- nao deve escrever no estoque diretamente.
+- nao deve calcular financeiro usando dados espalhados. Deve expor um resumo
+  financeiro unico para ser consumido pelo financeiro.
+
+Modulo: inventory
+
+Responsabilidade:
+
+- pecas;
+- saldo de estoque;
+- movimentos de estoque;
+- reserva/uso/devolucao de pecas em ordens;
+- pecas criticas;
+- sugestao de reposicao.
+
+Dependencias:
+
+- pode depender de accounts para usuario criador.
+- integracao com service_orders deve ocorrer via servicos bem definidos.
+- idealmente, guardar apenas referencia a ordem ou depender de uma interface
+  publica de service_orders.
+
+Modulo: financial
+
+Responsabilidade:
+
+- contas a receber;
+- pagamentos;
+- despesas;
+- fluxo de caixa;
+- resumo financeiro;
+- dashboard financeiro.
+
+Dependencias:
+
+- pode depender de accounts para usuario criador.
+- pode consumir resumo financeiro de service_orders por contrato publico.
+- nao deve recalcular total de ordem por conta propria.
+
+Modulo: reports
+
+Responsabilidade:
+
+- relatorios transversais;
+- exportacoes;
+- indicadores consolidados.
+
+Dependencias:
+
+- deve usar selectors publicos dos modulos.
+- nao deve escrever em dados operacionais.
+
+Modulo: notifications
+
+Responsabilidade futura:
+
+- notificacoes por email, WhatsApp, SMS ou painel;
+- lembretes de entrega;
+- avisos de estoque critico;
+- cobrancas.
+
+Modulo: integrations
+
+Responsabilidade futura:
+
+- API externa;
+- webhooks;
+- integracao com gateway de pagamento;
+- emissao fiscal;
+- importacao/exportacao.
+
+3.3 Direcao das dependencias
+----------------------------
+
+Recomendacao de baixo para cima:
+
+1. core
+2. accounts
+3. customers/vehicles
+4. service_orders
+5. inventory
+6. financial
+7. reports
+8. notifications/integrations
+
+Regra:
+
+- Modulos de nivel inferior nao devem importar modulos de nivel superior.
+- Reports pode ler varios modulos, mas nao deve alterar dados.
+- Financial deve consumir totais prontos de service_orders, nao recriar logica
+  operacional.
+
+3.4 Contratos publicos entre modulos
+------------------------------------
+
+Cada modulo deve expor uma API interna estavel.
+
+Exemplos:
+
+accounts.permissions:
+
+- can_manage_customers(user)
+- can_manage_vehicles(user)
+- can_view_service_orders(user)
+- can_manage_service_orders(user)
+- can_update_service_order_technical(user)
+- can_manage_inventory(user)
+- can_view_financial(user)
+
+customers.selectors:
+
+- get_active_customers()
+- get_customer_by_id(customer_id)
+- get_customer_vehicles(customer_id)
+
+service_orders.services:
+
+- create_service_order(data, user)
+- update_service_order(order, data, user)
+- update_technical_data(order, data, user)
+- change_status(order, status, user)
+- cancel_service_order(order, reason, user)
+- add_manual_item(order, data, user)
+- add_note(order, data, user)
+- start_time_entry(order, mechanic, user)
+- finish_time_entry(entry, user)
+
+service_orders.selectors:
+
+- get_service_order_detail(order_id)
+- get_service_order_financial_summary(order_id)
+- get_open_orders()
+- get_overdue_orders()
+- get_board_data()
+- get_agenda_data()
+- get_productivity_report(filters)
+
+inventory.services:
+
+- create_stock_movement(part, movement_type, quantity, user, reason)
+- reserve_part_for_service_order(order, part, quantity, user)
+- confirm_service_order_part_usage(order_part, user)
+- cancel_service_order_part_reservation(order_part, user)
+- return_service_order_part(order_part, user)
+
+inventory.selectors:
+
+- get_active_parts()
+- get_low_stock_parts()
+- get_restock_suggestions()
+- get_billable_parts_for_service_order(order_id)
+- get_parts_total_for_service_order(order_id)
+
+financial.services:
+
+- create_receivable_from_service_order(order_id, user)
+- register_payment(receivable, amount, method, user)
+- register_expense(data, user)
+- mark_expense_as_paid(expense, user)
+
+financial.selectors:
+
+- get_pending_receivables()
+- get_overdue_receivables()
+- get_cash_flow_summary(period)
+- get_financial_dashboard_data(user, filters)
+
+
+4. Permissoes
+=============
+
+4.1 Grupos
+----------
+
+Grupos atuais:
+
+- Administrador
+- Atendente
+- Mecanico
+- Financeiro
+
+4.2 Regras gerais
+-----------------
+
+Administrador:
+
+- acesso total ao sistema;
+- pode cadastrar, editar, cancelar e excluir conforme regras de negocio;
+- pode acessar todos os dashboards;
+- pode cancelar ordem de servico;
+- pode gerenciar estoque;
+- pode registrar movimentacoes financeiras.
+
+Atendente:
+
+- pode gerenciar clientes;
+- pode gerenciar veiculos;
+- pode criar e editar ordens de servico;
+- pode adicionar/editar/remover itens manuais da ordem;
+- pode adicionar notas;
+- pode ver quadro e agenda;
+- pode gerenciar estoque operacional;
+- pode ver relatorio de produtividade;
+- nao deve cancelar ordens se a regra exigir exclusividade do administrador;
+- acesso financeiro deve ser limitado ou negado, conforme decisao de negocio.
+
+Mecanico:
+
+- pode visualizar ordens de servico;
+- pode atualizar dados tecnicos da ordem;
+- pode adicionar notas;
+- pode iniciar e finalizar apontamento de tempo;
+- pode ver quadro e agenda;
+- pode visualizar estoque;
+- nao pode criar ordem;
+- nao pode editar dados comerciais;
+- nao pode cancelar ordem;
+- nao pode movimentar estoque diretamente;
+- nao pode acessar financeiro.
+
+Financeiro:
+
+- pode visualizar ordens de servico para conferencia;
+- pode visualizar estoque para conferencia de custos;
+- pode acessar dashboard financeiro;
+- pode criar/consultar contas a receber;
+- pode registrar pagamentos;
+- pode registrar despesas;
+- nao deve editar dados tecnicos ou operacionais da ordem;
+- nao deve movimentar estoque operacional.
+
+4.3 Matriz resumida
+-------------------
+
+Acao                                      Admin  Atendente  Mecanico  Financeiro
+Login                                     Sim    Sim        Sim       Sim
+Dashboard geral                           Sim    Sim        Sim       Sim
+Area administrativa                       Sim    Nao        Nao       Nao
+Cadastrar cliente                         Sim    Sim        Nao       Nao
+Editar cliente                            Sim    Sim        Nao       Nao
+Excluir/desativar cliente                 Sim    Sim        Nao       Nao
+Cadastrar veiculo                         Sim    Sim        Nao       Nao
+Editar veiculo                            Sim    Sim        Nao       Nao
+Visualizar ordem                          Sim    Sim        Sim       Sim
+Criar ordem                               Sim    Sim        Nao       Nao
+Editar dados comerciais da ordem          Sim    Sim        Nao       Nao
+Atualizar diagnostico/solucao             Sim    Nao        Sim       Nao
+Cancelar ordem                            Sim    Nao        Nao       Nao
+Adicionar item manual na ordem            Sim    Sim        Nao       Nao
+Adicionar nota na ordem                   Sim    Sim        Sim       Nao
+Quadro operacional                        Sim    Sim        Sim       Nao
+Agenda                                    Sim    Sim        Sim       Nao
+Apontar tempo                             Sim    Nao        Sim       Nao
+Relatorio de produtividade                Sim    Sim        Nao       Nao
+Visualizar estoque                        Sim    Sim        Sim       Sim
+Cadastrar/editar peca                     Sim    Sim        Nao       Nao
+Movimentar estoque                        Sim    Sim        Nao       Nao
+Reservar peca para ordem                  Sim    Sim        Nao       Nao
+Confirmar/cancelar/devolver peca da ordem Sim    Sim        Nao       Nao
+Dashboard financeiro                      Sim    Nao        Nao       Sim
+Registrar pagamento                       Sim    Nao        Nao       Sim
+Registrar despesa                         Sim    Nao        Nao       Sim
+
+4.4 Observacao sobre permissoes atuais
+--------------------------------------
+
+No estado atual do projeto, existe funcao de permissao para estoque e ordens,
+mas o dashboard financeiro esta apenas protegido por login. Na recriacao,
+criar explicitamente:
+
+- can_view_financial(user)
+- can_manage_financial(user)
+
+
+5. Modulo accounts
+==================
+
+5.1 Responsabilidade
+--------------------
+
+Gerenciar usuarios, autenticacao, grupos e direcionamento inicial do usuario.
+
+5.2 Entidades
+-------------
+
+CustomUser:
+
+- email: unico, usado como login;
+- username: removido;
+- first_name;
+- last_name;
+- is_active;
+- is_staff;
+- is_superuser;
+- date_joined;
+- created_at;
+- updated_at.
+
+5.3 Regras de negocio
+---------------------
+
+- Email e obrigatorio e unico.
+- Login deve ser feito por email.
+- Superusuario deve ter is_staff=True e is_superuser=True.
+- Usuario inativo nao deve conseguir acessar areas autenticadas.
+- Grupo define permissoes funcionais.
+- Usuario sem grupo deve receber acesso minimo ou ser bloqueado de areas
+  internas, conforme decisao de negocio.
+
+5.4 Telas atuais
+----------------
+
+- /conta/cadastro/
+- /conta/login/
+- /conta/painel/
+- /conta/administracao/
+- /conta/atendimento/
+- /conta/mecanica/
+- /conta/financeiro/
+- /conta/sair/
+
+5.5 Telas recomendadas na nova versao
+-------------------------------------
+
+- Login
+- Logout
+- Meu perfil
+- Dashboard inicial
+- Gestao de usuarios
+- Gestao de grupos/permissoes
+- Auditoria de acessos, opcional
+
+5.6 Testes minimos
+------------------
+
+- criar usuario comum com email;
+- criar superusuario;
+- impedir email duplicado;
+- login por email;
+- dashboard exige login;
+- cada grupo recebe/nega permissoes conforme matriz.
+
+
+6. Modulo customers
+===================
+
+6.1 Responsabilidade
+--------------------
+
+Gerenciar cadastro de clientes.
+
+6.2 Entidades
+-------------
+
+Customer:
+
+- name;
+- phone;
+- email;
+- document;
+- address;
+- notes;
+- is_active;
+- created_at;
+- updated_at.
+
+6.3 Regras de negocio
+---------------------
+
+- Nome e obrigatorio.
+- Telefone deve ser validado por formato permitido.
+- Email deve ser validado por formato.
+- Documento deve ser unico se a oficina decidir tratar CPF/CNPJ como
+  identificador principal.
+- Cliente nao deve ser removido fisicamente quando possuir historico
+  relevante; preferir desativacao logica.
+- Cliente inativo nao deve aparecer por padrao em seletores de nova ordem.
+
+6.4 Telas atuais
+----------------
+
+- /oficina/clientes/
+- /oficina/clientes/novo/
+- /oficina/clientes/<id>/
+- /oficina/clientes/<id>/editar/
+- /oficina/clientes/<id>/excluir/
+
+6.5 Testes minimos
+------------------
+
+- listar apenas clientes ativos por padrao;
+- criar cliente valido;
+- validar telefone/email/documento;
+- editar cliente;
+- impedir exclusao indevida quando houver vinculos criticos, ou desativar;
+- garantir permissoes de Atendente/Admin.
+
+
+7. Modulo vehicles
+==================
+
+7.1 Responsabilidade
+--------------------
+
+Gerenciar veiculos vinculados a clientes.
+
+7.2 Entidades
+-------------
+
+Vehicle:
+
+- customer;
+- plate;
+- brand;
+- model;
+- year;
+- color;
+- chassis_number;
+- mileage;
+- notes;
+- is_active;
+- created_at;
+- updated_at.
+
+7.3 Regras de negocio
+---------------------
+
+- Veiculo pertence a exatamente um cliente.
+- Placa deve ser unica.
+- Ano deve ser coerente.
+- Quilometragem nao deve ser negativa.
+- Veiculo inativo nao deve aparecer por padrao na criacao de ordem.
+- Ao selecionar um cliente na ordem, a tela deve carregar apenas os veiculos
+  ativos daquele cliente.
+
+7.4 Telas atuais
+----------------
+
+- /oficina/veiculos/
+- /oficina/veiculos/novo/
+- /oficina/veiculos/<id>/editar/
+- /oficina/veiculos/<id>/excluir/
+
+7.5 Rotas AJAX atuais
+---------------------
+
+- /servicos/ajax/veiculos-por-cliente/
+
+7.6 Testes minimos
+------------------
+
+- criar veiculo para cliente ativo;
+- impedir placa duplicada;
+- validar quilometragem;
+- retornar veiculos por cliente via endpoint;
+- respeitar permissoes de Admin/Atendente.
+
+
+8. Modulo service_orders
+========================
+
+8.1 Responsabilidade
+--------------------
+
+Controlar a vida operacional de uma ordem de servico.
+
+8.2 Entidades
+-------------
+
+ServiceOrder:
+
+- customer;
+- vehicle;
+- created_by;
+- assigned_mechanic;
+- title;
+- description;
+- diagnosis;
+- solution;
+- status;
+- priority;
+- labor_cost;
+- parts_cost;
+- discount;
+- expected_delivery_date;
+- finished_at;
+- created_at;
+- updated_at.
+
+ServiceOrderItem:
+
+- service_order;
+- item_type: service ou part;
+- description;
+- quantity;
+- unit_price;
+- discount;
+- total;
+- created_at.
+
+ServiceOrderHistory:
+
+- service_order;
+- user;
+- action;
+- field_name;
+- old_value;
+- new_value;
+- notes;
+- created_at.
+
+ServiceOrderNote:
+
+- service_order;
+- user;
+- note;
+- is_internal;
+- created_at.
+
+ServiceOrderTimeEntry:
+
+- service_order;
+- mechanic;
+- started_at;
+- finished_at;
+- notes;
+- duration;
+- is_open.
+
+8.3 Status da ordem
+-------------------
+
+Status atuais:
+
+- open: Aberta
+- in_progress: Em andamento
+- waiting_parts: Aguardando pecas
+- waiting_approval: Aguardando aprovacao
+- finished: Finalizada
+- canceled: Cancelada
+
+8.4 Prioridades
+---------------
+
+Prioridades atuais:
+
+- low: Baixa
+- medium: Media
+- high: Alta
+
+8.5 Regras de negocio
+---------------------
+
+Criacao:
+
+- Ordem deve ter cliente, veiculo, titulo e descricao.
+- Veiculo deve pertencer ao cliente informado.
+- Usuario criador deve ser registrado.
+- Status inicial padrao deve ser Aberta.
+- Prioridade padrao deve ser Media.
+
+Edicao comercial:
+
+- Admin e Atendente podem editar dados comerciais.
+- Ordem cancelada nao deve permitir alteracoes.
+- Alteracoes relevantes devem gerar historico.
+
+Atualizacao tecnica:
+
+- Admin e Mecanico podem preencher diagnostico e solucao.
+- Mecanico nao deve alterar dados comerciais.
+- Ordem cancelada nao deve permitir atualizacao tecnica.
+
+Status:
+
+- Ao mudar para Finalizada, preencher finished_at se estiver vazio.
+- Ao sair de Finalizada, limpar finished_at ou registrar nova regra clara.
+- Ao mudar para Cancelada, exigir permissao de Admin.
+- Ordem cancelada nao deve receber novos itens, pecas, notas ou tempo.
+
+Historico:
+
+- Registrar alteracoes em campos auditaveis:
+  - assigned_mechanic;
+  - title;
+  - description;
+  - diagnosis;
+  - solution;
+  - status;
+  - priority;
+  - labor_cost;
+  - parts_cost;
+  - discount;
+  - expected_delivery_date;
+  - finished_at.
+
+Itens manuais:
+
+- Item deve ter descricao, quantidade e preco unitario.
+- Quantidade deve ser maior que zero.
+- Desconto do item nao pode superar subtotal.
+- Itens manuais de tipo service compoem total de servicos.
+- Itens manuais de tipo part devem ter regra clara: ou continuam permitidos
+  como peca avulsa sem estoque, ou sao removidos para forcar uso do modulo
+  inventory.
+
+Notas:
+
+- Nota deve ter conteudo.
+- Nota interna deve ser visivel apenas para usuarios internos autorizados.
+- Ordem cancelada nao deve aceitar nota nova.
+
+Apontamento de tempo:
+
+- Admin e Mecanico podem iniciar tempo.
+- Mecanico so pode finalizar seu proprio apontamento.
+- Admin pode finalizar qualquer apontamento.
+- Nao deve existir apontamento aberto duplicado para o mesmo mecanico na mesma
+  ordem.
+- Decisao recomendada: mecanico nao pode ter mais de um apontamento aberto em
+  qualquer ordem ao mesmo tempo.
+
+Atraso:
+
+- Ordem em atraso quando expected_delivery_date < hoje e status nao e
+  Finalizada nem Cancelada.
+
+8.6 Total financeiro da ordem
+-----------------------------
+
+Esta e uma area critica do sistema.
+
+Regra recomendada para nova versao:
+
+- Todo total financeiro da ordem deve sair de uma unica funcao/selector:
+  service_orders.selectors.get_service_order_financial_summary(order_id)
+
+Campos do resumo:
+
+- manual_services_total;
+- manual_parts_total, se ainda existir item manual de peca;
+- inventory_parts_total;
+- labor_cost;
+- extra_parts_cost, se ainda existir campo legado;
+- gross_total;
+- order_discount;
+- net_total.
+
+Formula recomendada:
+
+gross_total =
+  manual_services_total
+  + manual_parts_total
+  + inventory_parts_total
+  + labor_cost
+  + extra_parts_cost
+
+net_total = max(gross_total - order_discount, 0)
+
+Decisao importante:
+
+- Evitar descontar duas vezes.
+- Se ServiceOrder.total_amount ja retorna valor liquido, Financial nao deve
+  aplicar novamente ServiceOrder.discount.
+- Se Financial precisa guardar original_amount e discount_amount, entao deve
+  receber gross_total e order_discount separadamente pelo resumo financeiro.
+
+Inconsistencia conhecida no projeto atual:
+
+- ServiceOrder.total_amount usa servicos manuais + pecas de estoque -
+  desconto.
+- create_receivable_from_service_order usa original_amount=total_amount e ainda
+  aplica discount_amount=service_order.discount, podendo descontar duas vezes.
+- O campo labor_cost existe na ordem, mas nao entra na formula atual de
+  total_amount.
+- O campo parts_cost existe na ordem, mas a logica atual usa pecas do estoque.
+
+Regra para a recriacao:
+
+- Definir uma fonte unica da verdade.
+- Financial nunca deve recalcular total por propriedades diferentes da ordem.
+- Templates devem exibir o mesmo resumo consumido pelo financeiro.
+
+8.7 Telas atuais
+----------------
+
+- /servicos/ordens/
+- /servicos/ordens/nova/
+- /servicos/ordens/<id>/
+- /servicos/ordens/<id>/editar/
+- /servicos/ordens/<id>/tecnico/
+- /servicos/ordens/<id>/status-rapido/
+- /servicos/ordens/<id>/tempo/iniciar/
+- /servicos/tempo/<id>/finalizar/
+- /servicos/ordens/<id>/cancelar/
+- /servicos/ordens/<id>/itens/adicionar/
+- /servicos/itens/<id>/editar/
+- /servicos/itens/<id>/excluir/
+- /servicos/ordens/<id>/notas/adicionar/
+- /servicos/quadro/
+- /servicos/agenda/
+- /servicos/relatorios/produtividade/
+
+8.8 Telas recomendadas
+----------------------
+
+- Lista de ordens com filtros por status, prioridade, cliente, mecanico e data.
+- Criacao de ordem.
+- Detalhe da ordem com abas:
+  - resumo;
+  - cliente/veiculo;
+  - diagnostico/solucao;
+  - servicos e pecas;
+  - apontamentos;
+  - financeiro;
+  - historico;
+  - notas.
+- Edicao comercial.
+- Edicao tecnica.
+- Quadro kanban por status.
+- Agenda por previsao de entrega.
+- Relatorio de produtividade.
+
+8.9 Testes minimos
+------------------
+
+- criar ordem valida;
+- impedir veiculo de outro cliente;
+- atualizar status e finished_at;
+- cancelar apenas como Admin;
+- impedir alteracao em ordem cancelada;
+- gerar historico para campos auditaveis;
+- adicionar item valido;
+- impedir desconto maior que subtotal;
+- adicionar nota valida;
+- iniciar/finalizar tempo;
+- impedir mecanico finalizar tempo de outro mecanico;
+- calcular resumo financeiro com servicos, pecas, desconto e mao de obra;
+- garantir que template e financeiro usam o mesmo total.
+
+
+9. Modulo inventory
+===================
+
+9.1 Responsabilidade
+--------------------
+
+Controlar cadastro de pecas, saldo, movimentacoes e pecas vinculadas a ordens.
+
+9.2 Entidades
+-------------
+
+Part:
+
+- name;
+- internal_code;
+- barcode;
+- brand;
+- category;
+- unit;
+- cost_price;
+- sale_price;
+- current_stock;
+- minimum_stock;
+- location;
+- is_active;
+- created_at;
+- updated_at.
+
+StockMovement:
+
+- part;
+- movement_type;
+- quantity;
+- unit_cost;
+- unit_sale_price;
+- reason;
+- service_order;
+- created_by;
+- created_at.
+
+ServiceOrderPart:
+
+- service_order;
+- part;
+- quantity;
+- unit_price;
+- discount;
+- status;
+- created_by;
+- created_at;
+- updated_at.
+
+9.3 Tipos de movimento
+----------------------
+
+Tipos atuais:
+
+- in: Entrada
+- out: Saida
+- adjust: Ajuste
+- return: Devolucao
+- loss: Perda
+- reserve: Reserva
+- release: Liberacao
+
+9.4 Status de peca da ordem
+---------------------------
+
+Status atuais:
+
+- reserved: Reservada
+- used: Utilizada
+- returned: Devolvida
+- canceled: Cancelada
+
+9.5 Regras de negocio
+---------------------
+
+Cadastro de peca:
+
+- Nome e obrigatorio.
+- Codigo interno deve ser unico.
+- Preco de custo nao pode ser negativo.
+- Preco de venda nao pode ser negativo.
+- Estoque atual nao pode ser negativo.
+- Estoque minimo nao pode ser negativo.
+- Peca inativa nao deve aparecer em novas reservas.
+
+Estoque critico:
+
+- Peca esta com estoque baixo quando current_stock <= minimum_stock.
+- Prioridade de reposicao:
+  - critical: estoque zero ou abaixo de 50% do minimo;
+  - high: abaixo do minimo;
+  - medium: igual ao minimo;
+  - normal: acima do minimo.
+- Sugestao de compra: quantidade necessaria para chegar a 2x o estoque minimo.
+
+Movimentacoes:
+
+- Toda alteracao de saldo deve passar por inventory.services.
+- Movimentacoes devem ocorrer em transacao.
+- Usar select_for_update na peca para evitar corrida de estoque.
+- Quantidade deve ser positiva.
+- Motivo deve ter pelo menos 5 caracteres.
+- Entrada aumenta estoque.
+- Devolucao aumenta estoque.
+- Liberacao aumenta estoque.
+- Saida reduz estoque.
+- Perda reduz estoque.
+- Reserva reduz estoque.
+- Ajuste define o estoque para a quantidade informada ou aplica diferenca,
+  conforme regra escolhida. A regra deve ser unica e bem documentada.
+- Movimentos que reduzem estoque devem validar saldo suficiente.
+
+Reserva para ordem:
+
+- Nao permitir reserva em ordem cancelada.
+- Nao permitir reserva de peca inativa.
+- Reserva reduz estoque imediatamente.
+- Reserva cria ServiceOrderPart com status reserved.
+- Confirmar uso muda status de reserved para used e nao altera estoque.
+- Cancelar reserva muda status de reserved para canceled e devolve estoque.
+- Devolver peca usada muda status de used para returned e devolve estoque.
+
+Cobranca da ordem:
+
+- Pecas com status reserved e used sao cobraveis.
+- Pecas com status canceled e returned nao sao cobraveis.
+- O total de pecas da ordem deve ser calculado por selector publico do estoque
+  ou pelo resumo financeiro unico da ordem.
+
+9.6 Telas atuais
+----------------
+
+- /estoque/pecas/
+- /estoque/pecas/criticas/
+- /estoque/pecas/nova/
+- /estoque/pecas/<id>/
+- /estoque/pecas/<id>/editar/
+- /estoque/pecas/<id>/movimentar/
+- /estoque/ordens/<id>/pecas/adicionar/
+- /estoque/ordens/pecas/<id>/confirmar/
+- /estoque/ordens/pecas/<id>/cancelar/
+- /estoque/ordens/pecas/<id>/devolver/
+
+9.7 Telas recomendadas
+----------------------
+
+- Lista de pecas com filtros por nome, codigo, categoria, marca e status.
+- Detalhe da peca com historico de movimentacoes.
+- Criar/editar peca.
+- Movimentar estoque.
+- Pecas criticas.
+- Sugestoes de compra.
+- Painel de pecas por ordem.
+
+9.8 Testes minimos
+------------------
+
+- cadastrar peca valida;
+- impedir codigo interno duplicado;
+- validar precos e estoques negativos;
+- entrada aumenta estoque;
+- saida reduz estoque;
+- saida sem saldo deve falhar;
+- reserva reduz estoque e cria vinculo com ordem;
+- confirmar uso nao altera estoque;
+- cancelar reserva devolve estoque;
+- devolver peca usada devolve estoque;
+- pecas canceladas/devolvidas nao entram no total cobravel;
+- calculo de estoque critico e sugestao de compra.
+
+
+10. Modulo financial
+====================
+
+10.1 Responsabilidade
+---------------------
+
+Gerenciar contas a receber, pagamentos, despesas e fluxo de caixa.
+
+10.2 Entidades
+--------------
+
+Receivable:
+
+- service_order;
+- customer;
+- original_amount;
+- discount_amount;
+- final_amount;
+- paid_amount;
+- status;
+- due_date;
+- created_by;
+- created_at;
+- updated_at.
+
+Payment:
+
+- receivable;
+- amount;
+- method;
+- paid_at;
+- notes;
+- created_by;
+- created_at.
+
+Expense:
+
+- description;
+- amount;
+- due_date;
+- paid_at;
+- status;
+- notes;
+- created_by;
+- created_at;
+- updated_at.
+
+CashFlowEntry:
+
+- entry_type;
+- description;
+- amount;
+- payment;
+- expense;
+- created_by;
+- created_at.
+
+10.3 Status e metodos
+---------------------
+
+Status de pagamento:
+
+- pending: Pendente
+- paid: Pago
+- overdue: Vencido
+- canceled: Cancelado
+
+Metodos de pagamento:
+
+- cash: Dinheiro
+- credit_card: Cartao de credito
+- debit_card: Cartao de debito
+- pix: Pix
+- bank_transfer: Transferencia bancaria
+- check: Cheque
+
+Tipos de fluxo de caixa:
+
+- income: Entrada
+- expense: Saida
+
+10.4 Regras de negocio
+----------------------
+
+Conta a receber:
+
+- Cada ordem deve ter no maximo uma conta a receber.
+- Conta deve estar vinculada ao cliente da ordem.
+- original_amount deve representar total bruto.
+- discount_amount deve representar desconto aplicado uma unica vez.
+- final_amount = max(original_amount - discount_amount, 0).
+- paid_amount nao pode ser negativo.
+- paid_amount nao pode ser maior que final_amount.
+- remaining_amount = max(final_amount - paid_amount, 0).
+- Conta esta totalmente paga quando paid_amount >= final_amount.
+
+Criacao a partir de ordem:
+
+- Financial deve chamar service_orders.selectors.get_service_order_financial_summary.
+- Financial deve receber gross_total, discount e net_total.
+- Financial nao deve aplicar desconto novamente se receber net_total.
+- Criacao deve ser idempotente: se ja existir conta para a ordem, atualizar
+  conforme regra definida ou bloquear nova criacao.
+
+Pagamento:
+
+- Valor do pagamento deve ser maior que zero.
+- Valor do pagamento nao pode superar saldo restante.
+- Registro de pagamento deve ocorrer em transacao.
+- Receivable deve ser bloqueado com select_for_update.
+- Ao pagar parcialmente, status permanece pending.
+- Ao quitar, status muda para paid.
+- Pagamento cria CashFlowEntry do tipo income.
+
+Despesa:
+
+- Valor deve ser maior que zero.
+- Despesa pode ser pending, paid, overdue ou canceled.
+- Despesa paga deve ter paid_at.
+- Ao marcar despesa como paga, criar CashFlowEntry do tipo expense.
+- Marcar despesa ja paga deve ser idempotente.
+
+Fluxo de caixa:
+
+- CashFlowEntry deve ter exatamente uma origem:
+  - payment; ou
+  - expense.
+- Nao pode ter payment e expense ao mesmo tempo.
+- Nao pode ficar sem origem.
+- Entradas devem vir de pagamentos.
+- Saidas devem vir de despesas.
+
+10.5 Telas atuais
+-----------------
+
+- /financial/
+
+10.6 Telas recomendadas
+-----------------------
+
+- Dashboard financeiro.
+- Contas a receber.
+- Detalhe da conta a receber.
+- Registrar pagamento.
+- Despesas.
+- Nova despesa.
+- Fluxo de caixa.
+- Relatorio por periodo.
+- Fechamento diario/mensal, opcional.
+
+10.7 Testes minimos
+-------------------
+
+- criar conta a receber a partir do resumo financeiro da ordem;
+- impedir desconto duplicado;
+- impedir pagamento maior que saldo;
+- pagamento parcial mantem pendente;
+- pagamento total quita conta;
+- pagamento gera entrada no caixa;
+- despesa paga gera saida no caixa;
+- fluxo de caixa exige exatamente uma origem;
+- dashboard financeiro exige permissao correta.
+
+
+11. Modulo reports
+==================
+
+11.1 Responsabilidade
+---------------------
+
+Consolidar indicadores sem alterar dados de negocio.
+
+11.2 Relatorios recomendados
+----------------------------
+
+Operacionais:
+
+- ordens abertas por status;
+- ordens atrasadas;
+- tempo medio de finalizacao;
+- produtividade por mecanico;
+- ordens por prioridade;
+- servicos mais frequentes.
+
+Estoque:
+
+- pecas criticas;
+- giro de estoque;
+- perdas;
+- pecas mais usadas em ordens;
+- sugestao de compra.
+
+Financeiro:
+
+- contas a receber pendentes;
+- recebimentos por periodo;
+- despesas por periodo;
+- fluxo de caixa;
+- ticket medio por ordem;
+- margem estimada por ordem, se houver custo das pecas.
+
+11.3 Regras
+-----------
+
+- Reports deve usar selectors publicos.
+- Reports nao deve criar, editar ou excluir dados operacionais.
+- Exportacoes devem respeitar permissoes.
+
+
+12. Telas do sistema
+====================
+
+12.1 Mapa de navegacao atual
+----------------------------
+
+Raiz:
+
+- / redireciona para login.
+
+Accounts:
+
+- /conta/cadastro/
+- /conta/login/
+- /conta/painel/
+- /conta/administracao/
+- /conta/atendimento/
+- /conta/mecanica/
+- /conta/financeiro/
+- /conta/sair/
+
+Customers/Vehicles:
+
+- /oficina/clientes/
+- /oficina/clientes/novo/
+- /oficina/clientes/<id>/
+- /oficina/clientes/<id>/editar/
+- /oficina/clientes/<id>/excluir/
+- /oficina/veiculos/
+- /oficina/veiculos/novo/
+- /oficina/veiculos/<id>/editar/
+- /oficina/veiculos/<id>/excluir/
+
+Service Orders:
+
+- /servicos/ordens/
+- /servicos/ordens/nova/
+- /servicos/ordens/<id>/
+- /servicos/ordens/<id>/editar/
+- /servicos/ordens/<id>/tecnico/
+- /servicos/ordens/<id>/status-rapido/
+- /servicos/ordens/<id>/tempo/iniciar/
+- /servicos/tempo/<id>/finalizar/
+- /servicos/ordens/<id>/cancelar/
+- /servicos/ordens/<id>/itens/adicionar/
+- /servicos/itens/<id>/editar/
+- /servicos/itens/<id>/excluir/
+- /servicos/ordens/<id>/notas/adicionar/
+- /servicos/quadro/
+- /servicos/agenda/
+- /servicos/relatorios/produtividade/
+- /servicos/ajax/veiculos-por-cliente/
+
+Inventory:
+
+- /estoque/pecas/
+- /estoque/pecas/criticas/
+- /estoque/pecas/nova/
+- /estoque/pecas/<id>/
+- /estoque/pecas/<id>/editar/
+- /estoque/pecas/<id>/movimentar/
+- /estoque/ordens/<id>/pecas/adicionar/
+- /estoque/ordens/pecas/<id>/confirmar/
+- /estoque/ordens/pecas/<id>/cancelar/
+- /estoque/ordens/pecas/<id>/devolver/
+
+Financial:
+
+- /financial/
+
+12.2 Padrao recomendado para telas
+----------------------------------
+
+Listas:
+
+- filtros no topo;
+- paginacao;
+- busca textual;
+- coluna de status;
+- acoes por permissao;
+- vazio amigavel quando nao houver dados.
+
+Detalhes:
+
+- cabecalho com identificador e status;
+- dados principais;
+- historico;
+- acoes disponiveis;
+- trilha de auditoria quando relevante.
+
+Formularios:
+
+- validacao server-side sempre;
+- validacao client-side apenas como apoio;
+- mensagens de erro especificas;
+- manter dados preenchidos apos erro;
+- botoes de acao coerentes com permissao.
+
+Dashboards:
+
+- cards de indicadores;
+- listas de pendencias;
+- links para acoes principais;
+- dados carregados por selectors publicos.
+
+
+13. Seeds e dados de demonstracao
+=================================
+
+13.1 Estado atual
+-----------------
+
+Existe comando:
+
+- financial/management/commands/seed_realistic_data.py
+
+Modos observados:
+
+- --only-seed
+- --reset-and-seed
+- --reset-only
+- --orders
+
+Dados gerados:
+
+- usuario administrador;
+- usuarios por grupo;
+- clientes;
+- veiculos;
+- ordens de servico;
+- itens;
+- contas a receber;
+- pagamentos;
+- despesas.
+
+Credencial demo atual:
+
+- admin@admin.com
+- senha: 321654
+
+13.2 Recomendacoes
+------------------
+
+- Separar seed por modulo:
+  - seed_accounts;
+  - seed_customers;
+  - seed_inventory;
+  - seed_service_orders;
+  - seed_financial.
+- Criar um comando orquestrador:
+  - seed_demo_data.
+- Cada seed deve ser idempotente quando possivel.
+- Evitar apagar dados sem flag explicita.
+- Nunca rodar reset em producao.
+
+
+14. Regras transversais
+=======================
+
+14.1 Dinheiro
+-------------
+
+- Usar Decimal.
+- Nunca usar float.
+- Campos monetarios devem ter max_digits e decimal_places padronizados.
+- Arredondamento deve ser centralizado.
+- Templates devem formatar valores em moeda brasileira.
+- Evitar simbolos inconsistentes; usar R$ para pt-BR.
+
+14.2 Datas
+----------
+
+- Usar timezone aware.
+- Datas operacionais devem respeitar TIME_ZONE.
+- Comparacoes de atraso devem usar data local.
+
+14.3 Auditoria
+--------------
+
+- Acoes relevantes devem registrar usuario e data.
+- Alteracoes de status e campos criticos devem gerar historico.
+- Movimentacoes de estoque sempre devem registrar usuario e motivo.
+- Lancamentos financeiros sempre devem registrar usuario.
+
+14.4 Transacoes
+---------------
+
+Usar transaction.atomic em:
+
+- movimentacoes de estoque;
+- reserva/cancelamento/devolucao de pecas;
+- mudancas financeiras com pagamento;
+- criacao de conta a receber a partir de ordem;
+- finalizacao de ordem quando disparar integracoes.
+
+14.5 Concorrencia
+-----------------
+
+Usar select_for_update em:
+
+- Part durante alteracao de estoque;
+- Receivable durante registro de pagamento;
+- Expense durante marcacao como paga;
+- objetos criticos de ordem quando status/total forem alterados em fluxo
+  concorrente.
+
+14.6 Exclusao
+-------------
+
+Regra recomendada:
+
+- Preferir desativacao logica em entidades com historico.
+- Exclusao fisica apenas para registros sem impacto historico ou dados criados
+  por engano antes de uso.
+
+14.7 Erros de dominio
+---------------------
+
+Criar exceptions em core, por exemplo:
+
+- DomainError
+- PermissionDeniedError
+- InvalidStatusTransition
+- InsufficientStockError
+- FinancialAmountError
+
+Services devem levantar erros de dominio claros. Views devem converter esses
+erros em mensagens amigaveis.
+
+
+15. APIs internas recomendadas
+==============================
+
+15.1 Exemplo de resumo financeiro da ordem
+------------------------------------------
+
+Contrato:
+
+service_orders.selectors.get_service_order_financial_summary(order_id)
+
+Retorno esperado:
+
+- order_id;
+- manual_services_total;
+- manual_parts_total;
+- inventory_parts_total;
+- labor_cost;
+- extra_parts_cost;
+- gross_total;
+- discount;
+- net_total;
+- billable_inventory_parts_count;
+- generated_at.
+
+Regra:
+
+- Qualquer tela ou modulo financeiro deve usar este contrato.
+- Nenhum template deve somar totais por conta propria.
+
+15.2 Exemplo de integracao estoque/ordem
+----------------------------------------
+
+Contrato:
+
+inventory.services.reserve_part_for_service_order(order, part, quantity, user)
+
+Responsabilidades:
+
+- validar permissao antes na view ou service;
+- validar ordem nao cancelada;
+- validar peca ativa;
+- validar estoque;
+- reduzir estoque;
+- criar movimento reserve;
+- criar ServiceOrderPart reserved.
+
+15.3 Exemplo de integracao ordem/financeiro
+-------------------------------------------
+
+Contrato:
+
+financial.services.create_receivable_from_service_order(order_id, user)
+
+Responsabilidades:
+
+- buscar resumo financeiro publico da ordem;
+- criar conta a receber com gross_total, discount e net_total;
+- impedir desconto duplicado;
+- impedir duplicidade de conta;
+- vincular cliente correto;
+- registrar usuario criador.
+
+
+16. Plano de recriacao modular
+==============================
+
+Fase 0 - Fundacao
+-----------------
+
+Entregas:
+
+- projeto Django limpo;
+- settings por ambiente;
+- core app;
+- base templates;
+- exceptions de dominio;
+- helpers de dinheiro/data;
+- pytest configurado;
+- ruff configurado;
+- CI basico, se houver repositorio remoto.
+
+Criterio de aceite:
+
+- aplicacao sobe;
+- testes rodam;
+- health check ou pagina inicial simples funciona.
+
+Fase 1 - Accounts
+-----------------
+
+Entregas:
+
+- CustomUser por email;
+- login/logout;
+- grupos;
+- permissoes;
+- dashboard inicial vazio;
+- seed de usuarios.
+
+Criterio de aceite:
+
+- cada perfil loga;
+- cada perfil recebe permissoes corretas;
+- usuarios sem permissao sao bloqueados.
+
+Fase 2 - Customers/Vehicles
+---------------------------
+
+Entregas:
+
+- CRUD de clientes;
+- CRUD de veiculos;
+- endpoint de veiculos por cliente;
+- validadores;
+- filtros basicos.
+
+Criterio de aceite:
+
+- atendente cria cliente e veiculo;
+- mecanico nao cria cliente;
+- veiculo pertence ao cliente correto.
+
+Fase 3 - Service Orders basico
+------------------------------
+
+Entregas:
+
+- CRUD principal de ordem;
+- status;
+- prioridade;
+- historico;
+- notas;
+- apontamento de tempo;
+- quadro e agenda basicos.
+
+Criterio de aceite:
+
+- atendente cria ordem;
+- mecanico atualiza diagnostico;
+- admin cancela;
+- historico registra mudancas.
+
+Fase 4 - Inventory isolado
+--------------------------
+
+Entregas:
+
+- cadastro de pecas;
+- movimentos de estoque;
+- pecas criticas;
+- sugestoes de reposicao.
+
+Criterio de aceite:
+
+- movimentacoes ajustam saldo corretamente;
+- estoque insuficiente bloqueia saida;
+- tela de criticas mostra prioridades corretas.
+
+Fase 5 - Integracao Service Orders + Inventory
+----------------------------------------------
+
+Entregas:
+
+- reserva de peca para ordem;
+- confirmacao de uso;
+- cancelamento de reserva;
+- devolucao;
+- total cobravel de pecas.
+
+Criterio de aceite:
+
+- reserva reduz estoque;
+- cancelamento devolve;
+- devolucao devolve;
+- apenas reserved/used entram no total.
+
+Fase 6 - Financial
+------------------
+
+Entregas:
+
+- contas a receber;
+- pagamentos;
+- despesas;
+- fluxo de caixa;
+- dashboard financeiro;
+- integracao com resumo financeiro da ordem.
+
+Criterio de aceite:
+
+- conta recebe total correto sem desconto duplicado;
+- pagamento parcial e total funcionam;
+- caixa reflete entradas e saidas;
+- permissao financeira e respeitada.
+
+Fase 7 - Reports e dashboards
+-----------------------------
+
+Entregas:
+
+- dashboard por perfil;
+- relatorios operacionais;
+- relatorios de estoque;
+- relatorios financeiros.
+
+Criterio de aceite:
+
+- cada perfil ve indicadores relevantes;
+- relatorios usam selectors publicos;
+- sem escrita de dados em reports.
+
+Fase 8 - Seeds e experiencia demo
+---------------------------------
+
+Entregas:
+
+- seed modular;
+- seed demo completo;
+- documentacao de uso local.
+
+Criterio de aceite:
+
+- ambiente novo pode ser populado com um comando;
+- dados demo cobrem todos os fluxos principais.
+
+
+17. Melhorias e falhas conhecidas do projeto atual
+==================================================
+
+17.1 Falhas/inconsistencias
+---------------------------
+
+- Nao existe modulo core no estado atual, embora haja necessidade clara de
+  validadores e utilitarios compartilhados.
+- O total financeiro da ordem esta inconsistente entre service_orders e
+  financial.
+- Ha risco de desconto duplicado na criacao de Receivable.
+- Campos labor_cost e parts_cost existem na ordem, mas a formula atual de total
+  nao os trata de forma clara.
+- Dashboard financeiro esta protegido apenas por login, sem permissao de grupo
+  especifica.
+- Cobertura de testes atual nao inclui financial.
+- Validadores de senha estao comentados nas configuracoes base.
+- Dashboard de contas pode ter divergencia entre contexto esperado no template
+  e contexto calculado na view.
+- Formularios de estoque podem melhorar widgets e tratamento de campos
+  numericos.
+- Listagem de pecas criticas pode ser otimizada com anotacoes no banco em vez
+  de muita logica em Python.
+- Templates devem padronizar moeda em R$.
+
+17.2 Melhorias recomendadas
+---------------------------
+
+- Centralizar calculo financeiro de ordem.
+- Criar can_view_financial e can_manage_financial.
+- Separar selectors de dashboard por modulo.
+- Definir contratos publicos entre modulos.
+- Garantir transacoes em estoque e financeiro.
+- Criar testes de integracao para os contratos:
+  - ordem -> estoque;
+  - ordem -> financeiro;
+  - estoque -> resumo financeiro da ordem.
+- Usar eventos de dominio de forma simples, se necessario:
+  - ServiceOrderFinished;
+  - PartReserved;
+  - PaymentRegistered.
+- Criar documentacao de arquitetura no repositorio.
+
+
+18. Checklist de qualidade por modulo
+=====================================
+
+Para considerar um modulo isoladamente pronto:
+
+- possui models com regras basicas;
+- possui services para toda escrita relevante;
+- possui selectors para toda leitura usada por views/templates;
+- possui permissions explicitas;
+- possui urls proprias;
+- possui templates proprios;
+- possui testes de models, services, selectors e permissions;
+- nao importa views de outro modulo;
+- nao escreve diretamente em models de outro modulo;
+- expoe contratos publicos documentados;
+- tem seed minimo quando fizer sentido;
+- possui mensagens de erro claras.
+
+
+19. Decisoes pendentes para a nova versao
+=========================================
+
+Antes de reimplementar, decidir:
+
+- Veiculos ficam dentro de customers ou viram modulo separado?
+- Itens manuais do tipo part continuam existindo ou toda peca deve vir do
+  estoque?
+- labor_cost sera usado como campo separado ou todo servico sera item manual?
+- parts_cost sera removido em favor de pecas do estoque?
+- Ordem finalizada gera conta a receber automaticamente ou manualmente?
+- Atendente pode ver algum resumo financeiro da ordem?
+- Financeiro pode alterar vencimento/desconto da conta a receber?
+- Uma ordem pode ter pagamento antes de finalizar?
+- Mecanico pode ter mais de um apontamento aberto ao mesmo tempo?
+- Cliente e veiculo serao excluidos fisicamente ou apenas desativados?
+
+
+20. Definicao de pronto do sistema
+==================================
+
+O sistema modular pode ser considerado pronto para uso inicial quando:
+
+- Admin, Atendente, Mecanico e Financeiro conseguem acessar suas areas.
+- Atendente cadastra cliente e veiculo.
+- Atendente cria ordem.
+- Mecanico atualiza diagnostico, solucao e tempo.
+- Atendente adiciona servicos e reserva pecas.
+- Estoque valida saldo corretamente.
+- Ordem calcula total unico e confiavel.
+- Financeiro cria conta a receber sem desconto duplicado.
+- Pagamento atualiza conta e fluxo de caixa.
+- Dashboards exibem dados coerentes.
+- Testes principais passam.
+- Permissoes impedem acesso indevido.
+
+
+21. Ordem recomendada de desenvolvimento diario
+===============================================
+
+Para trabalhar modulo por modulo:
+
+1. Escolha um modulo.
+2. Defina models e migrations.
+3. Defina services.
+4. Defina selectors.
+5. Defina permissions.
+6. Escreva testes dos services/selectors.
+7. Crie forms.
+8. Crie views.
+9. Crie templates.
+10. Escreva testes de views/permissoes.
+11. Integre com outro modulo apenas via contrato publico.
+12. Atualize este documento quando alguma regra mudar.
+
+
+Fim do documento.

@@ -189,16 +189,11 @@ class ServiceOrder(models.Model):
     @property
     def total_amount(self):
         """
-        Calculate final total using services and parts only.
-
-        This replaces legacy fields (labor_cost, parts_cost).
+        Return the net total from the service order financial summary.
         """
-        total = self.services_total + self.parts_total - self.discount
+        from service_orders.selectors import get_service_order_financial_summary
 
-        if total < Decimal("0.00"):
-            return Decimal("0.00")
-
-        return total
+        return get_service_order_financial_summary(self)["net_total"]
 
 
 class ServiceOrderHistory(models.Model):

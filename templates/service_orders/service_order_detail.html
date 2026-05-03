@@ -102,49 +102,49 @@
                         <tr>
                             <th>Mão de obra</th>
                             <td class="text-end">
-                                R$ {{ service_order.labor_cost }}
+                                {{ service_order.labor_cost|brl }}
                             </td>
                         </tr>
 
                         <tr>
                             <th>Peças manuais</th>
                             <td class="text-end">
-                                R$ {{ service_order.parts_cost }}
+                                {{ service_order.parts_cost|brl }}
                             </td>
                         </tr>
 
                         <tr>
                             <th>Itens manuais da OS</th>
                             <td class="text-end">
-                                R$ {{ manual_items_total }}
+                                {{ manual_items_total|brl }}
                             </td>
                         </tr>
 
                         <tr>
                             <th>Peças do estoque</th>
                             <td class="text-end">
-                                R$ {{ inventory_parts_total }}
+                                {{ inventory_parts_total|brl }}
                             </td>
                     </tr>
 
                     <tr>
                         <th>Subtotal</th>
                         <td class="text-end">
-                            R$ {{ financial_subtotal }}
+                            {{ financial_subtotal|brl }}
                         </td>
                     </tr>
 
                     <tr>
                         <th>Desconto geral</th>
                         <td class="text-end text-danger">
-                            - R$ {{ service_order.discount }}
+                            - {{ service_order.discount|brl }}
                         </td>
                     </tr>
 
                     <tr class="table-dark">
                         <th>Total geral da OS</th>
                         <td class="text-end fw-bold">
-                            R$ {{ financial_total }}
+                            {{ financial_total|brl }}
                         </td>
                     </tr>
                 </tbody>
@@ -307,15 +307,15 @@
                             </td>
 
                             <td>
-                                R$ {{ inventory_part.unit_price }}
+                                {{ inventory_part.unit_price|brl }}
                             </td>
 
                             <td>
-                                R$ {{ inventory_part.discount }}
+                                {{ inventory_part.discount|brl }}
                             </td>
 
                             <td>
-                                R$ {{ inventory_part.total }}
+                                {{ inventory_part.total|brl }}
                             </td>
 
                             <td>
@@ -374,7 +374,7 @@
                             Total de peças:
                         </th>
                         <th colspan="3">
-                            R$ {{ inventory_parts_total }}
+                            {{ inventory_parts_total|brl }}
                         </th>
                     </tr>
                 </tfoot>
