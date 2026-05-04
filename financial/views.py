@@ -200,7 +200,7 @@ def expense_create_view(request):
 
         if form.is_valid():
             try:
-                expense = register_expense(
+                register_expense(
                     description=form.cleaned_data["description"],
                     amount=form.cleaned_data["amount"],
                     due_date=form.cleaned_data["due_date"],
@@ -211,9 +211,7 @@ def expense_create_view(request):
             except DomainError as exc:
                 messages.error(request, exc.message)
             else:
-                messages.success(
-                    request, f"Despesa '{expense.description}' criada com sucesso."
-                )
+                messages.success(request, "Despesa cadastrada com sucesso.")
                 return redirect("financial:expense_list")
     else:
         form = ExpenseForm()
