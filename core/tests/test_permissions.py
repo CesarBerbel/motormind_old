@@ -10,6 +10,7 @@ from core.permissions import (
     MECHANIC_GROUP,
     assert_permission,
     can_manage_financial,
+    can_view_auditoria,
     can_view_financial,
     is_admin,
     is_authenticated_user,
@@ -180,3 +181,12 @@ def test_can_manage_financial_allows_only_admin_and_financial(permission_users):
     assert can_manage_financial(permission_users["attendant"]) is False
     assert can_manage_financial(permission_users["mechanic"]) is False
     assert can_manage_financial(permission_users["plain_user"]) is False
+
+
+@pytest.mark.django_db
+def test_can_view_auditoria_allows_only_admin(permission_users):
+    assert can_view_auditoria(permission_users["admin"]) is True
+    assert can_view_auditoria(permission_users["financial"]) is False
+    assert can_view_auditoria(permission_users["attendant"]) is False
+    assert can_view_auditoria(permission_users["mechanic"]) is False
+    assert can_view_auditoria(permission_users["plain_user"]) is False

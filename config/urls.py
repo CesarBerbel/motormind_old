@@ -26,4 +26,5 @@ urlpatterns = [
     ),
     path("estoque/", include("inventory.urls")),
     path("financial/", include("financial.urls")),
+    path("auditoria/", include("auditoria.urls")),
 ]

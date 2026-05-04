@@ -15,7 +15,11 @@ from service_orders.selectors import (
     get_overdue_service_orders_for_mechanic,
 )
 
-from .forms import AdministrativeUserForm, CustomUserCreationForm, EmailAuthenticationForm
+from .forms import (
+    AdministrativeUserForm,
+    CustomUserCreationForm,
+    EmailAuthenticationForm,
+)
 from .permissions import role_required
 from .selectors import get_administration_dashboard_data, get_administrative_users
 

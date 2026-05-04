@@ -197,7 +197,6 @@ def get_main_dashboard_data(user):
     }
 
 
-
 def get_administration_dashboard_data():
     """
     Return read-only data for the administrator area.
@@ -216,7 +215,9 @@ def get_administration_dashboard_data():
 
     users = User.objects.prefetch_related("groups").order_by("email")
     employees = users.filter(is_employee=True, is_customer=False, is_superuser=False)
-    customers_with_access = users.filter(is_customer=True, is_employee=False, is_superuser=False)
+    customers_with_access = users.filter(
+        is_customer=True, is_employee=False, is_superuser=False
+    )
     groups = Group.objects.annotate(users_count=Count("user")).order_by("name")
     company_settings = CompanySettings.get_solo()
 
@@ -262,11 +263,15 @@ def get_administrative_users(search_query=""):
     User = get_user_model()
     cleaned_query = (search_query or "").strip()
 
-    users = User.objects.filter(
-        is_employee=True,
-        is_customer=False,
-        is_superuser=False,
-    ).prefetch_related("groups").order_by("email")
+    users = (
+        User.objects.filter(
+            is_employee=True,
+            is_customer=False,
+            is_superuser=False,
+        )
+        .prefetch_related("groups")
+        .order_by("email")
+    )
 
     if cleaned_query:
         users = users.filter(
