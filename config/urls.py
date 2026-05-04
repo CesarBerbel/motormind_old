@@ -28,5 +28,8 @@ urlpatterns = [
     path("financial/", include("financial.urls")),
     path("crm/", include("crm.urls")),
     path("auditoria/", include("auditoria.urls")),
-    path("mensagens/", include("mensagens.urls")),
+    path(
+        "mensagens/",
+        include(("mensagens.urls", "mensagens"), namespace="mensagens"),
+    ),
 ]
