@@ -4,7 +4,13 @@ from django.contrib.auth.models import AnonymousUser, Group
 
 from core.exceptions import PermissionDeniedError
 from core.permissions import (
+    ADMIN_GROUP,
+    ATTENDANT_GROUP,
+    FINANCIAL_GROUP,
+    MECHANIC_GROUP,
     assert_permission,
+    can_manage_financial,
+    can_view_financial,
     is_admin,
     is_authenticated_user,
     user_in_any_group,
@@ -121,3 +127,56 @@ def test_assert_permission_raises_when_permission_is_denied():
 
     with pytest.raises(PermissionDeniedError):
         assert_permission(user, lambda current_user: False)
+
+
+@pytest.fixture
+def permission_users():
+    User = get_user_model()
+    groups = {
+        name: Group.objects.get_or_create(name=name)[0]
+        for name in [
+            ADMIN_GROUP,
+            ATTENDANT_GROUP,
+            MECHANIC_GROUP,
+            FINANCIAL_GROUP,
+        ]
+    }
+    result = {}
+
+    for role, group_name in [
+        ("admin", ADMIN_GROUP),
+        ("attendant", ATTENDANT_GROUP),
+        ("mechanic", MECHANIC_GROUP),
+        ("financial", FINANCIAL_GROUP),
+    ]:
+        user = User.objects.create_user(
+            email=f"core_{role}_financial_permission@example.com",
+            password="StrongPassword123",
+        )
+        user.groups.add(groups[group_name])
+        result[role] = user
+
+    result["plain_user"] = User.objects.create_user(
+        email="core_plain_financial_permission@example.com",
+        password="StrongPassword123",
+    )
+
+    return result
+
+
+@pytest.mark.django_db
+def test_can_view_financial_allows_only_admin_and_financial(permission_users):
+    assert can_view_financial(permission_users["admin"]) is True
+    assert can_view_financial(permission_users["financial"]) is True
+    assert can_view_financial(permission_users["attendant"]) is False
+    assert can_view_financial(permission_users["mechanic"]) is False
+    assert can_view_financial(permission_users["plain_user"]) is False
+
+
+@pytest.mark.django_db
+def test_can_manage_financial_allows_only_admin_and_financial(permission_users):
+    assert can_manage_financial(permission_users["admin"]) is True
+    assert can_manage_financial(permission_users["financial"]) is True
+    assert can_manage_financial(permission_users["attendant"]) is False
+    assert can_manage_financial(permission_users["mechanic"]) is False
+    assert can_manage_financial(permission_users["plain_user"]) is False
