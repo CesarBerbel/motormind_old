@@ -6,6 +6,13 @@ from django.utils import timezone
 
 from auditoria.models import AuditLog
 from auditoria.services import log_event, serialize_instance
+from service_orders.events import (
+    ServiceOrderBudgetApproved,
+    ServiceOrderCanceled,
+    ServiceOrderOpened,
+    ServiceOrderStatusChanged,
+    dispatch_domain_event_on_commit,
+)
 from service_orders.models import ServiceOrder
 from service_orders.selectors import get_service_order_financial_summary
 from service_orders.services.history_service import create_service_order_history
@@ -18,68 +25,106 @@ FINANCIAL_FIELDS = {
 
 ALLOWED_STATUS_TRANSITIONS = {
     ServiceOrder.Status.OPEN: {
-        ServiceOrder.Status.IN_PROGRESS,
+        ServiceOrder.Status.IN_DIAGNOSIS,
         ServiceOrder.Status.WAITING_APPROVAL,
-        ServiceOrder.Status.WAITING_PARTS,
-        ServiceOrder.Status.FINISHED,
         ServiceOrder.Status.CANCELED,
     },
-    ServiceOrder.Status.IN_PROGRESS: {
+    ServiceOrder.Status.IN_DIAGNOSIS: {
+        ServiceOrder.Status.WAITING_APPROVAL,
         ServiceOrder.Status.WAITING_PARTS,
-        ServiceOrder.Status.WAITING_APPROVAL,
-        ServiceOrder.Status.FINISHED,
-        ServiceOrder.Status.CANCELED,
-    },
-    ServiceOrder.Status.WAITING_PARTS: {
-        ServiceOrder.Status.IN_PROGRESS,
-        ServiceOrder.Status.WAITING_APPROVAL,
-        ServiceOrder.Status.FINISHED,
         ServiceOrder.Status.CANCELED,
     },
     ServiceOrder.Status.WAITING_APPROVAL: {
         ServiceOrder.Status.APPROVED,
-        ServiceOrder.Status.IN_PROGRESS,
         ServiceOrder.Status.CANCELED,
     },
     ServiceOrder.Status.APPROVED: {
         ServiceOrder.Status.IN_PROGRESS,
         ServiceOrder.Status.WAITING_PARTS,
+        ServiceOrder.Status.CANCELED,
+    },
+    ServiceOrder.Status.IN_PROGRESS: {
+        ServiceOrder.Status.WAITING_PARTS,
         ServiceOrder.Status.FINISHED,
         ServiceOrder.Status.CANCELED,
     },
-    ServiceOrder.Status.FINISHED: {
+    ServiceOrder.Status.WAITING_PARTS: {
+        ServiceOrder.Status.IN_DIAGNOSIS,
+        ServiceOrder.Status.WAITING_APPROVAL,
         ServiceOrder.Status.IN_PROGRESS,
         ServiceOrder.Status.CANCELED,
     },
+    ServiceOrder.Status.FINISHED: {
+        ServiceOrder.Status.BILLED,
+        ServiceOrder.Status.IN_PROGRESS,
+        ServiceOrder.Status.CANCELED,
+    },
+    ServiceOrder.Status.BILLED: {
+        ServiceOrder.Status.PAID,
+        ServiceOrder.Status.CANCELED,
+    },
+    ServiceOrder.Status.PAID: set(),
     ServiceOrder.Status.CANCELED: set(),
 }
 
+FINAL_FINISHED_AT_STATUSES = {
+    ServiceOrder.Status.FINISHED,
+    ServiceOrder.Status.BILLED,
+    ServiceOrder.Status.PAID,
+}
 
-def _safe_register_crm_event(function_name, *args, **kwargs):
-    """Register CRM side effects without making OS workflow depend on CRM availability."""
-    try:
-        from crm import services as crm_services
-    except ImportError:
-        return None
-
-    crm_function = getattr(crm_services, function_name, None)
-    if not crm_function:
-        return None
-
-    return crm_function(*args, **kwargs)
+LOCKED_STATUSES = {
+    ServiceOrder.Status.BILLED,
+    ServiceOrder.Status.PAID,
+    ServiceOrder.Status.CANCELED,
+}
 
 
 def apply_finished_at_by_status(service_order):
     """
-    Apply finished_at according to service order status.
+    Apply finished_at according to final operational statuses.
+
+    Finished, billed and paid orders keep the same finished_at timestamp.
+    Reopening the order to a non-final operational status clears finished_at.
     """
-    if service_order.status == ServiceOrder.Status.FINISHED:
+    if service_order.status in FINAL_FINISHED_AT_STATUSES:
         if not service_order.finished_at:
             service_order.finished_at = timezone.now()
     else:
         service_order.finished_at = None
 
     return service_order
+
+
+def get_allowed_next_statuses(current_status):
+    """
+    Return the valid next statuses for the current service order status.
+    """
+    return ALLOWED_STATUS_TRANSITIONS.get(current_status, set())
+
+
+def get_allowed_next_status_choices(service_order):
+    """
+    Return choices for UI controls, keeping the current status as the first option.
+    """
+    allowed_statuses = get_allowed_next_statuses(service_order.status)
+    choices = [(service_order.status, service_order.get_status_display())]
+
+    for status_value, status_label in ServiceOrder.Status.choices:
+        if status_value in allowed_statuses:
+            choices.append((status_value, status_label))
+
+    return choices
+
+
+def ensure_service_order_is_not_locked(service_order):
+    """
+    Block operational edits on statuses that represent closed accounting states.
+    """
+    if service_order.status in LOCKED_STATUSES:
+        raise ValidationError(
+            f"Ordem com status {service_order.get_status_display()} não permite alterações operacionais."
+        )
 
 
 def validate_service_order_status_transition(old_status, new_status):
@@ -129,7 +174,12 @@ def create_service_order_from_form(form, created_by):
         obj=service_order,
         new_data=serialize_instance(service_order),
     )
-    _safe_register_crm_event("register_service_order_opened", service_order, created_by)
+    dispatch_domain_event_on_commit(
+        ServiceOrderOpened(
+            service_order_id=service_order.pk,
+            user_id=getattr(created_by, "pk", None),
+        )
+    )
 
     return service_order
 
@@ -139,6 +189,7 @@ def update_service_order_from_form(form, changed_by, old_instance):
     Update a service order from a valid administrative form and create audit history.
     """
     service_order = form.save(commit=False)
+    ensure_service_order_is_not_locked(old_instance)
     validate_service_order_status_transition(old_instance.status, service_order.status)
     ensure_service_order_can_change_financial_data(service_order, old_instance)
 
@@ -160,12 +211,13 @@ def update_service_order_from_form(form, changed_by, old_instance):
         new_data=serialize_instance(service_order),
     )
     if old_status != service_order.status:
-        _safe_register_crm_event(
-            "register_service_order_status_change",
-            service_order,
-            changed_by,
-            old_status,
-            service_order.status,
+        dispatch_domain_event_on_commit(
+            ServiceOrderStatusChanged(
+                service_order_id=service_order.pk,
+                user_id=getattr(changed_by, "pk", None),
+                old_status=old_status,
+                new_status=service_order.status,
+            )
         )
 
     return service_order
@@ -176,6 +228,7 @@ def update_service_order_technical_from_form(form, changed_by, old_instance):
     Update technical fields from a valid mechanic form and create audit history.
     """
     service_order = form.save(commit=False)
+    ensure_service_order_is_not_locked(old_instance)
     validate_service_order_status_transition(old_instance.status, service_order.status)
     service_order = apply_finished_at_by_status(service_order)
     service_order.save()
@@ -194,6 +247,16 @@ def update_service_order_technical_from_form(form, changed_by, old_instance):
         new_data=serialize_instance(service_order),
     )
 
+    if old_instance.status != service_order.status:
+        dispatch_domain_event_on_commit(
+            ServiceOrderStatusChanged(
+                service_order_id=service_order.pk,
+                user_id=getattr(changed_by, "pk", None),
+                old_status=old_instance.status,
+                new_status=service_order.status,
+            )
+        )
+
     return service_order
 
 
@@ -206,6 +269,15 @@ def change_service_order_status(service_order, new_status, changed_by):
     old_instance = ServiceOrder.objects.get(pk=locked_order.pk)
 
     validate_service_order_status_transition(locked_order.status, new_status)
+
+    if (
+        locked_order.status == ServiceOrder.Status.WAITING_PARTS
+        and new_status == ServiceOrder.Status.IN_PROGRESS
+        and not locked_order.is_budget_approved
+    ):
+        raise ValidationError(
+            "Ordem aguardando peças só pode voltar para execução depois da aprovação do orçamento."
+        )
 
     locked_order.status = new_status
     locked_order = apply_finished_at_by_status(locked_order)
@@ -223,6 +295,15 @@ def change_service_order_status(service_order, new_status, changed_by):
         obj=locked_order,
         old_data=serialize_instance(old_instance),
         new_data=serialize_instance(locked_order),
+    )
+
+    dispatch_domain_event_on_commit(
+        ServiceOrderStatusChanged(
+            service_order_id=locked_order.pk,
+            user_id=getattr(changed_by, "pk", None),
+            old_status=old_instance.status,
+            new_status=locked_order.status,
+        )
     )
 
     return locked_order
@@ -252,8 +333,10 @@ def approve_service_order_budget(service_order, form, approved_by):
     """
     locked_order = ServiceOrder.objects.select_for_update().get(pk=service_order.pk)
 
-    if locked_order.status == ServiceOrder.Status.CANCELED:
-        raise ValidationError("Ordem cancelada não pode ter orçamento aprovado.")
+    if locked_order.status != ServiceOrder.Status.WAITING_APPROVAL:
+        raise ValidationError(
+            "Apenas ordens com status Aguardando aprovação podem ter orçamento aprovado."
+        )
 
     if hasattr(locked_order, "approval"):
         raise ValidationError("Esta ordem de serviço já possui orçamento aprovado.")
@@ -278,15 +361,14 @@ def approve_service_order_budget(service_order, form, approved_by):
 
     old_instance = ServiceOrder.objects.get(pk=locked_order.pk)
 
-    if locked_order.status == ServiceOrder.Status.WAITING_APPROVAL:
-        locked_order.status = ServiceOrder.Status.APPROVED
-        locked_order.save(update_fields=["status", "updated_at"])
+    locked_order.status = ServiceOrder.Status.APPROVED
+    locked_order.save(update_fields=["status", "updated_at"])
 
-        create_service_order_history(
-            service_order=locked_order,
-            changed_by=approved_by,
-            old_instance=old_instance,
-        )
+    create_service_order_history(
+        service_order=locked_order,
+        changed_by=approved_by,
+        old_instance=old_instance,
+    )
 
     log_event(
         action=AuditLog.Action.UPDATE,
@@ -300,12 +382,18 @@ def approve_service_order_budget(service_order, form, approved_by):
         },
     )
 
-    _safe_register_crm_event(
-        "register_service_order_status_change",
-        locked_order,
-        approved_by,
-        old_instance.status,
-        locked_order.status,
+    dispatch_domain_event_on_commit(
+        ServiceOrderBudgetApproved(
+            service_order_id=locked_order.pk,
+            user_id=getattr(approved_by, "pk", None),
+            approval_id=approval.pk,
+            metadata={
+                "old_status": old_instance.status,
+                "new_status": locked_order.status,
+                "approved_total": str(approval.net_total),
+                "channel": approval.channel,
+            },
+        )
     )
 
     return approval
@@ -338,8 +426,12 @@ def cancel_service_order(service_order, changed_by):
         old_data=serialize_instance(old_instance),
         new_data=serialize_instance(service_order),
     )
-    _safe_register_crm_event(
-        "register_service_order_canceled", service_order, changed_by
+    dispatch_domain_event_on_commit(
+        ServiceOrderCanceled(
+            service_order_id=service_order.pk,
+            user_id=getattr(changed_by, "pk", None),
+            metadata={"old_status": old_instance.status},
+        )
     )
 
     return service_order

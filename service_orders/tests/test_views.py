@@ -209,7 +209,7 @@ def test_mechanic_can_update_technical_data(
         data={
             "diagnosis": "Filtro obstruído.",
             "solution": "Filtro substituído.",
-            "status": ServiceOrder.Status.FINISHED,
+            "status": ServiceOrder.Status.IN_DIAGNOSIS,
         },
     )
 
@@ -217,8 +217,7 @@ def test_mechanic_can_update_technical_data(
 
     assert response.status_code == 302
     assert order_data["service_order"].diagnosis == "Filtro obstruído."
-    assert order_data["service_order"].status == ServiceOrder.Status.FINISHED
-    assert order_data["service_order"].finished_at is not None
+    assert order_data["service_order"].status == ServiceOrder.Status.IN_DIAGNOSIS
 
 
 @pytest.mark.django_db
@@ -361,7 +360,7 @@ def test_mechanic_update_creates_service_order_history(
         data={
             "diagnosis": "Novo diagnóstico técnico.",
             "solution": "Nova solução aplicada.",
-            "status": ServiceOrder.Status.IN_PROGRESS,
+            "status": ServiceOrder.Status.IN_DIAGNOSIS,
         },
     )
 
@@ -383,5 +382,5 @@ def test_mechanic_update_creates_service_order_history(
         service_order=order_data["service_order"],
         field_name="status",
         old_value=ServiceOrder.Status.OPEN,
-        new_value=ServiceOrder.Status.IN_PROGRESS,
+        new_value=ServiceOrder.Status.IN_DIAGNOSIS,
     ).exists()

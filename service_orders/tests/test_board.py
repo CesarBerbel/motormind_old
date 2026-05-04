@@ -358,7 +358,7 @@ def test_board_overdue_filter_only_shows_overdue_active_orders(
 @pytest.mark.django_db
 def test_attendant_can_quick_update_status_from_board(client, users, board_orders):
     """
-    Test if attendant can quickly update status from board.
+    Test if attendant can quickly move an order to the next valid board status.
     """
     service_order = board_orders["high_priority_order"]
 
@@ -373,28 +373,30 @@ def test_attendant_can_quick_update_status_from_board(client, users, board_order
             args=[service_order.pk],
         ),
         data={
-            "status": ServiceOrder.Status.IN_PROGRESS,
+            "status": ServiceOrder.Status.IN_DIAGNOSIS,
         },
     )
 
     service_order.refresh_from_db()
 
     assert response.status_code == 302
-    assert service_order.status == ServiceOrder.Status.IN_PROGRESS
+    assert service_order.status == ServiceOrder.Status.IN_DIAGNOSIS
     assert ServiceOrderHistory.objects.filter(
         service_order=service_order,
         field_name="status",
         old_value=ServiceOrder.Status.OPEN,
-        new_value=ServiceOrder.Status.IN_PROGRESS,
+        new_value=ServiceOrder.Status.IN_DIAGNOSIS,
     ).exists()
 
 
 @pytest.mark.django_db
 def test_quick_update_finished_status_sets_finished_at(client, users, board_orders):
     """
-    Test if quick update to finished status sets finished_at.
+    Test if quick update to finished status sets finished_at from a valid prior status.
     """
     service_order = board_orders["high_priority_order"]
+    service_order.status = ServiceOrder.Status.IN_PROGRESS
+    service_order.save(update_fields=["status"])
 
     client.login(
         username=users["attendant"].email,

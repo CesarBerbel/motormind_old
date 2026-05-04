@@ -184,7 +184,7 @@
                                         </label>
 
                                         <select name="status" class="form-select form-select-sm mb-2">
-                                            {% for status_value, status_label in status_choices %}
+                                            {% for status_value, status_label in service_order.allowed_next_status_choices %}
                                                 <option value="{{ status_value }}" {% if service_order.status == status_value %}selected{% endif %}>
                                                     {{ status_label }}
                                                 </option>

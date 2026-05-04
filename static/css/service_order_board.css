@@ -1,3 +1,38 @@
+
+.service-order-board-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 1rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+.service-order-board-columns {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    align-items: stretch;
+    min-width: max-content;
+}
+
+.service-order-board-column {
+    flex: 0 0 280px;
+    width: 280px;
+    max-width: 280px;
+}
+
+@media (min-width: 1400px) {
+    .service-order-board-column {
+        flex-basis: 300px;
+        width: 300px;
+        max-width: 300px;
+    }
+}
+
+.service-order-board-column > .card {
+    min-height: 100%;
+}
+
 .service-order-dropzone {
     min-height: 280px;
     border: 2px dashed transparent;

@@ -1,0 +1,30 @@
+/* Container for floating messages */
+#messages-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999; /* Always on top */
+    width: 90%;
+    max-width: 500px;
+}
+
+/* Custom toast style */
+.toast-message {
+    background-color: rgba(0, 0, 0, 0.8) !important; /* Semi-transparent black */
+    color: white !important;
+    border: none;
+    border-radius: 8px;
+    padding: 15px 20px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(5px); /* Modern blur effect */
+}
+
+/* Alert type variants if needed */
+.toast-success { border-left: 5px solid #28a745; }
+.toast-error { border-left: 5px solid #dc3545; }
+.toast-warning { border-left: 5px solid #ffc107; }

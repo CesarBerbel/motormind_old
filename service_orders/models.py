@@ -20,11 +20,14 @@ class ServiceOrder(models.Model):
         """
 
         OPEN = "open", "Aberta"
-        IN_PROGRESS = "in_progress", "Em execução"
-        WAITING_PARTS = "waiting_parts", "Aguardando peças"
+        IN_DIAGNOSIS = "in_diagnosis", "Em diagnóstico"
         WAITING_APPROVAL = "waiting_approval", "Aguardando aprovação"
         APPROVED = "approved", "Aprovada"
+        IN_PROGRESS = "in_progress", "Em execução"
+        WAITING_PARTS = "waiting_parts", "Aguardando peças"
         FINISHED = "finished", "Finalizada"
+        BILLED = "billed", "Faturada"
+        PAID = "paid", "Paga"
         CANCELED = "canceled", "Cancelada"
 
     class Priority(models.TextChoices):
@@ -200,6 +203,15 @@ class ServiceOrder(models.Model):
             )
             self.number = f"OS-{year}-{self.pk:06d}"
             type(self).objects.filter(pk=self.pk).update(number=self.number)
+
+    @property
+    def allowed_next_status_choices(self):
+        """
+        Return UI-safe status choices according to the service order state machine.
+        """
+        from service_orders.services import get_allowed_next_status_choices
+
+        return get_allowed_next_status_choices(self)
 
     @property
     def items_total(self):
