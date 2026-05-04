@@ -45,6 +45,8 @@ def service_order(user):
         created_by=user,
         title="OS total",
         description="Total financeiro.",
+        status=ServiceOrder.Status.FINISHED,
+        finished_at=timezone.now(),
         labor_cost=Decimal("50.00"),
         parts_cost=Decimal("20.00"),
         discount=Decimal("15.00"),

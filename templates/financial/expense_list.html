@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load core_formatters %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-1">Despesas</h1>
+    <p class="text-muted">Controle de saídas previstas e pagas.</p>
+
+    {% include "financial/_nav.html" %}
+
+    <form method="get" class="card card-body mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label for="id_q" class="form-label">Buscar</label>
+                <input type="search" name="q" id="id_q" value="{{ filters.q }}" class="form-control" placeholder="Descrição da despesa">
+            </div>
+            <div class="col-md-3">
+                <label for="id_status" class="form-label">Status</label>
+                <select name="status" id="id_status" class="form-select">
+                    <option value="">Todos</option>
+                    {% for value, label in payment_status_choices %}
+                        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="{% url 'financial:expense_list' %}" class="btn btn-outline-secondary">Limpar</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Descrição</th>
+                        <th>Valor</th>
+                        <th>Vencimento</th>
+                        <th>Pago em</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in expenses %}
+                        <tr>
+                            <td>{{ expense.description }}</td>
+                            <td>{{ expense.amount|brl }}</td>
+                            <td>{{ expense.due_date|date:"d/m/Y"|default:"-" }}</td>
+                            <td>{{ expense.paid_at|date:"d/m/Y H:i"|default:"-" }}</td>
+                            <td>{{ expense.get_status_display }}</td>
+                            <td class="text-end">
+                                {% if expense.status != "paid" %}
+                                    <a href="{% url 'financial:expense_pay' expense.pk %}" class="btn btn-sm btn-outline-success">Pagar</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="6">Nenhuma despesa encontrada.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

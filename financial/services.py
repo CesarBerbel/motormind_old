@@ -1,6 +1,8 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from core.exceptions import FinancialAmountError, ObjectAlreadyExistsError
+from service_orders.models import ServiceOrder
 from service_orders.selectors import get_service_order_financial_summary
 
 from .models import (
@@ -14,26 +16,40 @@ from .models import (
 
 
 @transaction.atomic
-def create_receivable_from_service_order(service_order, created_by):
+def create_receivable_from_service_order(service_order, created_by, due_date=None):
     """
-    Create a receivable from a service order total.
+    Create a receivable from the public service order financial summary.
     """
+    if service_order.status != ServiceOrder.Status.FINISHED:
+        raise FinancialAmountError(
+            "A conta a receber só pode ser criada para uma OS finalizada."
+        )
+
+    if Receivable.objects.filter(service_order=service_order).exists():
+        raise ObjectAlreadyExistsError(
+            "Esta ordem de serviço já possui uma conta a receber."
+        )
+
     summary = get_service_order_financial_summary(service_order)
-    original_amount = summary["gross_total"]
-    discount_amount = summary["discount"]
-    final_amount = summary["net_total"]
 
     receivable = Receivable(
         service_order=service_order,
         customer=service_order.customer,
-        original_amount=original_amount,
-        discount_amount=discount_amount,
-        final_amount=final_amount,
+        original_amount=summary["gross_total"],
+        discount_amount=summary["discount"],
+        final_amount=summary["net_total"],
+        due_date=due_date,
         created_by=created_by,
     )
 
     receivable.full_clean()
-    receivable.save()
+
+    try:
+        receivable.save()
+    except IntegrityError as exc:
+        raise ObjectAlreadyExistsError(
+            "Esta ordem de serviço já possui uma conta a receber."
+        ) from exc
 
     return receivable
 
@@ -42,15 +58,15 @@ def create_receivable_from_service_order(service_order, created_by):
 def register_payment(receivable, amount, method, created_by, paid_at=None, notes=None):
     """
     Register a payment and create a cash flow income entry.
-
-    This function locks the receivable row to avoid concurrent payments
-    updating paid_amount with stale data.
     """
     locked_receivable = (
         Receivable.objects.select_for_update()
         .select_related("service_order", "customer")
         .get(pk=receivable.pk)
     )
+
+    if locked_receivable.status == PaymentStatus.CANCELED:
+        raise FinancialAmountError("Não é possível pagar uma conta cancelada.")
 
     payment = Payment(
         receivable=locked_receivable,
@@ -87,10 +103,15 @@ def register_payment(receivable, amount, method, created_by, paid_at=None, notes
 
 @transaction.atomic
 def register_expense(
-    description, amount, created_by, due_date=None, paid_at=None, notes=None
+    description,
+    amount,
+    created_by,
+    due_date=None,
+    paid_at=None,
+    notes=None,
 ):
     """
-    Register an expense and optionally create a cash flow expense entry if already paid.
+    Register an expense and create cash flow entry when already paid.
     """
     status = PaymentStatus.PAID if paid_at else PaymentStatus.PENDING
 
@@ -120,12 +141,9 @@ def register_expense(
 
 
 @transaction.atomic
-def mark_expense_as_paid(expense, paid_at, user):
+def mark_expense_as_paid(expense, paid_at=None, user=None):
     """
     Mark an expense as paid and create a cash flow expense entry.
-
-    This function locks the expense row to avoid two concurrent requests
-    creating duplicated cash flow entries for the same expense.
     """
     locked_expense = Expense.objects.select_for_update().get(pk=expense.pk)
 
@@ -133,7 +151,7 @@ def mark_expense_as_paid(expense, paid_at, user):
         return locked_expense
 
     locked_expense.status = PaymentStatus.PAID
-    locked_expense.paid_at = paid_at
+    locked_expense.paid_at = paid_at or timezone.now()
     locked_expense.full_clean()
     locked_expense.save(update_fields=["status", "paid_at", "updated_at"])
 
@@ -142,7 +160,7 @@ def mark_expense_as_paid(expense, paid_at, user):
         description=locked_expense.description,
         amount=locked_expense.amount,
         expense=locked_expense,
-        created_by=user,
+        created_by=user or locked_expense.created_by,
     )
 
     return locked_expense

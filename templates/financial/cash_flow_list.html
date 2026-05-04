@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load core_formatters %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-1">Fluxo de caixa</h1>
+    <p class="text-muted">Lançamentos auditáveis gerados por pagamentos e despesas pagas.</p>
+
+    {% include "financial/_nav.html" %}
+
+    <form method="get" class="card card-body mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="id_start_date" class="form-label">Data inicial</label>
+                <input type="date" name="start_date" id="id_start_date" value="{{ filters.start_date }}" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label for="id_end_date" class="form-label">Data final</label>
+                <input type="date" name="end_date" id="id_end_date" value="{{ filters.end_date }}" class="form-control">
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="{% url 'financial:cash_flow_list' %}" class="btn btn-outline-secondary">Limpar</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Descrição</th>
+                        <th>Origem</th>
+                        <th>Valor</th>
+                        <th>Criado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in cash_flow_entries %}
+                        <tr>
+                            <td>{{ entry.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>{{ entry.get_entry_type_display }}</td>
+                            <td>{{ entry.description }}</td>
+                            <td>
+                                {% if entry.payment %}
+                                    Pagamento OS #{{ entry.payment.receivable.service_order_id }}
+                                {% elif entry.expense %}
+                                    Despesa #{{ entry.expense_id }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ entry.amount|brl }}</td>
+                            <td>{{ entry.created_by.get_full_name|default:entry.created_by.email }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="6">Nenhum lançamento encontrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
