@@ -1,10 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from core.permissions import can_access_operational_board, user_passes_permission
+from accounts.permissions import can_access_operational_board, user_passes_permission
 from service_orders.models import ServiceOrder
 from service_orders.selectors import (
     filter_service_orders_by_search,
@@ -93,30 +94,50 @@ def service_order_board_view(request):
     )
 
 
+def _is_ajax_request(request):
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+
+def _status_error_response(request, message, status_code=400):
+    if _is_ajax_request(request):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": message,
+            },
+            status=status_code,
+        )
+
+    messages.error(request, message)
+    return redirect("service_orders:service_order_board")
+
+
 @login_required
 @user_passes_permission(can_access_operational_board)
 def service_order_quick_status_update_view(request, pk):
     """
-    Quickly update service order status from operational board.
+    Quickly update service order status from the operational board.
+
+    Supports regular form submission and AJAX drag-and-drop updates.
     """
-    print("Pelo menos a cabecinha " + str(pk) + " entrou")
     service_order = get_object_or_404(
         ServiceOrder,
         pk=pk,
     )
 
-    canceled_redirect = redirect_if_canceled(request, service_order)
-
-    if canceled_redirect:
-        return canceled_redirect
-
-    if request.method != "POST":
-        messages.error(
+    if service_order.status == ServiceOrder.Status.CANCELED:
+        return _status_error_response(
             request,
-            "Método inválido para alterar status.",
+            "Ordem cancelada não pode receber alteração de status.",
+            status_code=409,
         )
 
-        return redirect("service_orders:service_order_board")
+    if request.method != "POST":
+        return _status_error_response(
+            request,
+            "Método inválido para alterar status.",
+            status_code=405,
+        )
 
     new_status = request.POST.get("status")
     valid_statuses = [
@@ -124,12 +145,11 @@ def service_order_quick_status_update_view(request, pk):
     ]
 
     if new_status not in valid_statuses:
-        messages.error(
+        return _status_error_response(
             request,
             "Status informado é inválido.",
+            status_code=400,
         )
-
-        return redirect("service_orders:service_order_board")
 
     old_instance = ServiceOrder.objects.get(pk=service_order.pk)
 
@@ -147,6 +167,19 @@ def service_order_quick_status_update_view(request, pk):
         changed_by=request.user,
         old_instance=old_instance,
     )
+
+    if _is_ajax_request(request):
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Status da ordem de serviço atualizado com sucesso.",
+                "status": service_order.status,
+                "status_label": service_order.get_status_display(),
+                "finished_at": service_order.finished_at.isoformat()
+                if service_order.finished_at
+                else None,
+            }
+        )
 
     messages.success(
         request,
