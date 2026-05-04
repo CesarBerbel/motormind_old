@@ -8,6 +8,12 @@ from .models import CustomUser
 class CustomUserAdmin(UserAdmin):
     """
     Admin configuration for custom user model.
+
+    The Django Admin intentionally does not expose user-type flags or the
+    superuser flag in the create/edit form. Superuser accounts must be created
+    through the createsuperuser management command. Internal staff accounts can
+    be maintained here as employees, while customer users belong to the
+    customer/portal flow.
     """
 
     model = CustomUser
@@ -16,6 +22,7 @@ class CustomUserAdmin(UserAdmin):
         "email",
         "first_name",
         "last_name",
+        "user_type_label",
         "is_staff",
         "is_active",
         "created_at",
@@ -25,6 +32,8 @@ class CustomUserAdmin(UserAdmin):
         "is_staff",
         "is_active",
         "is_superuser",
+        "is_customer",
+        "is_employee",
     )
 
     search_fields = (
@@ -55,12 +64,10 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
         (
-            "Permissões",
+            "Permissões de funcionário",
             {
                 "fields": (
                     "is_active",
-                    "is_staff",
-                    "is_superuser",
                     "groups",
                     "user_permissions",
                 )
@@ -86,16 +93,23 @@ class CustomUserAdmin(UserAdmin):
 
     add_fieldsets = (
         (
-            "Criar novo usuário",
+            "Criar novo funcionário",
             {
                 "classes": ("wide",),
                 "fields": (
                     "email",
                     "password1",
                     "password2",
-                    "is_staff",
                     "is_active",
                 ),
             },
         ),
     )
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.is_staff = False
+            obj.is_superuser = False
+            obj.is_customer = False
+            obj.is_employee = True
+        super().save_model(request, obj, form, change)

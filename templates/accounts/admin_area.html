@@ -6,21 +6,241 @@
 
 {% block content %}
 
-<div class="card shadow-sm">
-    <div class="card-body">
-
-        <h1 class="h4">
-            Administração
-        </h1>
-
-        <p class="text-muted">
-            Área restrita para administradores do sistema.
+<div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Administração</h1>
+        <p class="text-muted mb-0">
+            Central administrativa para funcionários, perfis, dados da oficina e visão geral do sistema.
         </p>
+    </div>
 
-        <div class="alert alert-info mb-0">
-            Aqui ficarão as configurações gerais, usuários, permissões e auditorias.
+    <div class="d-flex gap-2">
+        <a class="btn btn-primary" href="{% url 'accounts:admin_user_create' %}">
+            Novo funcionário
+        </a>
+        <a class="btn btn-outline-primary" href="{% url 'accounts:admin_user_list' %}">
+            Gerenciar funcionários
+        </a>
+        <a class="btn btn-outline-secondary" href="{% url 'accounts:admin_company_settings' %}">
+            Dados da oficina
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <span class="text-muted small">Funcionários</span>
+                <h2 class="h4 mb-0">{{ employees_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <span class="text-muted small">Perfis</span>
+                <h2 class="h4 mb-0">{{ groups_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <span class="text-muted small">OS abertas/ativas</span>
+                <h2 class="h4 mb-0">{{ open_service_orders_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <span class="text-muted small">Estoque crítico</span>
+                <h2 class="h4 mb-0">{{ low_stock_parts_count }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <strong>Dados da oficina</strong>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:admin_company_settings' %}">
+                    Editar
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Nome</span>
+                        <strong>{{ company_settings.name }}</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">CPF/CNPJ</span>
+                        <strong>{{ company_settings.document|default:"Não informado" }}</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Contato</span>
+                        <strong>{{ company_settings.phone|default:"Não informado" }}</strong>
+                        {% if company_settings.whatsapp %}
+                            <span class="text-muted">/ WhatsApp {{ company_settings.whatsapp }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Email</span>
+                        <strong>{{ company_settings.email|default:"Não informado" }}</strong>
+                    </div>
+                    <div class="col-12">
+                        <span class="text-muted small d-block">Endereço</span>
+                        <strong>
+                            {% if company_settings.address_line %}
+                                {{ company_settings.address_line }}{% if company_settings.number %}, {{ company_settings.number }}{% endif %} - {{ company_settings.city }}{% if company_settings.state %}/{{ company_settings.state }}{% endif %}
+                            {% else %}
+                                Não informado
+                            {% endif %}
+                        </strong>
+                    </div>
+                    <div class="col-12">
+                        {% if company_settings.is_configured %}
+                            <span class="badge text-bg-success">Configuração revisada</span>
+                        {% else %}
+                            <span class="badge text-bg-warning">Configuração pendente</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <strong>Funcionários recentes</strong>
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:admin_user_list' %}">
+                    Ver todos
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Email</th>
+                            <th>Nome</th>
+                            <th>Perfis</th>
+                            <th>Status</th>
+                            <th class="text-end">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for managed_user in recent_users %}
+                            <tr>
+                                <td>{{ managed_user.email }}</td>
+                                <td>{{ managed_user.get_full_name|default:"-" }}</td>
+                                <td>
+                                    {% for group in managed_user.groups.all %}
+                                        <span class="badge text-bg-secondary">{{ group.name }}</span>
+                                    {% empty %}
+                                        <span class="text-muted">Sem perfil</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if managed_user.is_active %}
+                                        <span class="badge text-bg-success">Ativo</span>
+                                    {% else %}
+                                        <span class="badge text-bg-danger">Inativo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:admin_user_update' managed_user.id %}">
+                                        Editar
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    Nenhum usuário encontrado.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <strong>Perfis de acesso</strong>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for group in groups %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ group.name }}</span>
+                        <span class="badge text-bg-primary rounded-pill">{{ group.users_count }}</span>
+                    </div>
+                {% empty %}
+                    <div class="list-group-item text-muted">
+                        Nenhum perfil cadastrado. Execute o comando setup_groups.
+                    </div>
+                {% endfor %}
+            </div>
         </div>
 
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <strong>Administração da oficina</strong>
+            </div>
+            <div class="list-group list-group-flush">
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{% url 'accounts:admin_company_settings' %}">
+                    Dados da oficina
+                    <span class="text-muted">›</span>
+                </a>
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{% url 'accounts:admin_user_list' %}">
+                    Funcionários e perfis
+                    <span class="text-muted">›</span>
+                </a>
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{% url 'customers:customer_list' %}">
+                    Clientes
+                    <span class="text-muted">›</span>
+                </a>
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{% url 'customers:vehicle_list' %}">
+                    Veículos
+                    <span class="text-muted">›</span>
+                </a>
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{% url 'inventory:part_list' %}">
+                    Estoque
+                    <span class="text-muted">›</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <strong>Resumo operacional</strong>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-7">Clientes ativos</dt>
+                    <dd class="col-5 text-end">{{ customers_count }}</dd>
+
+                    <dt class="col-7">Clientes com portal</dt>
+                    <dd class="col-5 text-end">{{ customers_with_access_count }}</dd>
+
+                    <dt class="col-7">Veículos ativos</dt>
+                    <dd class="col-5 text-end">{{ vehicles_count }}</dd>
+
+                    <dt class="col-7">OS cadastradas</dt>
+                    <dd class="col-5 text-end">{{ service_orders_count }}</dd>
+
+                    <dt class="col-7">Contas pendentes</dt>
+                    <dd class="col-5 text-end">{{ pending_receivables_count }}</dd>
+
+                    <dt class="col-7">Despesas pendentes</dt>
+                    <dd class="col-5 text-end">{{ pending_expenses_count }}</dd>
+                </dl>
+            </div>
+        </div>
     </div>
 </div>
 

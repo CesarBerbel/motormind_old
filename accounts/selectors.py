@@ -195,3 +195,85 @@ def get_main_dashboard_data(user):
         "open_service_orders_count": open_service_orders_count,
         "assigned_to_me_count": assigned_to_me_count,
     }
+
+
+
+def get_administration_dashboard_data():
+    """
+    Return read-only data for the administrator area.
+
+    This selector centralizes the administrative counters and avoids queries
+    directly inside the view/template.
+    """
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Group
+
+    from core.models import CompanySettings
+    from financial.models import Expense, PaymentStatus, Receivable
+    from inventory.selectors import count_low_stock_parts
+
+    User = get_user_model()
+
+    users = User.objects.prefetch_related("groups").order_by("email")
+    employees = users.filter(is_employee=True, is_customer=False, is_superuser=False)
+    customers_with_access = users.filter(is_customer=True, is_employee=False, is_superuser=False)
+    groups = Group.objects.annotate(users_count=Count("user")).order_by("name")
+    company_settings = CompanySettings.get_solo()
+
+    return {
+        "users_count": users.count(),
+        "active_users_count": users.filter(is_active=True).count(),
+        "inactive_users_count": users.filter(is_active=False).count(),
+        "employees_count": employees.count(),
+        "customers_with_access_count": customers_with_access.count(),
+        "groups_count": groups.count(),
+        "customers_count": Customer.objects.filter(is_active=True).count(),
+        "vehicles_count": Vehicle.objects.filter(is_active=True).count(),
+        "service_orders_count": ServiceOrder.objects.count(),
+        "open_service_orders_count": ServiceOrder.objects.exclude(
+            status__in=[
+                ServiceOrder.Status.FINISHED,
+                ServiceOrder.Status.CANCELED,
+            ]
+        ).count(),
+        "low_stock_parts_count": count_low_stock_parts(),
+        "pending_receivables_count": Receivable.objects.filter(
+            status=PaymentStatus.PENDING,
+        ).count(),
+        "pending_expenses_count": Expense.objects.filter(
+            status=PaymentStatus.PENDING,
+        ).count(),
+        "recent_users": employees[:8],
+        "groups": groups,
+        "company_settings": company_settings,
+    }
+
+
+def get_administrative_users(search_query=""):
+    """
+    Return internal employee users for the administrative user management screen.
+
+    Superusers are intentionally excluded because they must be created and
+    maintained by management commands. Customer users are intentionally excluded
+    because they belong to the customer/portal flow.
+    """
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    cleaned_query = (search_query or "").strip()
+
+    users = User.objects.filter(
+        is_employee=True,
+        is_customer=False,
+        is_superuser=False,
+    ).prefetch_related("groups").order_by("email")
+
+    if cleaned_query:
+        users = users.filter(
+            Q(email__icontains=cleaned_query)
+            | Q(first_name__icontains=cleaned_query)
+            | Q(last_name__icontains=cleaned_query)
+            | Q(groups__name__icontains=cleaned_query)
+        ).distinct()
+
+    return users

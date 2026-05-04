@@ -1,9 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from core.forms import CompanySettingsForm
+from core.models import CompanySettings
 from inventory.selectors import count_low_stock_parts
 from service_orders.models import ServiceOrder
 from service_orders.selectors import (
@@ -13,8 +15,9 @@ from service_orders.selectors import (
     get_overdue_service_orders_for_mechanic,
 )
 
-from .forms import CustomUserCreationForm, EmailAuthenticationForm
+from .forms import AdministrativeUserForm, CustomUserCreationForm, EmailAuthenticationForm
 from .permissions import role_required
+from .selectors import get_administration_dashboard_data, get_administrative_users
 
 
 def register_view(request):
@@ -140,11 +143,127 @@ def dashboard_view(request):
 @role_required("Administrador")
 def admin_area_view(request):
     """
-    Show administrator area.
+    Show the administrator command center.
     """
     return render(
         request,
         "accounts/admin_area.html",
+        get_administration_dashboard_data(),
+    )
+
+
+@login_required
+@role_required("Administrador")
+def admin_company_settings_view(request):
+    """
+    Create or update the official workshop data used by MotorMind.
+    """
+    company_settings = CompanySettings.get_solo()
+
+    if request.method == "POST":
+        form = CompanySettingsForm(request.POST, instance=company_settings)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Dados da oficina atualizados com sucesso.")
+            return redirect("accounts:admin_area")
+    else:
+        form = CompanySettingsForm(instance=company_settings)
+
+    return render(
+        request,
+        "accounts/admin_company_settings_form.html",
+        {
+            "form": form,
+            "company_settings": company_settings,
+        },
+    )
+
+
+@login_required
+@role_required("Administrador")
+def admin_user_list_view(request):
+    """
+    List internal users for administrative management.
+    """
+    search = request.GET.get("search", "").strip()
+
+    return render(
+        request,
+        "accounts/admin_user_list.html",
+        {
+            "users": get_administrative_users(search),
+            "search": search,
+        },
+    )
+
+
+@login_required
+@role_required("Administrador")
+def admin_user_create_view(request):
+    """
+    Create a new internal user and assign access profiles.
+    """
+    if request.method == "POST":
+        form = AdministrativeUserForm(request.POST)
+
+        if form.is_valid():
+            if not form.cleaned_data.get("password1"):
+                form.add_error("password1", "Informe uma senha inicial para o usuário.")
+            else:
+                user = form.save()
+                messages.success(request, f"Usuário {user.email} criado com sucesso.")
+                return redirect("accounts:admin_user_list")
+    else:
+        form = AdministrativeUserForm()
+
+    return render(
+        request,
+        "accounts/admin_user_form.html",
+        {
+            "form": form,
+            "form_title": "Novo funcionário",
+            "submit_label": "Criar funcionário",
+        },
+    )
+
+
+@login_required
+@role_required("Administrador")
+def admin_user_update_view(request, user_id):
+    """
+    Update an internal user and access profiles.
+    """
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    user = get_object_or_404(
+        User,
+        pk=user_id,
+        is_employee=True,
+        is_customer=False,
+        is_superuser=False,
+    )
+
+    if request.method == "POST":
+        form = AdministrativeUserForm(request.POST, instance=user)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Usuário {user.email} atualizado com sucesso.")
+            return redirect("accounts:admin_user_list")
+    else:
+        form = AdministrativeUserForm(instance=user)
+
+    return render(
+        request,
+        "accounts/admin_user_form.html",
+        {
+            "form": form,
+            "managed_user": user,
+            "form_title": "Editar usuário",
+            "submit_label": "Salvar alterações",
+        },
     )
 
 

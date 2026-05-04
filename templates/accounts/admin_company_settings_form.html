@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Dados da oficina - Administração
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Dados da oficina</h1>
+        <p class="text-muted mb-0">
+            Cadastre os dados institucionais usados em documentos, mensagens, recibos, orçamentos e identificação da oficina.
+        </p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'accounts:admin_area' %}">
+        Voltar para Administração
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <h2 class="h5 mb-3">Identificação</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.name.id_for_label }}">Nome da oficina</label>
+                    {{ form.name }}
+                    {{ form.name.errors }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.legal_name.id_for_label }}">Razão social</label>
+                    {{ form.legal_name }}
+                    {{ form.legal_name.errors }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.document.id_for_label }}">CPF/CNPJ</label>
+                    {{ form.document }}
+                    {{ form.document.errors }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.state_registration.id_for_label }}">Inscrição estadual</label>
+                    {{ form.state_registration }}
+                    {{ form.state_registration.errors }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.municipal_registration.id_for_label }}">Inscrição municipal</label>
+                    {{ form.municipal_registration }}
+                    {{ form.municipal_registration.errors }}
+                </div>
+            </div>
+
+            <h2 class="h5 mb-3">Contato</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.phone.id_for_label }}">Telefone</label>
+                    {{ form.phone }}
+                    {{ form.phone.errors }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.whatsapp.id_for_label }}">WhatsApp</label>
+                    {{ form.whatsapp }}
+                    {{ form.whatsapp.errors }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.website.id_for_label }}">Site</label>
+                    {{ form.website }}
+                    {{ form.website.errors }}
+                </div>
+            </div>
+
+            <h2 class="h5 mb-3">Endereço</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-md-8">
+                    <label class="form-label" for="{{ form.address_line.id_for_label }}">Endereço</label>
+                    {{ form.address_line }}
+                    {{ form.address_line.errors }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="{{ form.number.id_for_label }}">Número</label>
+                    {{ form.number }}
+                    {{ form.number.errors }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="{{ form.complement.id_for_label }}">Complemento</label>
+                    {{ form.complement }}
+                    {{ form.complement.errors }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.neighborhood.id_for_label }}">Bairro</label>
+                    {{ form.neighborhood }}
+                    {{ form.neighborhood.errors }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.city.id_for_label }}">Cidade</label>
+                    {{ form.city }}
+                    {{ form.city.errors }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="{{ form.state.id_for_label }}">UF</label>
+                    {{ form.state }}
+                    {{ form.state.errors }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.zip_code.id_for_label }}">CEP</label>
+                    {{ form.zip_code }}
+                    {{ form.zip_code.errors }}
+                </div>
+            </div>
+
+            <h2 class="h5 mb-3">Operação</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.opening_hours.id_for_label }}">Horário de funcionamento</label>
+                    {{ form.opening_hours }}
+                    {{ form.opening_hours.errors }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.service_terms.id_for_label }}">Termos e observações padrão</label>
+                    {{ form.service_terms }}
+                    {{ form.service_terms.errors }}
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        {{ form.is_configured }}
+                        <label class="form-check-label" for="{{ form.is_configured.id_for_label }}">
+                            Marcar dados da oficina como revisados e concluídos
+                        </label>
+                    </div>
+                    {{ form.is_configured.errors }}
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a class="btn btn-outline-secondary" href="{% url 'accounts:admin_area' %}">Cancelar</a>
+                <button class="btn btn-primary" type="submit">Salvar dados da oficina</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
