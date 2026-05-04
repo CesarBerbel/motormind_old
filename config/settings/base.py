@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "service_orders",
     "inventory",
     "financial",
+    "crm",
     "auditoria",
 ]
 

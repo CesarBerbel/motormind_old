@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load group_tags %}
+
+{% block title %}CRM - MotorMind{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-1">CRM</h1>
+        <p class="text-muted mb-0">Relacionamento, oportunidades, follow-ups, campanhas e clientes inativos.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'crm:interaction_create' %}" class="btn btn-primary">Nova interação</a>
+        <a href="{% url 'crm:reminder_create' %}" class="btn btn-outline-primary">Novo lembrete</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2"><div class="card shadow-sm"><div class="card-body"><span class="text-muted small">Clientes ativos</span><h2 class="h4 mb-0">{{ total_customers }}</h2></div></div></div>
+    <div class="col-md-2"><div class="card shadow-sm"><div class="card-body"><span class="text-muted small">Interações hoje</span><h2 class="h4 mb-0">{{ interactions_today }}</h2></div></div></div>
+    <div class="col-md-2"><div class="card shadow-sm"><div class="card-body"><span class="text-muted small">Follow-ups vencidos</span><h2 class="h4 mb-0">{{ pending_reminders }}</h2></div></div></div>
+    <div class="col-md-2"><div class="card shadow-sm"><div class="card-body"><span class="text-muted small">Oportunidades</span><h2 class="h4 mb-0">{{ open_opportunities }}</h2></div></div></div>
+    <div class="col-md-2"><div class="card shadow-sm"><div class="card-body"><span class="text-muted small">Campanhas ativas</span><h2 class="h4 mb-0">{{ active_campaigns }}</h2></div></div></div>
+    <div class="col-md-2"><div class="card shadow-sm"><div class="card-body"><span class="text-muted small">Clientes inativos</span><h2 class="h4 mb-0">{{ inactive_customers_count }}</h2></div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">Últimas interações</h2>
+                    <a href="{% url 'crm:interaction_list' %}" class="btn btn-sm btn-outline-secondary">Ver todas</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead><tr><th>Data</th><th>Cliente</th><th>Tipo</th><th>Assunto</th><th>Responsável</th></tr></thead>
+                        <tbody>
+                            {% for interaction in latest_interactions %}
+                                <tr>
+                                    <td>{{ interaction.interaction_date|date:"d/m/Y H:i" }}</td>
+                                    <td><a href="{% url 'customers:customer_detail' interaction.customer.pk %}">{{ interaction.customer.name }}</a></td>
+                                    <td>{{ interaction.get_interaction_type_display }}</td>
+                                    <td>{{ interaction.subject }}</td>
+                                    <td>{{ interaction.responsible_user|default:"Sistema" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="5" class="text-center text-muted py-4">Nenhuma interação registrada.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">Follow-ups pendentes</h2>
+                    <a href="{% url 'crm:reminder_list' %}" class="btn btn-sm btn-outline-secondary">Ver todos</a>
+                </div>
+                {% for reminder in due_reminders %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ reminder.title }}</strong><br>
+                        <span class="text-muted small">{{ reminder.customer.name }} · {{ reminder.due_date|date:"d/m/Y" }}</span>
+                    </div>
+                {% empty %}
+                    <p class="text-muted mb-0">Nenhum follow-up vencido.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">Clientes inativos</h2>
+            <a href="{% url 'crm:inactive_customer_list' %}" class="btn btn-sm btn-outline-secondary">Analisar lista</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Cliente</th><th>Telefone</th><th>Email</th><th>Última OS</th><th class="text-end">Ação</th></tr></thead>
+                <tbody>
+                    {% for customer in inactive_customers %}
+                        <tr>
+                            <td>{{ customer.name }}</td>
+                            <td>{{ customer.phone }}</td>
+                            <td>{{ customer.email|default:"-" }}</td>
+                            <td>{{ customer.last_order_at|date:"d/m/Y"|default:"Sem OS" }}</td>
+                            <td class="text-end"><a href="{% url 'crm:interaction_create' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-primary">Registrar contato</a></td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">Nenhum cliente inativo encontrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

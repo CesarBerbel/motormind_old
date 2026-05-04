@@ -3,6 +3,57 @@
 
 {% block title %}
     Detalhes do cliente - Sistema de Oficina
+
+{% if crm_summary %}
+<div class="card shadow-sm mt-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">CRM do cliente</h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'crm:interaction_create' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-primary">Registrar interação</a>
+                <a href="{% url 'crm:reminder_create' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-secondary">Criar lembrete</a>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <h3 class="h6">Últimas interações</h3>
+                {% for interaction in crm_summary.interactions %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ interaction.subject }}</strong><br>
+                        <span class="text-muted small">{{ interaction.interaction_date|date:"d/m/Y H:i" }} · {{ interaction.get_interaction_type_display }}</span>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">Nenhuma interação registrada.</p>
+                {% endfor %}
+            </div>
+            <div class="col-lg-3">
+                <h3 class="h6">Oportunidades abertas</h3>
+                {% for opportunity in crm_summary.open_opportunities %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ opportunity.title }}</strong><br>
+                        <span class="text-muted small">R$ {{ opportunity.estimated_value }}</span>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">Nenhuma oportunidade aberta.</p>
+                {% endfor %}
+            </div>
+            <div class="col-lg-3">
+                <h3 class="h6">Follow-ups pendentes</h3>
+                {% for reminder in crm_summary.pending_reminders %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ reminder.title }}</strong><br>
+                        <span class="text-muted small">{{ reminder.due_date|date:"d/m/Y" }}</span>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">Nenhum follow-up pendente.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block content %}
@@ -134,5 +185,56 @@
 
     </div>
 </div>
+
+
+{% if crm_summary %}
+<div class="card shadow-sm mt-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">CRM do cliente</h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'crm:interaction_create' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-primary">Registrar interação</a>
+                <a href="{% url 'crm:reminder_create' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-secondary">Criar lembrete</a>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <h3 class="h6">Últimas interações</h3>
+                {% for interaction in crm_summary.interactions %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ interaction.subject }}</strong><br>
+                        <span class="text-muted small">{{ interaction.interaction_date|date:"d/m/Y H:i" }} · {{ interaction.get_interaction_type_display }}</span>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">Nenhuma interação registrada.</p>
+                {% endfor %}
+            </div>
+            <div class="col-lg-3">
+                <h3 class="h6">Oportunidades abertas</h3>
+                {% for opportunity in crm_summary.open_opportunities %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ opportunity.title }}</strong><br>
+                        <span class="text-muted small">R$ {{ opportunity.estimated_value }}</span>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">Nenhuma oportunidade aberta.</p>
+                {% endfor %}
+            </div>
+            <div class="col-lg-3">
+                <h3 class="h6">Follow-ups pendentes</h3>
+                {% for reminder in crm_summary.pending_reminders %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ reminder.title }}</strong><br>
+                        <span class="text-muted small">{{ reminder.due_date|date:"d/m/Y" }}</span>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">Nenhum follow-up pendente.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}

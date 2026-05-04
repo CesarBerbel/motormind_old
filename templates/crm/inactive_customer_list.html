@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Clientes inativos - CRM{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="h4 mb-1">Clientes inativos</h1><p class="text-muted mb-0">Clientes sem OS nos últimos {{ days }} dias ou sem OS registrada.</p></div><a href="{% url 'crm:dashboard' %}" class="btn btn-outline-secondary">Voltar ao CRM</a></div>
+<form method="get" class="card card-body shadow-sm mb-3"><div class="input-group"><span class="input-group-text">Dias sem OS</span><input type="number" name="days" value="{{ days }}" min="30" class="form-control"><button class="btn btn-outline-secondary" type="submit">Filtrar</button></div></form>
+<div class="card shadow-sm"><div class="card-body"><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Cliente</th><th>Telefone</th><th>Email</th><th>Última OS</th><th class="text-end">Ação</th></tr></thead><tbody>{% for customer in customers %}<tr><td>{{ customer.name }}</td><td>{{ customer.phone }}</td><td>{{ customer.email|default:"-" }}</td><td>{{ customer.last_order_at|date:"d/m/Y"|default:"Sem OS" }}</td><td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'crm:interaction_create' %}?customer={{ customer.pk }}">Registrar contato</a></td></tr>{% empty %}<tr><td colspan="5" class="text-center text-muted py-4">Nenhum cliente inativo encontrado.</td></tr>{% endfor %}</tbody></table></div></div></div>
+{% endblock %}
+

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Lembretes - CRM{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="h4 mb-1">Lembretes e follow-ups</h1><p class="text-muted mb-0">Ações pendentes de relacionamento.</p></div><a href="{% url 'crm:reminder_create' %}" class="btn btn-primary">Novo lembrete</a></div>
+<form method="get" class="card card-body shadow-sm mb-3"><select name="status" class="form-select" onchange="this.form.submit()"><option value="">Todos os status</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></form>
+<div class="card shadow-sm"><div class="card-body"><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Data</th><th>Cliente</th><th>Título</th><th>Status</th><th>Responsável</th><th class="text-end">Ação</th></tr></thead><tbody>{% for reminder in reminders %}<tr><td>{{ reminder.due_date|date:"d/m/Y" }}</td><td>{{ reminder.customer.name }}</td><td>{{ reminder.title }}</td><td>{{ reminder.get_status_display }}</td><td>{{ reminder.responsible_user|default:"-" }}</td><td class="text-end">{% if reminder.status == "pending" %}<form method="post" action="{% url 'crm:reminder_done' reminder.pk %}">{% csrf_token %}<button type="submit" class="btn btn-sm btn-success">Concluir</button></form>{% endif %}</td></tr>{% empty %}<tr><td colspan="6" class="text-center text-muted py-4">Nenhum lembrete encontrado.</td></tr>{% endfor %}</tbody></table></div></div></div>
+{% endblock %}
+

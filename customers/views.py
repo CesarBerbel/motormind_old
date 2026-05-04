@@ -8,6 +8,11 @@ from core.permissions import groups_required
 from .forms import CustomerForm, VehicleForm
 from .models import Customer, Vehicle
 
+try:
+    from crm.selectors import get_customer_crm_summary
+except ImportError:
+    get_customer_crm_summary = None
+
 
 @login_required
 @groups_required(["Administrador", "Atendente"])
@@ -133,6 +138,9 @@ def customer_detail_view(request, pk):
     )
 
     vehicles = customer.vehicles.all()
+    crm_summary = (
+        get_customer_crm_summary(customer) if get_customer_crm_summary else None
+    )
 
     return render(
         request,
@@ -140,6 +148,7 @@ def customer_detail_view(request, pk):
         {
             "customer": customer,
             "vehicles": vehicles,
+            "crm_summary": crm_summary,
         },
     )
 

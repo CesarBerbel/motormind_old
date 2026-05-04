@@ -4,6 +4,47 @@
 
 {% block title %}
     Ordem de serviço #{{ service_order.pk }} - Sistema de Oficina
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">CRM vinculado à OS</h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'crm:interaction_create' %}?customer={{ service_order.customer.pk }}&service_order={{ service_order.pk }}" class="btn btn-sm btn-outline-primary">Registrar interação</a>
+                <a href="{% url 'crm:opportunity_create' %}?customer={{ service_order.customer.pk }}&vehicle={{ service_order.vehicle.pk }}&service_order={{ service_order.pk }}" class="btn btn-sm btn-outline-secondary">Criar oportunidade</a>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Canal</th>
+                        <th>Assunto</th>
+                        <th>Responsável</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for interaction in crm_timeline %}
+                        <tr>
+                            <td>{{ interaction.interaction_date|date:"d/m/Y H:i" }}</td>
+                            <td>{{ interaction.get_interaction_type_display }}</td>
+                            <td>{{ interaction.get_channel_display }}</td>
+                            <td>{{ interaction.subject }}</td>
+                            <td>{{ interaction.responsible_user|default:"Sistema" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">Nenhuma interação de CRM vinculada a esta OS.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block content %}
@@ -604,6 +645,47 @@
             </a>
         {% endif %}
     {% endif %}
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">CRM vinculado à OS</h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'crm:interaction_create' %}?customer={{ service_order.customer.pk }}&service_order={{ service_order.pk }}" class="btn btn-sm btn-outline-primary">Registrar interação</a>
+                <a href="{% url 'crm:opportunity_create' %}?customer={{ service_order.customer.pk }}&vehicle={{ service_order.vehicle.pk }}&service_order={{ service_order.pk }}" class="btn btn-sm btn-outline-secondary">Criar oportunidade</a>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Canal</th>
+                        <th>Assunto</th>
+                        <th>Responsável</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for interaction in crm_timeline %}
+                        <tr>
+                            <td>{{ interaction.interaction_date|date:"d/m/Y H:i" }}</td>
+                            <td>{{ interaction.get_interaction_type_display }}</td>
+                            <td>{{ interaction.get_channel_display }}</td>
+                            <td>{{ interaction.subject }}</td>
+                            <td>{{ interaction.responsible_user|default:"Sistema" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">Nenhuma interação de CRM vinculada a esta OS.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 {% endblock %}

@@ -32,6 +32,11 @@ from service_orders.services import (
 
 from .common import redirect_if_canceled
 
+try:
+    from crm.selectors import get_service_order_crm_timeline
+except ImportError:
+    get_service_order_crm_timeline = None
+
 
 @login_required
 @user_passes_permission(can_view_service_orders)
@@ -131,6 +136,11 @@ def service_order_detail_view(request, pk):
 
     inventory_parts = get_all_inventory_parts_for_service_order(service_order)
     financial_summary = get_service_order_financial_summary(service_order)
+    crm_timeline = (
+        get_service_order_crm_timeline(service_order)
+        if get_service_order_crm_timeline
+        else []
+    )
 
     return render(
         request,
@@ -149,6 +159,7 @@ def service_order_detail_view(request, pk):
             "financial_total": financial_summary["net_total"],
             "financial_summary": financial_summary,
             "note_form": ServiceOrderNoteForm(),
+            "crm_timeline": crm_timeline,
         },
     )
 
