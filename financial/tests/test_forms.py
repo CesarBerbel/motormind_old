@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from customers.models import Customer, Vehicle
-from financial.forms import PaymentForm, ReceivableCreateForm
+from financial.forms import ExpenseForm, PaymentForm, ReceivableCreateForm
 from financial.models import Receivable
 from service_orders.models import ServiceOrder
 
@@ -83,3 +83,17 @@ def test_payment_form_rejects_amount_above_remaining(service_order, user):
 
     assert form.is_valid() is False
     assert "amount" in form.errors
+
+
+@pytest.mark.django_db
+def test_financial_forms_apply_bootstrap_visual_classes(service_order):
+    receivable_form = ReceivableCreateForm()
+    expense_form = ExpenseForm()
+
+    assert (
+        "form-select" in receivable_form.fields["service_order"].widget.attrs["class"]
+    )
+    assert "form-control" in receivable_form.fields["due_date"].widget.attrs["class"]
+    assert "form-control" in expense_form.fields["description"].widget.attrs["class"]
+    assert "form-control" in expense_form.fields["amount"].widget.attrs["class"]
+    assert "form-control" in expense_form.fields["notes"].widget.attrs["class"]

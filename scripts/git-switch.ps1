@@ -41,7 +41,7 @@ Write-Host ""
 # 3. Checkout para branch informada
 Write-Host "🔀 Criando a branch: $branchName"
 
-git checkout -b $branchName origin/$branchName
+git checkout -b $branchName
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Não foi possível fazer checkout da branch."

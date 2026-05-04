@@ -7,6 +7,20 @@ from service_orders.models import ServiceOrder
 
 from .models import Expense, PaymentMethod
 
+FORM_CONTROL_CLASS = "form-control form-control-lg"
+FORM_SELECT_CLASS = "form-select form-select-lg"
+
+
+def apply_bootstrap_attrs(field, *, placeholder=None, css_class=FORM_CONTROL_CLASS):
+    """
+    Apply consistent Bootstrap styling to financial forms.
+    """
+    existing_class = field.widget.attrs.get("class", "")
+    field.widget.attrs["class"] = f"{existing_class} {css_class}".strip()
+
+    if placeholder:
+        field.widget.attrs["placeholder"] = placeholder
+
 
 class ReceivableCreateForm(forms.Form):
     """
@@ -22,6 +36,7 @@ class ReceivableCreateForm(forms.Form):
         label="Data de vencimento",
         required=False,
         widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Se ficar em branco, a conta será criada sem vencimento definido.",
     )
 
     def __init__(self, *args, **kwargs):
@@ -32,6 +47,12 @@ class ReceivableCreateForm(forms.Form):
             .filter(receivable__isnull=True)
             .order_by("-finished_at", "-created_at")
         )
+        self.fields["service_order"].empty_label = "Selecione uma OS finalizada"
+        apply_bootstrap_attrs(
+            self.fields["service_order"],
+            css_class=FORM_SELECT_CLASS,
+        )
+        apply_bootstrap_attrs(self.fields["due_date"])
 
 
 class PaymentForm(forms.Form):
@@ -65,6 +86,19 @@ class PaymentForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.receivable = receivable
         self.fields["amount"].widget.attrs.update({"step": "0.01"})
+        apply_bootstrap_attrs(
+            self.fields["amount"],
+            placeholder="0,00",
+        )
+        apply_bootstrap_attrs(
+            self.fields["method"],
+            css_class=FORM_SELECT_CLASS,
+        )
+        apply_bootstrap_attrs(self.fields["paid_at"])
+        apply_bootstrap_attrs(
+            self.fields["notes"],
+            placeholder="Observações internas sobre o pagamento, se necessário.",
+        )
 
     def clean_amount(self):
         amount = self.cleaned_data["amount"]
@@ -97,13 +131,39 @@ class ExpenseForm(forms.ModelForm):
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
             "paid_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "notes": forms.Textarea(attrs={"rows": 3}),
+            "notes": forms.Textarea(attrs={"rows": 4}),
+        }
+        labels = {
+            "description": "Descrição da despesa",
+            "amount": "Valor",
+            "due_date": "Vencimento",
+            "paid_at": "Data de pagamento",
+            "notes": "Observações",
+        }
+        help_texts = {
+            "description": "Use uma descrição clara para facilitar auditoria e conciliação.",
+            "due_date": "Informe quando a despesa vence, caso ainda não esteja paga.",
+            "notes": "Opcional. Registre fornecedor, número de nota ou contexto interno.",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["amount"].widget.attrs.update({"step": "0.01"})
         self.fields["paid_at"].help_text = "Preencha somente se a despesa já foi paga."
+        apply_bootstrap_attrs(
+            self.fields["description"],
+            placeholder="Ex.: Compra de óleo, aluguel, energia, fornecedor...",
+        )
+        apply_bootstrap_attrs(
+            self.fields["amount"],
+            placeholder="0,00",
+        )
+        apply_bootstrap_attrs(self.fields["due_date"])
+        apply_bootstrap_attrs(self.fields["paid_at"])
+        apply_bootstrap_attrs(
+            self.fields["notes"],
+            placeholder="Detalhes adicionais para controle interno.",
+        )
 
 
 class ExpensePaymentForm(forms.Form):
@@ -117,6 +177,10 @@ class ExpensePaymentForm(forms.Form):
         widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
         help_text="Se ficar em branco, o sistema usará a data e hora atual.",
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_bootstrap_attrs(self.fields["paid_at"])
 
     def clean_paid_at(self):
         return self.cleaned_data.get("paid_at") or timezone.now()

@@ -3,8 +3,13 @@
 
 {% block content %}
 <div class="container py-4">
-    <h1 class="mb-1">Contas a receber</h1>
-    <p class="text-muted">Cobranças geradas a partir de ordens de serviço finalizadas.</p>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <h1 class="mb-1">Contas a receber</h1>
+            <p class="text-muted mb-0">Cobranças geradas a partir de ordens de serviço finalizadas.</p>
+        </div>
+        <a href="{% url 'financial:receivable_create' %}" class="btn btn-success">Gerar conta a receber</a>
+    </div>
 
     {% include "financial/_nav.html" %}
 
