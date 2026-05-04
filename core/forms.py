@@ -34,7 +34,9 @@ class CompanySettingsForm(forms.ModelForm):
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "legal_name": forms.TextInput(attrs={"class": "form-control"}),
-            "document": forms.TextInput(attrs={"class": "form-control", "placeholder": "CPF ou CNPJ"}),
+            "document": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "CPF ou CNPJ"}
+            ),
             "state_registration": forms.TextInput(attrs={"class": "form-control"}),
             "municipal_registration": forms.TextInput(attrs={"class": "form-control"}),
             "phone": forms.TextInput(attrs={"class": "form-control"}),

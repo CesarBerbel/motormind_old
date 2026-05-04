@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhe de auditoria | MotorMind{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Detalhe de auditoria</h1>
+        <p class="text-muted mb-0">{{ audit_log.created_at|date:"d/m/Y H:i:s" }} · {{ audit_log.get_action_display }}</p>
+    </div>
+    <a href="{% url 'auditoria:audit_log_list' %}" class="btn btn-outline-secondary">Voltar</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">Resumo</div>
+            <div class="card-body">
+                <dl class="mb-0">
+                    <dt>Usuário</dt>
+                    <dd>{{ audit_log.user.email|default:"Sistema" }}</dd>
+                    <dt>Objeto</dt>
+                    <dd>{{ audit_log.app_label }}.{{ audit_log.model_name }} #{{ audit_log.object_id }}</dd>
+                    <dt>IP</dt>
+                    <dd>{{ audit_log.ip_address|default:"-" }}</dd>
+                    <dt>Caminho</dt>
+                    <dd class="text-break">{{ audit_log.path|default:"-" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-semibold">Dados antigos</div>
+            <div class="card-body"><pre class="mb-0 small">{{ audit_log.old_data|default:"{}" }}</pre></div>
+        </div>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-semibold">Dados novos</div>
+            <div class="card-body"><pre class="mb-0 small">{{ audit_log.new_data|default:"{}" }}</pre></div>
+        </div>
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Metadados</div>
+            <div class="card-body"><pre class="mb-0 small">{{ audit_log.metadata|default:"{}" }}</pre></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

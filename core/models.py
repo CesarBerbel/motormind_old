@@ -259,7 +259,9 @@ class CompanySettings(TimeStampedModel):
         super().clean()
 
         if self.pk and self.pk != 1:
-            raise ValidationError("O sistema permite apenas um cadastro de dados da oficina.")
+            raise ValidationError(
+                "O sistema permite apenas um cadastro de dados da oficina."
+            )
 
         if self.state:
             self.state = self.state.upper()

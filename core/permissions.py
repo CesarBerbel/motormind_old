@@ -359,6 +359,17 @@ def can_manage_financial(user):
     )
 
 
+def can_view_auditoria(user):
+    """
+    Only administrators can view the global audit trail.
+
+    Audit logs can expose sensitive operational metadata such as IP address,
+    user agent, object identifiers and before/after snapshots. For that reason,
+    this permission is intentionally stricter than financial dashboard access.
+    """
+    return is_admin(user)
+
+
 def assert_permission(user, permission_function, message=None):
     """
     Raise a domain permission error when the user is not allowed.

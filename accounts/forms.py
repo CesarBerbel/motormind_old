@@ -164,8 +164,6 @@ class EmailAuthenticationForm(forms.Form):
         return self.user
 
 
-
-
 class AdministrativeUserForm(forms.ModelForm):
     """
     Form used by administrators to create and update internal employee users.
@@ -238,7 +236,9 @@ class AdministrativeUserForm(forms.ModelForm):
             query = query.exclude(pk=self.instance.pk)
 
         if query.exists():
-            raise forms.ValidationError("Este email já está cadastrado para outro usuário.")
+            raise forms.ValidationError(
+                "Este email já está cadastrado para outro usuário."
+            )
 
         return email
 

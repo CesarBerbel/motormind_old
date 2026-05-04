@@ -37,13 +37,17 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault("is_employee", True)
 
         if extra_fields.get("is_superuser"):
-            raise ValueError("Superuser deve ser criado apenas com create_superuser/createsuperuser.")
+            raise ValueError(
+                "Superuser deve ser criado apenas com create_superuser/createsuperuser."
+            )
 
         if extra_fields.get("is_customer"):
             raise ValueError("Use create_customer_user para criar usuário de cliente.")
 
         if not extra_fields.get("is_employee"):
-            raise ValueError("Usuário comum criado por create_user deve ser funcionário.")
+            raise ValueError(
+                "Usuário comum criado por create_user deve ser funcionário."
+            )
 
         return self._create_user(email=email, password=password, **extra_fields)
 

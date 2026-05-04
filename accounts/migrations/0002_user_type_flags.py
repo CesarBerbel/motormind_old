@@ -45,7 +45,10 @@ class Migration(migrations.Migration):
             constraint=models.CheckConstraint(
                 condition=(
                     models.Q(("is_superuser", False))
-                    | (models.Q(("is_customer", False)) & models.Q(("is_employee", False)))
+                    | (
+                        models.Q(("is_customer", False))
+                        & models.Q(("is_employee", False))
+                    )
                 ),
                 name="accounts_superuser_not_customer_or_employee",
             ),
@@ -53,7 +56,8 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="customuser",
             constraint=models.CheckConstraint(
-                condition=models.Q(("is_customer", False)) | models.Q(("is_employee", False)),
+                condition=models.Q(("is_customer", False))
+                | models.Q(("is_employee", False)),
                 name="accounts_user_not_customer_and_employee",
             ),
         ),

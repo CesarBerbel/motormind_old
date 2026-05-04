@@ -1,6 +1,8 @@
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from auditoria.models import AuditLog
+from auditoria.services import log_event, serialize_instance
 from core.exceptions import FinancialAmountError, ObjectAlreadyExistsError
 from service_orders.models import ServiceOrder
 from service_orders.selectors import get_service_order_financial_summary
@@ -51,6 +53,14 @@ def create_receivable_from_service_order(service_order, created_by, due_date=Non
             "Esta ordem de serviço já possui uma conta a receber."
         ) from exc
 
+    log_event(
+        action=AuditLog.Action.CREATE,
+        user=created_by,
+        obj=receivable,
+        new_data=serialize_instance(receivable),
+        metadata={"source": "service_order", "service_order_id": service_order.pk},
+    )
+
     return receivable
 
 
@@ -98,6 +108,14 @@ def register_payment(receivable, amount, method, created_by, paid_at=None, notes
         created_by=created_by,
     )
 
+    log_event(
+        action=AuditLog.Action.PAYMENT_REGISTERED,
+        user=created_by,
+        obj=payment,
+        new_data=serialize_instance(payment),
+        metadata={"receivable_id": locked_receivable.pk, "amount": str(payment.amount)},
+    )
+
     return payment
 
 
@@ -137,6 +155,13 @@ def register_expense(
             created_by=created_by,
         )
 
+    log_event(
+        action=AuditLog.Action.EXPENSE_REGISTERED,
+        user=created_by,
+        obj=expense,
+        new_data=serialize_instance(expense),
+    )
+
     return expense
 
 
@@ -144,23 +169,48 @@ def register_expense(
 def mark_expense_as_paid(expense, paid_at=None, user=None):
     """
     Mark an expense as paid and create a cash flow expense entry.
+
+    The operation is idempotent: when the expense is already paid, the service
+    returns the existing record without duplicating cash flow entries.
     """
     locked_expense = Expense.objects.select_for_update().get(pk=expense.pk)
+    actor = user or locked_expense.created_by
 
     if locked_expense.status == PaymentStatus.PAID:
+        log_event(
+            action=AuditLog.Action.EXPENSE_REGISTERED,
+            user=actor,
+            obj=locked_expense,
+            new_data=serialize_instance(locked_expense),
+            metadata={"event": "mark_expense_as_paid_already_paid"},
+        )
         return locked_expense
+
+    old_data = serialize_instance(locked_expense)
 
     locked_expense.status = PaymentStatus.PAID
     locked_expense.paid_at = paid_at or timezone.now()
     locked_expense.full_clean()
     locked_expense.save(update_fields=["status", "paid_at", "updated_at"])
 
-    CashFlowEntry.objects.create(
+    cash_flow_entry = CashFlowEntry.objects.create(
         entry_type=CashFlowType.EXPENSE,
         description=locked_expense.description,
         amount=locked_expense.amount,
         expense=locked_expense,
-        created_by=user or locked_expense.created_by,
+        created_by=actor,
+    )
+
+    log_event(
+        action=AuditLog.Action.EXPENSE_REGISTERED,
+        user=actor,
+        obj=locked_expense,
+        old_data=old_data,
+        new_data=serialize_instance(locked_expense),
+        metadata={
+            "event": "mark_expense_as_paid",
+            "cash_flow_entry_id": cash_flow_entry.pk,
+        },
     )
 
     return locked_expense

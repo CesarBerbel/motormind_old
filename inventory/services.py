@@ -3,6 +3,8 @@ from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from auditoria.models import AuditLog
+from auditoria.services import log_event
 from inventory.models import Part, ServiceOrderPart, StockMovement
 
 
@@ -114,7 +116,7 @@ def create_stock_movement(
 
     locked_part.save(update_fields=["current_stock", "updated_at"])
 
-    return StockMovement.objects.create(
+    movement = StockMovement.objects.create(
         part=locked_part,
         movement_type=movement_type,
         quantity=quantity,
@@ -124,6 +126,17 @@ def create_stock_movement(
         service_order=service_order,
         created_by=created_by,
     )
+
+    log_event(
+        action=AuditLog.Action.STOCK_MOVEMENT,
+        user=created_by,
+        obj=movement,
+        old_data={"part_id": locked_part.pk, "stock": str(old_stock)},
+        new_data={"part_id": locked_part.pk, "stock": str(locked_part.current_stock)},
+        metadata={"movement_type": movement_type, "quantity": str(quantity)},
+    )
+
+    return movement
 
 
 def create_stock_entry(

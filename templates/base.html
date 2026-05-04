@@ -155,6 +155,14 @@
                         </li>
                     {% endif %}
 
+                    {% if user|has_group:"Administrador" %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'auditoria' in request.path %}active{% endif %}" href="{% url 'auditoria:audit_log_list' %}">
+                                Auditoria
+                            </a>
+                        </li>
+                    {% endif %}
+
                 {% endif %}
 
             </ul>

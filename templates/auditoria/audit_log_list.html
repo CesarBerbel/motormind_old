@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Auditoria | MotorMind{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Auditoria</h1>
+        <p class="text-muted mb-0">Registros de ações críticas executadas no sistema.</p>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">{{ form.action|as_crispy_field }}</div>
+            <div class="col-md-3">{{ form.app_label|as_crispy_field }}</div>
+            <div class="col-md-3">{{ form.model_name|as_crispy_field }}</div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Data</th>
+                    <th>Ação</th>
+                    <th>Usuário</th>
+                    <th>Objeto</th>
+                    <th>IP</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in page_obj %}
+                    <tr>
+                        <td>{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
+                        <td>{{ log.get_action_display }}</td>
+                        <td>{{ log.user.email|default:"Sistema" }}</td>
+                        <td>
+                            {% if log.app_label %}
+                                <span class="badge text-bg-secondary">{{ log.app_label }}.{{ log.model_name }}</span>
+                            {% endif %}
+                            <div class="small text-muted">{{ log.object_repr|default:log.object_id }}</div>
+                        </td>
+                        <td>{{ log.ip_address|default:"-" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'auditoria:audit_log_detail' log.pk %}" class="btn btn-sm btn-outline-primary">Detalhes</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Nenhum registro encontrado.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
