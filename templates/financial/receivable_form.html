@@ -2,19 +2,91 @@
 
 {% block content %}
 <div class="container py-4">
-    <h1 class="mb-3">{{ title }}</h1>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <p class="text-uppercase text-muted small fw-semibold mb-1">Financeiro</p>
+            <h1 class="h3 mb-1">{{ title }}</h1>
+            <p class="text-muted mb-0">
+                Transforme uma ordem de serviço finalizada em uma conta a receber auditável.
+            </p>
+        </div>
+        <a href="{% url 'financial:receivable_list' %}" class="btn btn-outline-secondary">
+            Voltar para contas
+        </a>
+    </div>
+
     {% include "financial/_nav.html" %}
 
-    <form method="post" class="card card-body">
-        {% csrf_token %}
-        <div class="row g-3">
-            {% include "includes/form_field.html" with field=form.service_order field_wrapper_class="col-md-8" %}
-            {% include "includes/form_field.html" with field=form.due_date field_wrapper_class="col-md-4" %}
+    <div class="row g-4 align-items-start">
+        <div class="col-lg-8">
+            <form method="post" class="card border-0 shadow-sm">
+                {% csrf_token %}
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <span class="fw-bold">R$</span>
+                        </div>
+                        <div>
+                            <h2 class="h5 mb-1">Dados da conta</h2>
+                            <p class="text-muted mb-0 small">
+                                A conta será criada a partir do resumo financeiro da OS.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="row g-4">
+                        {% include "includes/form_field.html" with field=form.service_order field_wrapper_class="col-12" %}
+                        {% include "includes/form_field.html" with field=form.due_date field_wrapper_class="col-md-6" %}
+                    </div>
+                </div>
+
+                <div class="card-footer bg-white border-0 px-4 pb-4">
+                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-end">
+                        <a href="{% url 'financial:receivable_list' %}" class="btn btn-light border">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success px-4">
+                            {{ submit_label }}
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
-        <div class="mt-4 d-flex gap-2">
-            <button type="submit" class="btn btn-success">{{ submit_label }}</button>
-            <a href="{% url 'financial:receivable_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-4">
+                    <h2 class="h6 mb-3">Regras aplicadas</h2>
+                    <ul class="list-unstyled d-grid gap-3 mb-0 small text-muted">
+                        <li class="d-flex gap-2">
+                            <span class="text-success fw-bold">✓</span>
+                            Apenas OS finalizadas e sem conta a receber aparecem na lista.
+                        </li>
+                        <li class="d-flex gap-2">
+                            <span class="text-success fw-bold">✓</span>
+                            O total vem do resumo financeiro da ordem, evitando desconto duplicado.
+                        </li>
+                        <li class="d-flex gap-2">
+                            <span class="text-success fw-bold">✓</span>
+                            A conta fica vinculada ao cliente da ordem de serviço.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert alert-info border-0 shadow-sm mb-0">
+                <strong>Dica operacional:</strong>
+                confira se a OS está realmente finalizada antes de gerar a cobrança.
+            </div>
         </div>
-    </form>
+    </div>
 </div>
 {% endblock %}

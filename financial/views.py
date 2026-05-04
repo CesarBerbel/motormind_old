@@ -115,8 +115,8 @@ def receivable_create_view(request):
         "financial/receivable_form.html",
         {
             "form": form,
-            "title": "Nova conta a receber",
-            "submit_label": "Criar conta a receber",
+            "title": "Gerar conta a receber",
+            "submit_label": "Gerar conta a receber",
         },
     )
 
@@ -221,8 +221,8 @@ def expense_create_view(request):
         "financial/expense_form.html",
         {
             "form": form,
-            "title": "Nova despesa",
-            "submit_label": "Salvar despesa",
+            "title": "Gerar despesa",
+            "submit_label": "Gerar despesa",
         },
     )
 
