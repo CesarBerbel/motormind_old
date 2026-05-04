@@ -52,6 +52,8 @@ def get_overdue_service_order_filter():
     return Q(expected_delivery_date__lt=today) & ~Q(
         status__in=[
             ServiceOrder.Status.FINISHED,
+            ServiceOrder.Status.BILLED,
+            ServiceOrder.Status.PAID,
             ServiceOrder.Status.CANCELED,
         ]
     )

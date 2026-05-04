@@ -1,0 +1,60 @@
+/* Container principal do board */
+.board-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 120px); /* ajusta conforme header/navbar */
+    overflow: hidden;
+}
+
+/* Linha das colunas (scroll horizontal) */
+.board-columns {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 16px;
+    height: 100%;
+}
+
+/* Cada coluna */
+.board-column {
+    min-width: 320px;
+    max-width: 320px;
+    background: #f8f9fa;
+    border-radius: 8px;
+
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Header da coluna (fixo) */
+.board-column-header {
+    padding: 12px;
+    font-weight: bold;
+    background: #212529;
+    color: white;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+/* Área dos cards (SCROLL VERTICAL) */
+.board-column-body {
+    padding: 12px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Cards */
+.board-card {
+    background: white;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}

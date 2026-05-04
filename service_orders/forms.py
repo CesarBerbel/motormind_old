@@ -14,6 +14,7 @@ from .models import (
     ServiceOrderNote,
     ServiceOrderTimeEntry,
 )
+from .services import get_allowed_next_status_choices
 
 
 class ServiceOrderForm(forms.ModelForm):
@@ -169,6 +170,16 @@ class ServiceOrderForm(forms.ModelForm):
         self.fields["assigned_mechanic"].empty_label = (
             "Selecione o mecânico responsável"
         )
+
+        if self.instance and self.instance.pk:
+            self.fields["status"].choices = get_allowed_next_status_choices(
+                self.instance
+            )
+        else:
+            self.fields["status"].choices = [
+                (ServiceOrder.Status.OPEN, ServiceOrder.Status.OPEN.label),
+            ]
+            self.fields["status"].initial = ServiceOrder.Status.OPEN
 
         if "customer" in self.data:
             try:
