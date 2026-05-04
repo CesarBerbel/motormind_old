@@ -182,6 +182,59 @@ def get_closed_time_entries_for_period(start_datetime, end_datetime):
     )
 
 
+def get_active_service_orders_for_mechanic(mechanic):
+    """
+    Return active service orders assigned to the given mechanic.
+    """
+    return (
+        get_service_orders_base_queryset()
+        .filter(
+            assigned_mechanic=mechanic,
+        )
+        .exclude(
+            status__in=[
+                ServiceOrder.Status.FINISHED,
+                ServiceOrder.Status.CANCELED,
+            ]
+        )
+        .order_by(
+            "priority_order",
+            "expected_delivery_date",
+            "created_at",
+        )
+    )
+
+
+def get_overdue_service_orders_for_mechanic(mechanic):
+    """
+    Return overdue active service orders assigned to the given mechanic.
+    """
+    return get_active_service_orders_for_mechanic(mechanic).filter(
+        get_overdue_service_order_filter()
+    )
+
+
+def get_open_time_entry_for_mechanic(mechanic):
+    """
+    Return the current open time entry for the given mechanic, if any.
+    """
+    return (
+        ServiceOrderTimeEntry.objects.select_related(
+            "service_order",
+            "service_order__customer",
+            "service_order__vehicle",
+        )
+        .filter(
+            mechanic=mechanic,
+            ended_at__isnull=True,
+        )
+        .order_by(
+            "-started_at",
+        )
+        .first()
+    )
+
+
 def get_billable_inventory_parts(service_order):
     """
     Return inventory parts that must be included in service order financial total.
