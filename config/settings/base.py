@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "financial",
     "crm",
     "auditoria",
+    "mensagens",
 ]
 
 MIDDLEWARE = [

@@ -59,10 +59,12 @@ class ServiceOrderCanceled(ServiceOrderDomainEvent):
 _EVENT_HANDLER_REGISTRY = {
     ServiceOrderOpened: [
         "service_orders.event_handlers.register_crm_service_order_opened",
+        "service_orders.event_handlers.enqueue_service_order_opened_message",
     ],
     ServiceOrderStatusChanged: [
         "service_orders.event_handlers.register_crm_service_order_status_changed",
         "service_orders.event_handlers.create_receivable_when_service_order_is_finished",
+        "service_orders.event_handlers.enqueue_vehicle_ready_message",
     ],
     ServiceOrderBudgetApproved: [
         "service_orders.event_handlers.register_crm_service_order_budget_approved",

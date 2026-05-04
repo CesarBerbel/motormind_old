@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Fila de mensagens{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Fila de mensagens</h1>
+    <a href="{% url 'mensagens:manual_message_create' %}" class="btn btn-primary">Nova mensagem</a>
+</div>
+<form method="get" class="card card-body mb-3">{{ form|crispy }}<button class="btn btn-outline-secondary">Filtrar</button></form>
+<div class="card"><div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+<thead><tr><th>Agendada</th><th>Canal</th><th>Destinatário</th><th>Assunto</th><th>Status</th><th>Tentativas</th><th>Erro</th><th></th></tr></thead>
+<tbody>
+{% for item in queue_messages %}
+<tr>
+<td>{{ item.scheduled_at|date:"d/m/Y H:i" }}</td><td>{{ item.get_channel_display }}</td><td>{{ item.recipient }}</td><td>{{ item.subject|default:"-" }}</td><td>{{ item.get_status_display }}</td><td>{{ item.retry_count }}</td><td class="text-danger small">{{ item.error_message|truncatechars:80 }}</td>
+<td class="text-end">{% if item.status == "pending" or item.status == "failed" %}<form method="post" action="{% url 'mensagens:queue_process' item.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary">Processar</button></form>{% endif %}</td>
+</tr>
+{% empty %}<tr><td colspan="8" class="text-muted">Nenhuma mensagem na fila.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

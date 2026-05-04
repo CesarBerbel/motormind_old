@@ -17,6 +17,46 @@ from .models import (
 )
 
 
+def _enqueue_payment_received_message_on_commit(payment_id, created_by_id=None):
+    """
+    Queue payment confirmation after the financial transaction commits.
+    """
+
+    def _handler():
+        try:
+            from django.contrib.auth import get_user_model
+
+            from mensagens.services import enqueue_payment_received_message
+        except ImportError:
+            return None
+
+        try:
+            payment = Payment.objects.select_related(
+                "receivable",
+                "receivable__service_order",
+                "receivable__service_order__customer",
+                "receivable__service_order__vehicle",
+                "receivable__customer",
+            ).get(pk=payment_id)
+        except Payment.DoesNotExist:
+            return None
+
+        created_by = None
+        if created_by_id:
+            User = get_user_model()
+            try:
+                created_by = User.objects.get(pk=created_by_id)
+            except User.DoesNotExist:
+                created_by = None
+
+        try:
+            return enqueue_payment_received_message(payment, created_by=created_by)
+        except Exception:
+            return None
+
+    transaction.on_commit(_handler)
+
+
 @transaction.atomic
 def create_receivable_from_service_order(service_order, created_by, due_date=None):
     """
@@ -114,6 +154,11 @@ def register_payment(receivable, amount, method, created_by, paid_at=None, notes
         obj=payment,
         new_data=serialize_instance(payment),
         metadata={"receivable_id": locked_receivable.pk, "amount": str(payment.amount)},
+    )
+
+    _enqueue_payment_received_message_on_commit(
+        payment_id=payment.pk,
+        created_by_id=getattr(created_by, "pk", None),
     )
 
     return payment

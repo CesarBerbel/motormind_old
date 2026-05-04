@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-muted mb-0">Configure textos oficiais com variáveis controladas e histórico auditável.</p>
+    </div>
+    <a href="{% url 'mensagens:template_list' %}" class="btn btn-outline-secondary">Voltar</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><h2 class="h5 mb-0">Dados do template</h2></div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">Salvar template</button>
+                        <a href="{% url 'mensagens:template_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header"><h2 class="h6 mb-0">Variáveis permitidas</h2></div>
+            <div class="card-body small">
+                <p>Use variáveis no formato:</p>
+                <pre class="bg-light p-2 rounded mb-2"><code>{% templatetag openvariable %} cliente_nome {% templatetag closevariable %}</code></pre>
+                <p class="mb-2">No campo de variáveis, informe JSON ou uma variável por linha:</p>
+                <pre class="bg-light p-2 rounded mb-0"><code>["cliente_nome", "os_numero"]</code></pre>
+            </div>
+        </div>
+        <div class="alert alert-info small mb-0">
+            Templates de e-mail exigem assunto. Templates de WhatsApp podem deixar o assunto vazio.
+        </div>
+    </div>
+</div>
+{% endblock %}
