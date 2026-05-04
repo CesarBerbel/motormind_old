@@ -197,9 +197,17 @@
     </div>
 </nav>
 
-<main class="container-fluid py-4">
+<main class="py-4">
 
-    {% block content %}
+    {% block container %}
+        <div class="container">
+    {% endblock %}   
+        
+        {% block content %}{% endblock %}
+
+
+    {% block endcontainer %}
+        </div>
     {% endblock %}
 
 </main>

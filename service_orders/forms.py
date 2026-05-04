@@ -1,9 +1,10 @@
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 
+from core.form_fields import BRLDecimalField, money_widget
 from customers.models import Vehicle
 
 from .models import (
@@ -12,42 +13,6 @@ from .models import (
     ServiceOrderNote,
     ServiceOrderTimeEntry,
 )
-
-
-class BRLDecimalField(forms.DecimalField):
-    """
-    Field that accepts Brazilian money formats.
-    """
-
-    default_error_messages = {
-        "invalid": "Informe um valor monetário válido. Exemplo: R$ 150,00.",
-    }
-
-    def to_python(self, value):
-        """
-        Convert Brazilian money string to Decimal.
-        """
-        if value in self.empty_values:
-            return None
-
-        if isinstance(value, Decimal):
-            return value
-
-        value = str(value).strip()
-        value = value.replace("R$", "")
-        value = value.replace(" ", "")
-
-        if "," in value:
-            value = value.replace(".", "")
-            value = value.replace(",", ".")
-
-        try:
-            return Decimal(value)
-        except InvalidOperation as exc:
-            raise forms.ValidationError(
-                self.error_messages["invalid"],
-                code="invalid",
-            ) from exc
 
 
 class ServiceOrderForm(forms.ModelForm):
@@ -62,14 +27,7 @@ class ServiceOrderForm(forms.ModelForm):
         decimal_places=2,
         required=False,
         initial=Decimal("0.00"),
-        widget=forms.TextInput(
-            attrs={
-                "class": "form-control money-input",
-                "placeholder": "Ex: R$ 150,00",
-                "inputmode": "decimal",
-                "autocomplete": "off",
-            }
-        ),
+        widget=money_widget("Ex: R$ 150,00"),
     )
 
     parts_cost = BRLDecimalField(
@@ -79,14 +37,7 @@ class ServiceOrderForm(forms.ModelForm):
         decimal_places=2,
         required=False,
         initial=Decimal("0.00"),
-        widget=forms.TextInput(
-            attrs={
-                "class": "form-control money-input",
-                "placeholder": "Ex: R$ 200,00",
-                "inputmode": "decimal",
-                "autocomplete": "off",
-            }
-        ),
+        widget=money_widget("Ex: R$ 200,00"),
     )
 
     discount = BRLDecimalField(
@@ -96,14 +47,7 @@ class ServiceOrderForm(forms.ModelForm):
         decimal_places=2,
         required=False,
         initial=Decimal("0.00"),
-        widget=forms.TextInput(
-            attrs={
-                "class": "form-control money-input",
-                "placeholder": "Ex: R$ 50,00",
-                "inputmode": "decimal",
-                "autocomplete": "off",
-            }
-        ),
+        widget=money_widget("Ex: R$ 50,00"),
     )
 
     class Meta:
@@ -328,14 +272,7 @@ class ServiceOrderItemForm(forms.ModelForm):
         min_value=Decimal("0.00"),
         max_digits=10,
         decimal_places=2,
-        widget=forms.TextInput(
-            attrs={
-                "class": "form-control money-input",
-                "placeholder": "Ex: R$ 100,00",
-                "inputmode": "decimal",
-                "autocomplete": "off",
-            }
-        ),
+        widget=money_widget("Ex: R$ 100,00"),
     )
 
     class Meta:

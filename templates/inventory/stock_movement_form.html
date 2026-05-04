@@ -6,48 +6,220 @@
 
 {% block content %}
 
-<div class="mb-4">
-    <h1 class="h4 mb-1">
-        Movimentar estoque
-    </h1>
+<div class="row justify-content-center">
+    <div class="col-lg-9">
 
-    <p class="text-muted mb-0">
-        Peça: {{ part.internal_code }} - {{ part.name }}
-    </p>
-</div>
+        <div class="mb-4">
+            <h1 class="h4 mb-1">
+                Movimentar estoque
+            </h1>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <p class="mb-1">
-            <strong>Estoque atual:</strong>
-            {{ part.current_stock }}
-        </p>
+            <p class="text-muted mb-0">
+                Registre entradas, saídas, ajustes, perdas, reservas, liberações ou devoluções da peça.
+            </p>
+        </div>
 
-        <p class="mb-0">
-            <strong>Estoque mínimo:</strong>
-            {{ part.minimum_stock }}
-        </p>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">
+                Dados da peça
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div class="col-md-8">
+                        <p class="mb-1 text-muted small">
+                            Peça
+                        </p>
+
+                        <h2 class="h5 mb-0">
+                            {{ part.name }}
+                        </h2>
+
+                        <p class="text-muted mb-0">
+                            Código interno: {{ part.internal_code }}
+                        </p>
+                    </div>
+
+                    <div class="col-md-4 text-md-end">
+                        {% if part.is_active %}
+                            <span class="badge text-bg-success">
+                                Ativa
+                            </span>
+                        {% else %}
+                            <span class="badge text-bg-secondary">
+                                Inativa
+                            </span>
+                        {% endif %}
+
+                        {% if part.is_low_stock %}
+                            <span class="badge text-bg-warning">
+                                Estoque baixo
+                            </span>
+                        {% else %}
+                            <span class="badge text-bg-primary">
+                                Estoque normal
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 h-100">
+                            <p class="text-muted small mb-1">
+                                Estoque atual
+                            </p>
+
+                            <p class="fs-5 fw-semibold mb-0">
+                                {{ part.current_stock }} {{ part.unit }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 h-100">
+                            <p class="text-muted small mb-1">
+                                Estoque mínimo
+                            </p>
+
+                            <p class="fs-5 fw-semibold mb-0">
+                                {{ part.minimum_stock }} {{ part.unit }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 h-100">
+                            <p class="text-muted small mb-1">
+                                Marca
+                            </p>
+
+                            <p class="fs-6 fw-semibold mb-0">
+                                {{ part.brand|default:"Não informada" }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 h-100">
+                            <p class="text-muted small mb-1">
+                                Localização
+                            </p>
+
+                            <p class="fs-6 fw-semibold mb-0">
+                                {{ part.location|default:"Não informada" }}
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <form method="post" class="card card-body shadow-sm" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-4">
+                <h2 class="h5 mb-1">
+                    Nova movimentação
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Toda movimentação ficará registrada no histórico da peça com usuário, data e justificativa.
+                </p>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <label for="{{ form.movement_type.id_for_label }}" class="form-label">
+                        {{ form.movement_type.label }}
+                    </label>
+
+                    {{ form.movement_type }}
+
+                    {% if form.movement_type.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.movement_type.errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="form-text">
+                        Escolha se a movimentação aumenta, reduz ou ajusta o saldo.
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="{{ form.quantity.id_for_label }}" class="form-label">
+                        {{ form.quantity.label }}
+                    </label>
+
+                    <div class="input-group">
+                        {{ form.quantity }}
+                        <span class="input-group-text">
+                            {{ part.unit }}
+                        </span>
+                    </div>
+
+                    {% if form.quantity.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.quantity.errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="form-text">
+                        Para ajuste, informe o novo saldo final da peça.
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label for="{{ form.reason.id_for_label }}" class="form-label">
+                        {{ form.reason.label }}
+                    </label>
+
+                    {{ form.reason }}
+
+                    {% if form.reason.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.reason.errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="form-text">
+                        Informe uma justificativa clara com pelo menos 5 caracteres. Exemplo: contagem física, perda por avaria ou entrada por compra.
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="alert alert-info mt-4 mb-0">
+                <strong>Regra de saldo:</strong>
+                saídas, perdas e reservas reduzem o estoque e serão bloqueadas se a quantidade for maior que o saldo disponível.
+                Entradas, devoluções e liberações aumentam o estoque. Ajustes definem o novo saldo informado.
+            </div>
+
+            <div class="alert alert-warning mt-3 mb-0">
+                <strong>Atenção:</strong>
+                movimentações de estoque não devem ser apagadas. Use uma nova movimentação de correção quando precisar ajustar o saldo.
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{% url 'inventory:part_detail' part.pk %}" class="btn btn-outline-secondary">
+                    Voltar
+                </a>
+
+                <button type="submit" class="btn btn-success">
+                    Registrar movimentação
+                </button>
+            </div>
+        </form>
+
     </div>
 </div>
-
-<form method="post" class="card card-body shadow-sm">
-    {% csrf_token %}
-
-    {{ form.as_p }}
-
-    <div class="alert alert-info">
-        Para saída, perda ou reserva, o sistema bloqueia automaticamente caso não exista estoque suficiente.
-    </div>
-
-    <div class="d-flex justify-content-between mt-3">
-        <a href="{% url 'inventory:part_detail' part.pk %}" class="btn btn-outline-secondary">
-            Voltar
-        </a>
-
-        <button type="submit" class="btn btn-success">
-            Registrar movimentação
-        </button>
-    </div>
-</form>
 
 {% endblock %}

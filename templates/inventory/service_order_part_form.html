@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% block title %}
     Adicionar peça na OS - Sistema de Oficina
 {% endblock %}
@@ -19,7 +19,17 @@
 <form method="post" class="card card-body shadow-sm">
     {% csrf_token %}
 
-    {{ form.as_p }}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+        {% for field in form %}
+            {% include "includes/form_field.html" with field=field field_wrapper_class="col-md-6" %}
+        {% endfor %}
+    </div>
 
     <div class="alert alert-info">
         Ao salvar, o sistema valida o estoque disponível, cria uma reserva e reduz o saldo atual da peça.
@@ -36,4 +46,5 @@
     </div>
 </form>
 
+<script src="{% static 'js/brl_money_mask.js' %}"></script>
 {% endblock %}
