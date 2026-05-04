@@ -25,6 +25,13 @@ def service_order_item_add_view(request, pk):
     if canceled_redirect:
         return canceled_redirect
 
+    if service_order.is_budget_approved:
+        messages.error(
+            request,
+            "Orçamento aprovado não permite adicionar, editar ou excluir itens.",
+        )
+        return redirect("service_orders:service_order_detail", pk=service_order.pk)
+
     if request.method == "POST":
         form = ServiceOrderItemForm(request.POST)
 
@@ -78,6 +85,13 @@ def service_order_item_update_view(request, pk, item_pk):
 
     if canceled_redirect:
         return canceled_redirect
+
+    if service_order.is_budget_approved:
+        messages.error(
+            request,
+            "Orçamento aprovado não permite adicionar, editar ou excluir itens.",
+        )
+        return redirect("service_orders:service_order_detail", pk=service_order.pk)
 
     item = get_object_or_404(
         ServiceOrderItem,
@@ -140,6 +154,13 @@ def service_order_item_delete_view(request, pk, item_pk):
 
     if canceled_redirect:
         return canceled_redirect
+
+    if service_order.is_budget_approved:
+        messages.error(
+            request,
+            "Orçamento aprovado não permite adicionar, editar ou excluir itens.",
+        )
+        return redirect("service_orders:service_order_detail", pk=service_order.pk)
 
     item = get_object_or_404(
         ServiceOrderItem,

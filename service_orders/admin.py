@@ -2,11 +2,52 @@ from django.contrib import admin
 
 from .models import (
     ServiceOrder,
+    ServiceOrderApproval,
     ServiceOrderHistory,
     ServiceOrderItem,
     ServiceOrderNote,
     ServiceOrderTimeEntry,
 )
+
+
+class ServiceOrderRelatedNumberMixin:
+    """
+    Helper used by admin classes for models that are linked to a service order.
+    """
+
+    @admin.display(description="Número da OS")
+    def service_order_number(self, obj):
+        """
+        Return the public service order number for related records.
+        """
+        if not obj or not getattr(obj, "service_order", None):
+            return "-"
+
+        return obj.service_order.display_number
+
+
+class ServiceOrderApprovalInline(ServiceOrderRelatedNumberMixin, admin.StackedInline):
+    """
+    Inline admin to show formal budget approval.
+    """
+
+    model = ServiceOrderApproval
+    extra = 0
+    max_num = 1
+    can_delete = False
+    readonly_fields = (
+        "approved_by",
+        "customer_name_snapshot",
+        "vehicle_snapshot",
+        "gross_total",
+        "discount",
+        "net_total",
+        "financial_summary_snapshot",
+        "approved_at",
+        "service_order_number",
+        "created_at",
+        "updated_at",
+    )
 
 
 class ServiceOrderItemInline(admin.TabularInline):
@@ -18,7 +59,7 @@ class ServiceOrderItemInline(admin.TabularInline):
     extra = 0
 
 
-class ServiceOrderNoteInline(admin.TabularInline):
+class ServiceOrderNoteInline(ServiceOrderRelatedNumberMixin, admin.TabularInline):
     """
     Inline admin to show service order notes.
     """
@@ -26,12 +67,13 @@ class ServiceOrderNoteInline(admin.TabularInline):
     model = ServiceOrderNote
     extra = 0
     readonly_fields = (
+        "service_order_number",
         "created_at",
         "updated_at",
     )
 
 
-class ServiceOrderTimeEntryInline(admin.TabularInline):
+class ServiceOrderTimeEntryInline(ServiceOrderRelatedNumberMixin, admin.TabularInline):
     """
     Inline admin to show time entries.
     """
@@ -41,6 +83,7 @@ class ServiceOrderTimeEntryInline(admin.TabularInline):
     readonly_fields = (
         "started_at",
         "ended_at",
+        "service_order_number",
         "created_at",
         "updated_at",
     )
@@ -85,6 +128,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     """
 
     list_display = (
+        "number",
         "id",
         "customer",
         "vehicle",
@@ -93,6 +137,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         "status",
         "priority",
         "total_amount",
+        "is_budget_approved",
         "created_by",
         "created_at",
     )
@@ -106,6 +151,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
+        "number",
         "customer__name",
         "vehicle__plate",
         "assigned_mechanic__email",
@@ -114,6 +160,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = (
+        "number",
         "created_at",
         "updated_at",
         "finished_at",
@@ -130,6 +177,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
 
     inlines = [
+        ServiceOrderApprovalInline,
         ServiceOrderItemInline,
         ServiceOrderNoteInline,
         ServiceOrderHistoryInline,
@@ -141,6 +189,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
             "Identificação",
             {
                 "fields": (
+                    "number",
                     "customer",
                     "vehicle",
                     "created_by",
@@ -214,7 +263,7 @@ class ServiceOrderItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(ServiceOrderNote)
-class ServiceOrderNoteAdmin(admin.ModelAdmin):
+class ServiceOrderNoteAdmin(ServiceOrderRelatedNumberMixin, admin.ModelAdmin):
     """
     Admin configuration for service order notes.
     """
@@ -239,6 +288,7 @@ class ServiceOrderNoteAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = (
+        "service_order_number",
         "created_at",
         "updated_at",
     )
@@ -296,7 +346,7 @@ class ServiceOrderHistoryAdmin(admin.ModelAdmin):
 
 
 @admin.register(ServiceOrderTimeEntry)
-class ServiceOrderTimeEntryAdmin(admin.ModelAdmin):
+class ServiceOrderTimeEntryAdmin(ServiceOrderRelatedNumberMixin, admin.ModelAdmin):
     """
     Admin configuration for service order time entries.
     """
@@ -323,6 +373,48 @@ class ServiceOrderTimeEntryAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = (
+        "service_order_number",
+        "created_at",
+        "updated_at",
+    )
+
+
+@admin.register(ServiceOrderApproval)
+class ServiceOrderApprovalAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for service order budget approvals.
+    """
+
+    list_display = (
+        "service_order",
+        "channel",
+        "net_total",
+        "approved_by",
+        "approved_at",
+    )
+
+    list_filter = (
+        "channel",
+        "approved_at",
+    )
+
+    search_fields = (
+        "service_order__number",
+        "service_order__customer__name",
+        "customer_name_snapshot",
+        "vehicle_snapshot",
+    )
+
+    readonly_fields = (
+        "service_order",
+        "approved_by",
+        "customer_name_snapshot",
+        "vehicle_snapshot",
+        "gross_total",
+        "discount",
+        "net_total",
+        "financial_summary_snapshot",
+        "approved_at",
         "created_at",
         "updated_at",
     )

@@ -28,6 +28,14 @@ def service_order_part_add_view(request, service_order_pk):
 
         return redirect("service_orders:service_order_detail", pk=service_order.pk)
 
+    if service_order.is_budget_approved:
+        messages.error(
+            request,
+            "Orçamento aprovado não permite adicionar novas peças ao valor da OS.",
+        )
+
+        return redirect("service_orders:service_order_detail", pk=service_order.pk)
+
     if request.method == "POST":
         form = ServiceOrderPartForm(request.POST)
 
@@ -102,6 +110,13 @@ def service_order_part_cancel_view(request, service_order_pk, pk):
     )
 
     if request.method == "POST":
+        if service_order_part.service_order.is_budget_approved:
+            messages.error(
+                request,
+                "Orçamento aprovado não permite cancelar peça que altera o valor da OS.",
+            )
+            return redirect("service_orders:service_order_detail", pk=service_order_pk)
+
         try:
             cancel_reserved_service_order_part(
                 service_order_part=service_order_part,
@@ -129,6 +144,13 @@ def service_order_part_return_view(request, service_order_pk, pk):
     )
 
     if request.method == "POST":
+        if service_order_part.service_order.is_budget_approved:
+            messages.error(
+                request,
+                "Orçamento aprovado não permite devolver peça que altera o valor da OS.",
+            )
+            return redirect("service_orders:service_order_detail", pk=service_order_pk)
+
         try:
             return_used_service_order_part(
                 service_order_part=service_order_part,

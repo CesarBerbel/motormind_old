@@ -9,6 +9,7 @@ from customers.models import Vehicle
 
 from .models import (
     ServiceOrder,
+    ServiceOrderApproval,
     ServiceOrderItem,
     ServiceOrderNote,
     ServiceOrderTimeEntry,
@@ -369,4 +370,37 @@ class ServiceOrderTimeEntryFinishForm(forms.ModelForm):
 
         labels = {
             "note": "Observação do apontamento",
+        }
+
+
+class ServiceOrderApprovalForm(forms.ModelForm):
+    """
+    Form used to register a formal service order budget approval.
+    """
+
+    class Meta:
+        model = ServiceOrderApproval
+        fields = [
+            "channel",
+            "notes",
+        ]
+
+        widgets = {
+            "channel": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "notes": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Ex: Cliente aprovou o orçamento por WhatsApp às 14h30.",
+                }
+            ),
+        }
+
+        labels = {
+            "channel": "Canal de aprovação",
+            "notes": "Observações da aprovação",
         }

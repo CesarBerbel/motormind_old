@@ -71,6 +71,11 @@ urlpatterns = [
         name="service_order_time_finish",
     ),
     path(
+        "ordens/<int:pk>/aprovar-orcamento/",
+        order_views.service_order_approve_budget_view,
+        name="service_order_approve_budget",
+    ),
+    path(
         "ordens/<int:pk>/cancelar/",
         order_views.service_order_cancel_view,
         name="service_order_cancel",

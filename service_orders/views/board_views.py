@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,7 +15,7 @@ from service_orders.selectors import (
     get_overdue_service_order_filter,
     get_service_orders_for_board,
 )
-from service_orders.services import create_service_order_history
+from service_orders.services import change_service_order_status
 
 
 @login_required
@@ -149,22 +150,18 @@ def service_order_quick_status_update_view(request, pk):
             status_code=400,
         )
 
-    old_instance = ServiceOrder.objects.get(pk=service_order.pk)
-
-    service_order.status = new_status
-
-    if service_order.status == ServiceOrder.Status.FINISHED:
-        service_order.finished_at = timezone.now()
-    else:
-        service_order.finished_at = None
-
-    service_order.save()
-
-    create_service_order_history(
-        service_order=service_order,
-        changed_by=request.user,
-        old_instance=old_instance,
-    )
+    try:
+        service_order = change_service_order_status(
+            service_order=service_order,
+            new_status=new_status,
+            changed_by=request.user,
+        )
+    except ValidationError as error:
+        return _status_error_response(
+            request,
+            error.messages[0],
+            status_code=400,
+        )
 
     if _is_ajax_request(request):
         return JsonResponse(

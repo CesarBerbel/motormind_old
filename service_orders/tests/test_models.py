@@ -39,19 +39,27 @@ def service_order_data():
 
 
 @pytest.mark.django_db
-def test_service_order_string_representation(service_order_data):
-    """
-    Test service order string representation.
-    """
-    service_order = ServiceOrder.objects.create(
-        customer=service_order_data["customer"],
-        vehicle=service_order_data["vehicle"],
-        created_by=service_order_data["user"],
-        title="Troca de óleo",
-        description="Cliente solicitou troca de óleo.",
+def test_service_order_string_representation(customer, vehicle, django_user_model):
+    user = django_user_model.objects.create_user(
+        email="usuario@test.com",
+        password="senha-teste-123",
+        first_name="Usuário",
+        last_name="Teste",
     )
 
-    assert str(service_order) == f"OS #{service_order.pk} - Cliente Teste"
+    order = ServiceOrder.objects.create(
+        customer=customer,
+        vehicle=vehicle,
+        created_by=user,
+        title="Teste",
+        description="Teste",
+    )
+
+    assert order.number is not None
+    assert order.number.startswith("OS-")
+
+    assert str(order).startswith(f"OS {order.number}")
+    assert customer.name in str(order)
 
 
 @pytest.mark.django_db

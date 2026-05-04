@@ -5,7 +5,9 @@ from service_orders.services.history_service import (
 )
 from service_orders.services.service_order_service import (
     apply_finished_at_by_status,
+    approve_service_order_budget,
     cancel_service_order,
+    change_service_order_status,
     create_service_order_from_form,
     update_service_order_from_form,
     update_service_order_technical_from_form,
@@ -14,7 +16,9 @@ from service_orders.services.service_order_service import (
 __all__ = [
     "AUDITED_FIELDS",
     "apply_finished_at_by_status",
+    "approve_service_order_budget",
     "cancel_service_order",
+    "change_service_order_status",
     "create_service_order_history",
     "create_service_order_from_form",
     "normalize_audit_value",

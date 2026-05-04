@@ -136,7 +136,7 @@
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <span class="service-order-drag-handle text-muted small me-2" title="Arrastar OS">☰</span>
                                         <strong>
-                                            #{{ service_order.pk }}
+                                            {{ service_order.display_number }}
                                         </strong>
 
                                         {% if service_order.expected_delivery_date and service_order.expected_delivery_date < today and service_order.status != "finished" and service_order.status != "canceled" %}

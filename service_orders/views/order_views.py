@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -12,6 +13,7 @@ from core.permissions import (
     user_passes_permission,
 )
 from service_orders.forms import (
+    ServiceOrderApprovalForm,
     ServiceOrderForm,
     ServiceOrderNoteForm,
     ServiceOrderTechnicalForm,
@@ -23,12 +25,14 @@ from service_orders.selectors import (
     get_service_order_financial_summary,
     get_service_orders_for_list,
 )
-from service_orders.services import cancel_service_order as cancel_service_order_service
 from service_orders.services import (
+    approve_service_order_budget,
+    change_service_order_status,
     create_service_order_from_form,
     update_service_order_from_form,
     update_service_order_technical_from_form,
 )
+from service_orders.services import cancel_service_order as cancel_service_order_service
 
 from .common import redirect_if_canceled
 
@@ -159,6 +163,8 @@ def service_order_detail_view(request, pk):
             "financial_total": financial_summary["net_total"],
             "financial_summary": financial_summary,
             "note_form": ServiceOrderNoteForm(),
+            "approval_form": ServiceOrderApprovalForm(),
+            "approval": getattr(service_order, "approval", None),
             "crm_timeline": crm_timeline,
         },
     )
@@ -180,18 +186,23 @@ def service_order_update_view(request, pk):
         form = ServiceOrderForm(request.POST, instance=service_order)
 
         if form.is_valid():
-            updated_service_order = update_service_order_from_form(
-                form=form,
-                changed_by=request.user,
-                old_instance=old_instance,
-            )
+            try:
+                updated_service_order = update_service_order_from_form(
+                    form=form,
+                    changed_by=request.user,
+                    old_instance=old_instance,
+                )
+            except ValidationError as error:
+                form.add_error(None, error)
+                messages.error(request, error.messages[0])
+            else:
 
-            messages.success(request, "Ordem de serviço atualizada com sucesso.")
+                messages.success(request, "Ordem de serviço atualizada com sucesso.")
 
-            return redirect(
-                "service_orders:service_order_detail",
-                pk=updated_service_order.pk,
-            )
+                return redirect(
+                    "service_orders:service_order_detail",
+                    pk=updated_service_order.pk,
+                )
 
         messages.error(
             request,
@@ -227,18 +238,23 @@ def service_order_technical_update_view(request, pk):
         form = ServiceOrderTechnicalForm(request.POST, instance=service_order)
 
         if form.is_valid():
-            updated_service_order = update_service_order_technical_from_form(
-                form=form,
-                changed_by=request.user,
-                old_instance=old_instance,
-            )
+            try:
+                updated_service_order = update_service_order_technical_from_form(
+                    form=form,
+                    changed_by=request.user,
+                    old_instance=old_instance,
+                )
+            except ValidationError as error:
+                form.add_error(None, error)
+                messages.error(request, error.messages[0])
+            else:
 
-            messages.success(request, "Dados técnicos atualizados com sucesso.")
+                messages.success(request, "Dados técnicos atualizados com sucesso.")
 
-            return redirect(
-                "service_orders:service_order_detail",
-                pk=updated_service_order.pk,
-            )
+                return redirect(
+                    "service_orders:service_order_detail",
+                    pk=updated_service_order.pk,
+                )
 
         messages.error(
             request,
@@ -264,10 +280,14 @@ def service_order_cancel_view(request, pk):
     service_order = get_object_or_404(ServiceOrder, pk=pk)
 
     if request.method == "POST":
-        canceled_service_order = cancel_service_order_service(
-            service_order=service_order,
-            changed_by=request.user,
-        )
+        try:
+            canceled_service_order = cancel_service_order_service(
+                service_order=service_order,
+                changed_by=request.user,
+            )
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
+            return redirect("service_orders:service_order_detail", pk=service_order.pk)
 
         messages.warning(request, "Ordem de serviço cancelada com sucesso.")
 
@@ -312,8 +332,20 @@ def service_order_quick_status_update_view(request, pk):
             status=400,
         )
 
-    service_order.status = new_status
-    service_order.save(update_fields=["status", "updated_at"])
+    try:
+        service_order = change_service_order_status(
+            service_order=service_order,
+            new_status=new_status,
+            changed_by=request.user,
+        )
+    except ValidationError as error:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": error.messages[0],
+            },
+            status=400,
+        )
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return JsonResponse(
@@ -332,3 +364,45 @@ def service_order_quick_status_update_view(request, pk):
         return redirect(next_url)
 
     return redirect("service_orders:service_order_board")
+
+
+@login_required
+@user_passes_permission(can_manage_service_orders)
+@require_POST
+def service_order_approve_budget_view(request, pk):
+    service_order = get_object_or_404(
+        ServiceOrder.objects.select_related(
+            "customer",
+            "vehicle",
+        ),
+        pk=pk,
+    )
+
+    canceled_redirect = redirect_if_canceled(request, service_order)
+
+    if canceled_redirect:
+        return canceled_redirect
+
+    form = ServiceOrderApprovalForm(request.POST)
+
+    if not form.is_valid():
+        messages.error(
+            request,
+            "Não foi possível aprovar o orçamento. Verifique o canal e as observações.",
+        )
+        return redirect("service_orders:service_order_detail", pk=service_order.pk)
+
+    try:
+        approve_service_order_budget(
+            service_order=service_order,
+            form=form,
+            approved_by=request.user,
+        )
+    except ValidationError as error:
+        messages.error(request, error.messages[0])
+    else:
+        messages.success(
+            request, "Orçamento aprovado e snapshot financeiro registrado."
+        )
+
+    return redirect("service_orders:service_order_detail", pk=service_order.pk)

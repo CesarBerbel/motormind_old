@@ -23,6 +23,7 @@ class ServiceOrder(models.Model):
         IN_PROGRESS = "in_progress", "Em execução"
         WAITING_PARTS = "waiting_parts", "Aguardando peças"
         WAITING_APPROVAL = "waiting_approval", "Aguardando aprovação"
+        APPROVED = "approved", "Aprovada"
         FINISHED = "finished", "Finalizada"
         CANCELED = "canceled", "Cancelada"
 
@@ -34,6 +35,15 @@ class ServiceOrder(models.Model):
         LOW = "low", "Baixa"
         MEDIUM = "medium", "Média"
         HIGH = "high", "Alta"
+
+    number = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True,
+        null=True,
+        editable=False,
+        verbose_name="Número da OS",
+    )
 
     customer = models.ForeignKey(
         Customer,
@@ -160,7 +170,36 @@ class ServiceOrder(models.Model):
         ]
 
     def __str__(self):
-        return f"OS #{self.pk} - {self.customer.name}"
+        return f"OS {self.display_number} - {self.customer.name}"
+
+    @property
+    def display_number(self):
+        """
+        Return the public service order number.
+        """
+        return self.number or f"#{self.pk}"
+
+    @property
+    def is_budget_approved(self):
+        """
+        Check if the service order already has a formal budget approval.
+        """
+        return hasattr(self, "approval")
+
+    def save(self, *args, **kwargs):
+        """
+        Save the service order and create a public sequential number when needed.
+        """
+        needs_number = not self.number
+
+        super().save(*args, **kwargs)
+
+        if needs_number and self.pk:
+            year = (
+                self.created_at.year if self.created_at else timezone.localdate().year
+            )
+            self.number = f"OS-{year}-{self.pk:06d}"
+            type(self).objects.filter(pk=self.pk).update(number=self.number)
 
     @property
     def items_total(self):
@@ -455,3 +494,103 @@ class ServiceOrderTimeEntry(models.Model):
         end = self.ended_at or timezone.now()
 
         return end - self.started_at
+
+
+class ServiceOrderApproval(models.Model):
+    """
+    Model that stores the formal approved budget snapshot for a service order.
+    """
+
+    class Channel(models.TextChoices):
+        """
+        Controlled approval channels.
+        """
+
+        IN_PERSON = "in_person", "Presencial"
+        PHONE = "phone", "Telefone"
+        WHATSAPP = "whatsapp", "WhatsApp"
+        EMAIL = "email", "E-mail"
+        PORTAL = "portal", "Portal do cliente"
+        OTHER = "other", "Outro"
+
+    service_order = models.OneToOneField(
+        ServiceOrder,
+        on_delete=models.PROTECT,
+        related_name="approval",
+        verbose_name="Ordem de serviço",
+    )
+
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="approved_service_orders",
+        verbose_name="Aprovado por",
+    )
+
+    channel = models.CharField(
+        max_length=20,
+        choices=Channel.choices,
+        verbose_name="Canal de aprovação",
+    )
+
+    customer_name_snapshot = models.CharField(
+        max_length=255,
+        verbose_name="Nome do cliente no momento da aprovação",
+    )
+
+    vehicle_snapshot = models.CharField(
+        max_length=255,
+        verbose_name="Veículo no momento da aprovação",
+    )
+
+    gross_total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Total bruto aprovado",
+    )
+
+    discount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="Desconto aprovado",
+    )
+
+    net_total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Total líquido aprovado",
+    )
+
+    financial_summary_snapshot = models.JSONField(
+        default=dict,
+        verbose_name="Snapshot financeiro aprovado",
+    )
+
+    notes = models.TextField(
+        blank=True,
+        verbose_name="Observações da aprovação",
+    )
+
+    approved_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Aprovado em",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Criado em",
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Atualizado em",
+    )
+
+    class Meta:
+        verbose_name = "Aprovação de orçamento da OS"
+        verbose_name_plural = "Aprovações de orçamento das OS"
+        ordering = ["-approved_at"]
+
+    def __str__(self):
+        return f"Aprovação {self.service_order.display_number}"

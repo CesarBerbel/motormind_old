@@ -82,7 +82,7 @@
                 <tbody>
                     {% for service_order in service_orders %}
                         <tr>
-                            <td>#{{ service_order.pk }}</td>
+                            <td>{{ service_order.display_number }}</td>
                             <td>{{ service_order.customer.name }}</td>
                             <td>{{ service_order.vehicle.plate }}</td>
                             <td>{{ service_order.title }}</td>
