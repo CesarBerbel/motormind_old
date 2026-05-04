@@ -135,3 +135,56 @@ def create_receivable_when_service_order_is_finished(event):
     except ObjectAlreadyExistsError:
         service_order.refresh_from_db()
         return getattr(service_order, "receivable", None)
+
+
+def _try_get_messaging_services():
+    try:
+        from mensagens import services as messaging_services
+    except ImportError:
+        return None
+
+    return messaging_services
+
+
+def enqueue_service_order_opened_message(event):
+    """
+    Queue a transactional message when a service order is opened.
+
+    This handler is intentionally tolerant: messaging failures must not break the
+    operational OS workflow after the main transaction has already committed.
+    """
+    messaging_services = _try_get_messaging_services()
+    if not messaging_services or not hasattr(
+        messaging_services, "enqueue_service_order_opened_message"
+    ):
+        return None
+
+    try:
+        return messaging_services.enqueue_service_order_opened_message(
+            _get_service_order(event),
+            created_by=_get_user(event),
+        )
+    except Exception:
+        return None
+
+
+def enqueue_vehicle_ready_message(event):
+    """
+    Queue a transactional message when the OS reaches the finished status.
+    """
+    if event.new_status != ServiceOrder.Status.FINISHED:
+        return None
+
+    messaging_services = _try_get_messaging_services()
+    if not messaging_services or not hasattr(
+        messaging_services, "enqueue_vehicle_ready_message"
+    ):
+        return None
+
+    try:
+        return messaging_services.enqueue_vehicle_ready_message(
+            _get_service_order(event),
+            created_by=_get_user(event),
+        )
+    except Exception:
+        return None

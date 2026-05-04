@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Templates de mensagem{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Templates de mensagem</h1>
+    <a href="{% url 'mensagens:template_create' %}" class="btn btn-primary">Novo template</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-6"><input type="text" name="q" value="{{ filters.q }}" class="form-control" placeholder="Buscar por nome ou código"></div>
+    <div class="col-md-3">
+        <select name="channel" class="form-select">
+            <option value="">Todos os canais</option>
+            <option value="email" {% if filters.channel == "email" %}selected{% endif %}>E-mail</option>
+            <option value="whatsapp" {% if filters.channel == "whatsapp" %}selected{% endif %}>WhatsApp</option>
+        </select>
+    </div>
+    <div class="col-md-3"><button class="btn btn-outline-secondary w-100">Filtrar</button></div>
+</form>
+
+<div class="card"><div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+<thead><tr><th>Nome</th><th>Código</th><th>Canal</th><th>Tipo</th><th>Ativo</th><th></th></tr></thead>
+<tbody>
+{% for template in templates %}
+<tr>
+    <td>{{ template.name }}</td><td><code>{{ template.code }}</code></td><td>{{ template.get_channel_display }}</td><td>{{ template.get_message_type_display }}</td><td>{{ template.is_active|yesno:"Sim,Não" }}</td>
+    <td class="text-end"><a href="{% url 'mensagens:template_update' template.pk %}" class="btn btn-sm btn-outline-primary">Editar</a></td>
+</tr>
+{% empty %}<tr><td colspan="6" class="text-muted">Nenhum template encontrado.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

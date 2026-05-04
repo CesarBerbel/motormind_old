@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Nova mensagem manual{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Nova mensagem manual</h1>
+        <p class="text-muted mb-0">Crie uma mensagem avulsa ou use um template ativo.</p>
+    </div>
+    <a href="{% url 'mensagens:dashboard' %}" class="btn btn-outline-secondary">Voltar</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><h2 class="h5 mb-0">Mensagem</h2></div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    Mensagens comerciais dependem de consentimento do cliente. Mensagens sensíveis, como senha inicial, devem preferencialmente usar template transacional controlado.
+                </div>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">Adicionar à fila</button>
+                        <a href="{% url 'mensagens:dashboard' %}" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header"><h2 class="h6 mb-0">Como preencher</h2></div>
+            <div class="card-body small">
+                <ol class="mb-0 ps-3">
+                    <li>Selecione um cliente ou informe destinatário manual.</li>
+                    <li>Escolha canal e tipo coerentes com a mensagem.</li>
+                    <li>Use template para mensagens operacionais recorrentes.</li>
+                    <li>Agende apenas quando não quiser envio no próximo processamento da fila.</li>
+                </ol>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2 class="h6 mb-0">Exemplo de variáveis</h2></div>
+            <div class="card-body small">
+                <pre class="bg-light p-2 rounded mb-0"><code>{
+  "cliente_nome": "Maria",
+  "os_numero": "123",
+  "portal_url": "https://oficina.com/portal/"
+}</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

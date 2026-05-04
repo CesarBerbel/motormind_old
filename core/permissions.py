@@ -433,3 +433,38 @@ def role_required(group_name):
     Require a single group for a function-based view.
     """
     return groups_required([group_name])
+
+
+def can_view_messages(user):
+    """
+    Admin, attendant and financial can view message templates, queue and logs.
+    """
+    return user_in_any_group(
+        user,
+        [
+            ADMIN_GROUP,
+            ATTENDANT_GROUP,
+            FINANCIAL_GROUP,
+        ],
+    )
+
+
+def can_manage_messages(user):
+    """
+    Admin manages official message templates and providers.
+    """
+    return is_admin(user)
+
+
+def can_send_messages(user):
+    """
+    Admin, attendant and financial can enqueue transactional/manual messages.
+    """
+    return user_in_any_group(
+        user,
+        [
+            ADMIN_GROUP,
+            ATTENDANT_GROUP,
+            FINANCIAL_GROUP,
+        ],
+    )

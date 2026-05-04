@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="h3">Variáveis disponíveis para mensagens</h1>
+
+    <p class="text-muted">
+        Use as variáveis abaixo dentro dos templates no formato
+        <code>{% templatetag openvariable %} cliente_nome {% templatetag closevariable %}</code>.
+    </p>
+
+    {% for category, variables in grouped_variables.items %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>{{ category }}</strong>
+            </div>
+
+            <div class="card-body">
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Variável</th>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                            <th>Exemplo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for variable in variables %}
+                            <tr>
+                                <td><code>{{ variable.placeholder }}</code></td>
+                                <td>{{ variable.label }}</td>
+                                <td>{{ variable.description }}</td>
+                                <td>{{ variable.example_value }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% empty %}
+        <div class="alert alert-info">
+            Nenhuma variável cadastrada.
+        </div>
+    {% endfor %}
+
+    {% if uncatalogued_variables %}
+        <div class="alert alert-warning">
+            <h2 class="h5">Variáveis detectadas nos templates, mas ainda não cadastradas</h2>
+
+            {% for variable in uncatalogued_variables %}
+                <code>{{ variable }}</code>{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

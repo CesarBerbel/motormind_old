@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-1">Preview de mensagem</h1>
+            <p class="text-muted mb-0">
+                Renderize um template usando variáveis reais antes de enviar.
+            </p>
+        </div>
+
+        <a href="{% url 'mensagens:message_variables' %}" class="btn btn-outline-secondary">
+            Ver variáveis disponíveis
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Dados do preview
+                </div>
+
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            {{ form.template.label_tag }}
+                            {{ form.template }}
+                            {% for error in form.template.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.variables.label_tag }}
+                            {{ form.variables }}
+                            <div class="form-text">{{ form.variables.help_text }}</div>
+                            {% for error in form.variables.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            Gerar preview
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            {% if preview %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header">
+                        Resultado renderizado
+                    </div>
+
+                    <div class="card-body">
+                        <h5>Assunto</h5>
+                        <div class="border rounded p-3 bg-light mb-4">
+                            {{ preview.subject|linebreaksbr }}
+                        </div>
+
+                        <h5>Corpo</h5>
+                        <div class="border rounded p-3 bg-light">
+                            {{ preview.body|linebreaksbr }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header">
+                        Variáveis exigidas pelo template
+                    </div>
+
+                    <div class="card-body">
+                        {% if required_variables %}
+                            {% for variable in required_variables %}
+                                <span class="badge text-bg-secondary me-1 mb-1">
+                                    {{ variable }}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">
+                                Este template não possui variáveis.
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if missing_variables %}
+                    <div class="alert alert-warning">
+                        <strong>Atenção:</strong>
+                        algumas variáveis não foram preenchidas:
+                        <br>
+                        {% for variable in missing_variables %}
+                            <code>{{ variable }}</code>{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-info">
+                    Selecione um template, informe as variáveis reais e clique em
+                    <strong>Gerar preview</strong>.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

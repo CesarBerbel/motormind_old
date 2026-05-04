@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+    <h2>Variáveis disponíveis para mensagens</h2>
+
+    <hr>
+
+    <h4>Variáveis cadastradas</h4>
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Descrição</th>
+                <th>Exemplo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for var in registered %}
+            <tr>
+                <td><code>{{ var.code }}</code></td>
+                <td>{{ var.description }}</td>
+                <td>{{ var.example }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3">Nenhuma variável cadastrada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <hr>
+
+    <h4>Variáveis detectadas automaticamente</h4>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Origem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for var in detected %}
+            <tr>
+                <td><code>{{ var.code }}</code></td>
+                <td>{{ var.description }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2">Nenhuma variável detectada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}
