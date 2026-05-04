@@ -1,4 +1,5 @@
 import random
+import unicodedata
 from decimal import Decimal
 
 from django.apps import apps
@@ -193,6 +194,37 @@ class Command(BaseCommand):
 
         return self.create_admin_user()
 
+    def normalize_group_slug_for_email(self, group_name):
+        """
+        Convert a group name into a deterministic ASCII slug safe for email local-part.
+
+        Examples:
+        - "Mecânico" becomes "mecanico";
+        - "Financeiro" becomes "financeiro";
+        - "Atendente Geral" becomes "atendente_geral".
+        """
+        normalized = unicodedata.normalize("NFKD", group_name)
+        ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
+        ascii_text = ascii_text.lower().strip()
+
+        allowed_chars = []
+        previous_was_separator = False
+
+        for char in ascii_text:
+            if char.isalnum():
+                allowed_chars.append(char)
+                previous_was_separator = False
+            elif char in {" ", "-", "_"} and not previous_was_separator:
+                allowed_chars.append("_")
+                previous_was_separator = True
+
+        slug = "".join(allowed_chars).strip("_")
+
+        if not slug:
+            return "grupo"
+
+        return slug
+
     def create_users_by_existing_groups(self):
         """
         Create 5 users for each existing group with first name and last name.
@@ -217,7 +249,7 @@ class Command(BaseCommand):
         ]
 
         for group in groups:
-            group_slug = group.name.lower().replace(" ", "_").replace("-", "_")
+            group_slug = self.normalize_group_slug_for_email(group.name)
 
             for index, (first_name, last_name) in enumerate(people_names, start=1):
                 email = f"{group_slug}{index}@motormind.test"

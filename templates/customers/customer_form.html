@@ -7,7 +7,7 @@
 {% block content %}
 
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-10">
 
         <div class="card shadow-sm">
             <div class="card-body">
@@ -25,10 +25,36 @@
                         </div>
                     {% endif %}
 
+                    <h2 class="h6 border-bottom pb-2 mb-3">Dados principais</h2>
+
+                    <div class="row g-3 mb-4">
+                        {% include "includes/form_field.html" with field=form.name field_wrapper_class="col-md-6" %}
+                        {% include "includes/form_field.html" with field=form.phone field_wrapper_class="col-md-6" %}
+                        {% include "includes/form_field.html" with field=form.email field_wrapper_class="col-md-6" %}
+                        {% include "includes/form_field.html" with field=form.document field_wrapper_class="col-md-6" %}
+                    </div>
+
+                    <h2 class="h6 border-bottom pb-2 mb-3">Endereço completo</h2>
+
+                    <div class="alert alert-info py-2 small" id="cep_help_message">
+                        Digite o CEP e aguarde o preenchimento automático do logradouro, bairro, cidade e UF. Confirme o número e o complemento manualmente.
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        {% include "includes/form_field.html" with field=form.zip_code field_wrapper_class="col-md-3" %}
+                        {% include "includes/form_field.html" with field=form.street field_wrapper_class="col-md-7" %}
+                        {% include "includes/form_field.html" with field=form.number field_wrapper_class="col-md-2" %}
+                        {% include "includes/form_field.html" with field=form.complement field_wrapper_class="col-md-4" %}
+                        {% include "includes/form_field.html" with field=form.neighborhood field_wrapper_class="col-md-4" %}
+                        {% include "includes/form_field.html" with field=form.city field_wrapper_class="col-md-3" %}
+                        {% include "includes/form_field.html" with field=form.state field_wrapper_class="col-md-1" %}
+                    </div>
+
+                    <h2 class="h6 border-bottom pb-2 mb-3">Observações e situação</h2>
+
                     <div class="row g-3">
-                        {% for field in form %}
-                            {% include "includes/form_field.html" with field=field field_wrapper_class="col-md-6" %}
-                        {% endfor %}
+                        {% include "includes/form_field.html" with field=form.notes field_wrapper_class="col-md-12" %}
+                        {% include "includes/form_field.html" with field=form.is_active field_wrapper_class="col-md-12" %}
                     </div>
 
                     <div class="d-flex justify-content-between mt-4">
@@ -48,4 +74,85 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const zipCodeInput = document.getElementById("id_zip_code");
+    const streetInput = document.getElementById("id_street");
+    const neighborhoodInput = document.getElementById("id_neighborhood");
+    const cityInput = document.getElementById("id_city");
+    const stateInput = document.getElementById("id_state");
+    const numberInput = document.getElementById("id_number");
+    const helpMessage = document.getElementById("cep_help_message");
+
+    if (!zipCodeInput) {
+        return;
+    }
+
+    function onlyDigits(value) {
+        return value.replace(/\D/g, "");
+    }
+
+    function formatZipCode(value) {
+        const digits = onlyDigits(value).slice(0, 8);
+        if (digits.length > 5) {
+            return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+        }
+        return digits;
+    }
+
+    function setHelpMessage(message, type) {
+        helpMessage.className = `alert alert-${type} py-2 small`;
+        helpMessage.textContent = message;
+    }
+
+    async function fetchAddressByZipCode(zipCode) {
+        const digits = onlyDigits(zipCode);
+
+        if (digits.length !== 8) {
+            return;
+        }
+
+        setHelpMessage("Consultando CEP...", "secondary");
+
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+
+            if (!response.ok) {
+                throw new Error("Falha ao consultar o CEP.");
+            }
+
+            const data = await response.json();
+
+            if (data.erro) {
+                setHelpMessage("CEP não encontrado. Preencha o endereço manualmente.", "warning");
+                return;
+            }
+
+            streetInput.value = data.logradouro || streetInput.value;
+            neighborhoodInput.value = data.bairro || neighborhoodInput.value;
+            cityInput.value = data.localidade || cityInput.value;
+            stateInput.value = data.uf || stateInput.value;
+
+            setHelpMessage("Endereço preenchido automaticamente. Confira os dados e informe número/complemento.", "success");
+
+            if (numberInput) {
+                numberInput.focus();
+            }
+        } catch (error) {
+            setHelpMessage("Não foi possível consultar o CEP agora. Preencha o endereço manualmente.", "danger");
+        }
+    }
+
+    zipCodeInput.addEventListener("input", function () {
+        zipCodeInput.value = formatZipCode(zipCodeInput.value);
+    });
+
+    zipCodeInput.addEventListener("blur", function () {
+        fetchAddressByZipCode(zipCodeInput.value);
+    });
+});
+</script>
 {% endblock %}

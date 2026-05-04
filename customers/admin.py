@@ -23,6 +23,9 @@ class CustomerAdmin(admin.ModelAdmin):
         "phone",
         "email",
         "document",
+        "zip_code",
+        "city",
+        "state",
         "is_active",
         "created_at",
     )
@@ -37,6 +40,11 @@ class CustomerAdmin(admin.ModelAdmin):
         "phone",
         "email",
         "document",
+        "zip_code",
+        "street",
+        "neighborhood",
+        "city",
+        "state",
     )
 
     ordering = ("name",)

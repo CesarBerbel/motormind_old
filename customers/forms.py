@@ -19,7 +19,13 @@ class CustomerForm(forms.ModelForm):
             "phone",
             "email",
             "document",
-            "address",
+            "zip_code",
+            "street",
+            "number",
+            "complement",
+            "neighborhood",
+            "city",
+            "state",
             "notes",
             "is_active",
         ]
@@ -51,10 +57,61 @@ class CustomerForm(forms.ModelForm):
                     "id": "cpf_mask",  # Hook for future JS mask
                 }
             ),
-            "address": forms.TextInput(
+            "zip_code": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Digite o endereço do cliente",
+                    "placeholder": "00000-000",
+                    "id": "id_zip_code",
+                    "inputmode": "numeric",
+                    "autocomplete": "postal-code",
+                }
+            ),
+            "street": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Rua, avenida, travessa...",
+                    "id": "id_street",
+                    "autocomplete": "address-line1",
+                }
+            ),
+            "number": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Número",
+                    "id": "id_number",
+                    "autocomplete": "address-line2",
+                }
+            ),
+            "complement": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Apartamento, sala, referência...",
+                    "id": "id_complement",
+                }
+            ),
+            "neighborhood": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Bairro",
+                    "id": "id_neighborhood",
+                    "autocomplete": "address-level3",
+                }
+            ),
+            "city": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Cidade",
+                    "id": "id_city",
+                    "autocomplete": "address-level2",
+                }
+            ),
+            "state": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "UF",
+                    "id": "id_state",
+                    "maxlength": "2",
+                    "autocomplete": "address-level1",
                 }
             ),
             "notes": forms.Textarea(
@@ -75,8 +132,14 @@ class CustomerForm(forms.ModelForm):
             "name": "Nome",
             "phone": "Telefone",
             "email": "Email",
-            "document": "CPF",
-            "address": "Endereço",
+            "document": "CPF/CNPJ",
+            "zip_code": "CEP",
+            "street": "Logradouro",
+            "number": "Número",
+            "complement": "Complemento",
+            "neighborhood": "Bairro",
+            "city": "Cidade",
+            "state": "UF",
             "notes": "Observações",
             "is_active": "Cliente ativo",
         }
@@ -114,6 +177,28 @@ class CustomerForm(forms.ModelForm):
             )
 
         return digits
+
+    def clean_zip_code(self):
+        zip_code = self.cleaned_data.get("zip_code")
+        if not zip_code:
+            return zip_code
+
+        digits = re.sub(r"\D", "", zip_code)
+        if len(digits) != 8:
+            raise ValidationError("O CEP deve ter 8 dígitos.")
+
+        return f"{digits[:5]}-{digits[5:]}"
+
+    def clean_state(self):
+        state = self.cleaned_data.get("state")
+        if not state:
+            return state
+
+        state = state.strip().upper()
+        if len(state) != 2 or not state.isalpha():
+            raise ValidationError("Informe a UF com 2 letras, por exemplo SP.")
+
+        return state
 
     def clean_email(self):
         """

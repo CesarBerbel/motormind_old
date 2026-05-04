@@ -30,6 +30,11 @@ def customer_list_view(request):
             | Q(phone__icontains=search)
             | Q(email__icontains=search)
             | Q(document__icontains=search)
+            | Q(zip_code__icontains=search)
+            | Q(street__icontains=search)
+            | Q(neighborhood__icontains=search)
+            | Q(city__icontains=search)
+            | Q(state__icontains=search)
         )
 
     return render(

@@ -33,7 +33,7 @@
                 name="search"
                 value="{{ search }}"
                 class="form-control"
-                placeholder="Buscar por nome, telefone, email ou documento"
+                placeholder="Buscar por nome, telefone, email, documento, CEP, cidade ou UF"
             >
         </div>
 
@@ -56,6 +56,7 @@
                         <th>Telefone</th>
                         <th>Email</th>
                         <th>Documento</th>
+                        <th>Cidade/UF</th>
                         <th>Situação</th>
                         <th class="text-end">Ações</th>
                     </tr>
@@ -68,6 +69,7 @@
                             <td>{{ customer.phone }}</td>
                             <td>{{ customer.email|default:"-" }}</td>
                             <td>{{ customer.document|default:"-" }}</td>
+                            <td>{% if customer.city or customer.state %}{{ customer.city|default:"" }}{% if customer.city and customer.state %} / {% endif %}{{ customer.state|default:"" }}{% else %}-{% endif %}</td>
                             <td>
                                 {% if customer.is_active %}
                                     <span class="badge text-bg-success">Ativo</span>
@@ -93,7 +95,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 Nenhum cliente encontrado.
                             </td>
                         </tr>

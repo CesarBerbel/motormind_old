@@ -95,7 +95,13 @@
                 <p><strong>Telefone:</strong> {{ customer.phone }}</p>
                 <p><strong>Email:</strong> {{ customer.email|default:"Não informado" }}</p>
                 <p><strong>Documento:</strong> {{ customer.document|default:"Não informado" }}</p>
-                <p><strong>Endereço:</strong> {{ customer.address|default:"Não informado" }}</p>
+                <p><strong>CEP:</strong> {{ customer.zip_code|default:"Não informado" }}</p>
+                <p><strong>Logradouro:</strong> {{ customer.street|default:"Não informado" }}</p>
+                <p><strong>Número:</strong> {{ customer.number|default:"Não informado" }}</p>
+                <p><strong>Complemento:</strong> {{ customer.complement|default:"Não informado" }}</p>
+                <p><strong>Bairro:</strong> {{ customer.neighborhood|default:"Não informado" }}</p>
+                <p><strong>Cidade/UF:</strong> {% if customer.city or customer.state %}{{ customer.city|default:"" }}{% if customer.city and customer.state %} / {% endif %}{{ customer.state|default:"" }}{% else %}Não informado{% endif %}</p>
+                <p><strong>Endereço completo:</strong> {{ customer.address|default:"Não informado" }}</p>
 
                 <p class="mb-0">
                     <strong>Situação:</strong>

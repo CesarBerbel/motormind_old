@@ -40,11 +40,68 @@ class Customer(models.Model):
         validators=[validate_document],
     )
 
+    zip_code = models.CharField(
+        max_length=9,
+        blank=True,
+        null=True,
+        verbose_name="CEP",
+        help_text="Informe o CEP para preenchimento automático do endereço.",
+        validators=[
+            RegexValidator(
+                regex=r"^\d{5}-?\d{3}$",
+                message="Informe um CEP válido no formato 00000-000.",
+            )
+        ],
+    )
+
+    street = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        verbose_name="Logradouro",
+    )
+
+    number = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name="Número",
+    )
+
+    complement = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Complemento",
+    )
+
+    neighborhood = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Bairro",
+    )
+
+    city = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Cidade",
+    )
+
+    state = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        verbose_name="UF",
+    )
+
     address = models.CharField(
         max_length=255,
         blank=True,
         null=True,
-        verbose_name="Endereço",
+        verbose_name="Endereço completo",
+        help_text="Campo legado preenchido automaticamente a partir dos campos detalhados.",
     )
 
     notes = models.TextField(
@@ -75,7 +132,44 @@ class Customer(models.Model):
 
     def save(self, *args, **kwargs):
         self.document = only_digits(self.document)
+        self.zip_code = self._format_zip_code(self.zip_code)
+        self.state = self.state.upper() if self.state else self.state
+        self.address = self.get_full_address()
         super().save(*args, **kwargs)
+
+    @staticmethod
+    def _format_zip_code(zip_code):
+        if not zip_code:
+            return zip_code
+
+        digits = only_digits(zip_code)
+        if len(digits) == 8:
+            return f"{digits[:5]}-{digits[5:]}"
+        return zip_code
+
+    def get_full_address(self):
+        parts = []
+
+        if self.street:
+            street_line = self.street
+            if self.number:
+                street_line = f"{street_line}, {self.number}"
+            parts.append(street_line)
+
+        if self.complement:
+            parts.append(self.complement)
+
+        if self.neighborhood:
+            parts.append(self.neighborhood)
+
+        city_state = " / ".join(part for part in [self.city, self.state] if part)
+        if city_state:
+            parts.append(city_state)
+
+        if self.zip_code:
+            parts.append(f"CEP {self.zip_code}")
+
+        return " - ".join(parts)
 
     def __str__(self):
         return self.name
