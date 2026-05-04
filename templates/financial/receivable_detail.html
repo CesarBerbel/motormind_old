@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load core_formatters %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <h1 class="mb-1">Conta a receber #{{ receivable.pk }}</h1>
+            <p class="text-muted mb-0">OS #{{ receivable.service_order_id }} - {{ receivable.customer.name }}</p>
+        </div>
+        {% if receivable.status != "paid" %}
+            <a href="{% url 'financial:payment_create' receivable.pk %}" class="btn btn-success">Registrar pagamento</a>
+        {% endif %}
+    </div>
+
+    {% include "financial/_nav.html" %}
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><h5>Original</h5><p class="fs-4 mb-0">{{ receivable.original_amount|brl }}</p></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><h5>Desconto</h5><p class="fs-4 mb-0">{{ receivable.discount_amount|brl }}</p></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><h5>Final</h5><p class="fs-4 mb-0">{{ receivable.final_amount|brl }}</p></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><h5>Restante</h5><p class="fs-4 mb-0">{{ receivable.remaining_amount|brl }}</p></div></div></div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header"><strong>Dados da cobrança</strong></div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4"><strong>Status:</strong> {{ receivable.get_status_display }}</div>
+                <div class="col-md-4"><strong>Vencimento:</strong> {{ receivable.due_date|date:"d/m/Y"|default:"-" }}</div>
+                <div class="col-md-4"><strong>Criado por:</strong> {{ receivable.created_by.get_full_name|default:receivable.created_by.email }}</div>
+                <div class="col-md-12">
+                    <a href="{% url 'service_orders:service_order_detail' receivable.service_order_id %}" class="btn btn-sm btn-outline-primary">Abrir ordem de serviço</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><strong>Pagamentos</strong></div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Valor</th>
+                        <th>Forma</th>
+                        <th>Pago em</th>
+                        <th>Registrado por</th>
+                        <th>Observações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.amount|brl }}</td>
+                            <td>{{ payment.get_method_display }}</td>
+                            <td>{{ payment.paid_at|date:"d/m/Y H:i" }}</td>
+                            <td>{{ payment.created_by.get_full_name|default:payment.created_by.email }}</td>
+                            <td>{{ payment.notes|default:"-" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="5">Nenhum pagamento registrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

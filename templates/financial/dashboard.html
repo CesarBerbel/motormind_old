@@ -3,128 +3,167 @@
 
 {% block content %}
 <div class="container py-4">
-    <h1 class="mb-4">Financeiro</h1>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <h1 class="mb-1">Financeiro</h1>
+            <p class="text-muted mb-0">Resumo de caixa, contas a receber e despesas.</p>
+        </div>
+    </div>
+
+    {% include "financial/_nav.html" %}
+
+    <form method="get" class="card card-body mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="id_start_date" class="form-label">Data inicial</label>
+                <input type="date" name="start_date" id="id_start_date" value="{{ filters.start_date }}" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label for="id_end_date" class="form-label">Data final</label>
+                <input type="date" name="end_date" id="id_end_date" value="{{ filters.end_date }}" class="form-control">
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="{% url 'financial:dashboard' %}" class="btn btn-outline-secondary">Limpar</a>
+            </div>
+        </div>
+    </form>
 
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card border-success">
+        <div class="col-md-3">
+            <div class="card border-success h-100">
                 <div class="card-body">
                     <h5 class="card-title">Entradas</h5>
-                    <p class="fs-4 text-success">
-                        {{ summary.income|brl }}
-                    </p>
+                    <p class="fs-4 text-success mb-0">{{ summary.income|brl }}</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="card border-danger">
+        <div class="col-md-3">
+            <div class="card border-danger h-100">
                 <div class="card-body">
                     <h5 class="card-title">Saídas</h5>
-                    <p class="fs-4 text-danger">
-                        {{ summary.expense|brl }}
-                    </p>
+                    <p class="fs-4 text-danger mb-0">{{ summary.expense|brl }}</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="card border-primary">
+        <div class="col-md-3">
+            <div class="card border-primary h-100">
                 <div class="card-body">
                     <h5 class="card-title">Saldo</h5>
-                    <p class="fs-4 text-primary">
-                        {{ summary.balance|brl }}
-                    </p>
+                    <p class="fs-4 text-primary mb-0">{{ summary.balance|brl }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning h-100">
+                <div class="card-body">
+                    <h5 class="card-title">A receber</h5>
+                    <p class="fs-4 text-warning mb-0">{{ summary.pending_receivables|brl }}</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <h2 class="h4">Contas a receber pendentes</h2>
-
-    <div class="table-responsive mb-4">
-        <table class="table table-striped align-middle">
-            <thead>
-                <tr>
-                    <th>OS</th>
-                    <th>Cliente</th>
-                    <th>Valor final</th>
-                    <th>Pago</th>
-                    <th>Restante</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for receivable in pending_receivables %}
-                    <tr>
-                        <td>#{{ receivable.service_order_id }}</td>
-                        <td>{{ receivable.customer.name }}</td>
-                        <td>{{ receivable.final_amount|brl }}</td>
-                        <td>{{ receivable.paid_amount|brl }}</td>
-                        <td>{{ receivable.remaining_amount|brl }}</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="5">Nenhuma conta a receber pendente.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Contas a receber pendentes</strong>
+                    <a href="{% url 'financial:receivable_list' %}" class="btn btn-sm btn-outline-primary">Ver todas</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>OS</th>
+                                <th>Cliente</th>
+                                <th>Valor final</th>
+                                <th>Restante</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for receivable in pending_receivables %}
+                                <tr>
+                                    <td>#{{ receivable.service_order_id }}</td>
+                                    <td>{{ receivable.customer.name }}</td>
+                                    <td>{{ receivable.final_amount|brl }}</td>
+                                    <td>{{ receivable.remaining_amount|brl }}</td>
+                                    <td class="text-end">
+                                        <a href="{% url 'financial:receivable_detail' receivable.pk %}" class="btn btn-sm btn-outline-secondary">Abrir</a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="5">Nenhuma conta pendente.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Despesas pendentes</strong>
+                    <a href="{% url 'financial:expense_list' %}" class="btn btn-sm btn-outline-primary">Ver todas</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in pending_expenses %}
+                                <tr>
+                                    <td>{{ expense.description }}</td>
+                                    <td>{{ expense.amount|brl }}</td>
+                                    <td class="text-end">
+                                        <a href="{% url 'financial:expense_pay' expense.pk %}" class="btn btn-sm btn-outline-success">Pagar</a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="3">Nenhuma despesa pendente.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <h2 class="h4">Despesas pendentes</h2>
-
-    <div class="table-responsive mb-4">
-        <table class="table table-striped align-middle">
-            <thead>
-                <tr>
-                    <th>Descrição</th>
-                    <th>Valor</th>
-                    <th>Vencimento</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for expense in pending_expenses %}
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Últimos lançamentos de caixa</strong>
+            <a href="{% url 'financial:cash_flow_list' %}" class="btn btn-sm btn-outline-primary">Ver fluxo</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
                     <tr>
-                        <td>{{ expense.description }}</td>
-                        <td>{{ expense.amount|brl }}</td>
-                        <td>{{ expense.due_date|default:"-" }}</td>
+                        <th>Tipo</th>
+                        <th>Descrição</th>
+                        <th>Valor</th>
+                        <th>Data</th>
                     </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="3">Nenhuma despesa pendente.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <h2 class="h4">Últimos lançamentos de caixa</h2>
-
-    <div class="table-responsive">
-        <table class="table table-striped align-middle">
-            <thead>
-                <tr>
-                    <th>Tipo</th>
-                    <th>Descrição</th>
-                    <th>Valor</th>
-                    <th>Data</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for entry in cash_flow_entries %}
-                    <tr>
-                        <td>{{ entry.get_entry_type_display }}</td>
-                        <td>{{ entry.description }}</td>
-                        <td>{{ entry.amount|brl }}</td>
-                        <td>{{ entry.created_at|date:"d/m/Y H:i" }}</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="4">Nenhum lançamento de caixa encontrado.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {% for entry in cash_flow_entries %}
+                        <tr>
+                            <td>{{ entry.get_entry_type_display }}</td>
+                            <td>{{ entry.description }}</td>
+                            <td>{{ entry.amount|brl }}</td>
+                            <td>{{ entry.created_at|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="4">Nenhum lançamento encontrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

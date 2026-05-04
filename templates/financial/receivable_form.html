@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-3">{{ title }}</h1>
+    {% include "financial/_nav.html" %}
+
+    <form method="post" class="card card-body">
+        {% csrf_token %}
+        <div class="row g-3">
+            {% include "includes/form_field.html" with field=form.service_order field_wrapper_class="col-md-8" %}
+            {% include "includes/form_field.html" with field=form.due_date field_wrapper_class="col-md-4" %}
+        </div>
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-success">{{ submit_label }}</button>
+            <a href="{% url 'financial:receivable_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

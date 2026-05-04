@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load core_formatters %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-1">Contas a receber</h1>
+    <p class="text-muted">Cobranças geradas a partir de ordens de serviço finalizadas.</p>
+
+    {% include "financial/_nav.html" %}
+
+    <form method="get" class="card card-body mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label for="id_q" class="form-label">Buscar</label>
+                <input type="search" name="q" id="id_q" value="{{ filters.q }}" class="form-control" placeholder="Cliente, documento, placa ou título da OS">
+            </div>
+            <div class="col-md-3">
+                <label for="id_status" class="form-label">Status</label>
+                <select name="status" id="id_status" class="form-select">
+                    <option value="">Todos</option>
+                    {% for value, label in payment_status_choices %}
+                        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="{% url 'financial:receivable_list' %}" class="btn btn-outline-secondary">Limpar</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>OS</th>
+                        <th>Cliente</th>
+                        <th>Vencimento</th>
+                        <th>Original</th>
+                        <th>Desconto</th>
+                        <th>Final</th>
+                        <th>Pago</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for receivable in receivables %}
+                        <tr>
+                            <td>#{{ receivable.service_order_id }}</td>
+                            <td>{{ receivable.customer.name }}</td>
+                            <td>{{ receivable.due_date|date:"d/m/Y"|default:"-" }}</td>
+                            <td>{{ receivable.original_amount|brl }}</td>
+                            <td>{{ receivable.discount_amount|brl }}</td>
+                            <td>{{ receivable.final_amount|brl }}</td>
+                            <td>{{ receivable.paid_amount|brl }}</td>
+                            <td>{{ receivable.get_status_display }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'financial:receivable_detail' receivable.pk %}" class="btn btn-sm btn-outline-secondary">Detalhes</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="9">Nenhuma conta a receber encontrada.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -126,8 +126,8 @@ def test_get_cash_flow_summary_calculates_income_expense_and_balance(order, user
         created_by=user,
     )
 
-    assert get_cash_flow_summary() == {
-        "income": Decimal("100.00"),
-        "expense": Decimal("40.00"),
-        "balance": Decimal("60.00"),
-    }
+    summary = get_cash_flow_summary()
+
+    assert summary["income"] == Decimal("100.00")
+    assert summary["expense"] == Decimal("40.00")
+    assert summary["balance"] == Decimal("60.00")

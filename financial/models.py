@@ -17,6 +17,7 @@ class PaymentMethod(models.TextChoices):
     DEBIT_CARD = "debit_card", "Cartão de débito"
     CREDIT_CARD = "credit_card", "Cartão de crédito"
     BANK_TRANSFER = "bank_transfer", "Transferência bancária"
+    CHECK = "check", "Cheque"
     OTHER = "other", "Outro"
 
 
@@ -27,6 +28,7 @@ class PaymentStatus(models.TextChoices):
 
     PENDING = "pending", "Pendente"
     PAID = "paid", "Pago"
+    OVERDUE = "overdue", "Vencido"
     CANCELED = "canceled", "Cancelado"
 
 
@@ -159,6 +161,9 @@ class Receivable(models.Model):
             )
 
         expected_final_amount = self.original_amount - self.discount_amount
+
+        if expected_final_amount < Decimal("0.00"):
+            expected_final_amount = Decimal("0.00")
 
         if self.final_amount != expected_final_amount:
             raise ValidationError(
@@ -307,6 +312,22 @@ class Expense(models.Model):
     def __str__(self):
         return self.description
 
+    def clean(self):
+        """
+        Validate expense status consistency.
+        """
+        super().clean()
+
+        if self.status == PaymentStatus.PAID and not self.paid_at:
+            raise ValidationError(
+                {"paid_at": "Uma despesa paga precisa ter data de pagamento."}
+            )
+
+        if self.status != PaymentStatus.PAID and self.paid_at:
+            raise ValidationError(
+                {"status": "Uma despesa com data de pagamento deve estar paga."}
+            )
+
 
 class CashFlowEntry(models.Model):
     """
@@ -361,10 +382,10 @@ class CashFlowEntry(models.Model):
         verbose_name="Criado em",
     )
 
-    from django.db import models
-    from django.db.models import Q
-
     class Meta:
+        verbose_name = "Lançamento de caixa"
+        verbose_name_plural = "Lançamentos de caixa"
+        ordering = ["-created_at"]
         constraints = [
             models.CheckConstraint(
                 name="cash_flow_has_exactly_one_source",

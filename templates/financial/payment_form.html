@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load core_formatters %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-1">{{ title }}</h1>
+    <p class="text-muted">Saldo em aberto: <strong>{{ receivable.remaining_amount|brl }}</strong></p>
+    {% include "financial/_nav.html" %}
+
+    <form method="post" class="card card-body">
+        {% csrf_token %}
+        <div class="row g-3">
+            {% include "includes/form_field.html" with field=form.amount field_wrapper_class="col-md-4" %}
+            {% include "includes/form_field.html" with field=form.method field_wrapper_class="col-md-4" %}
+            {% include "includes/form_field.html" with field=form.paid_at field_wrapper_class="col-md-4" %}
+            {% include "includes/form_field.html" with field=form.notes field_wrapper_class="col-12" %}
+        </div>
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-success">{{ submit_label }}</button>
+            <a href="{% url 'financial:receivable_detail' receivable.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

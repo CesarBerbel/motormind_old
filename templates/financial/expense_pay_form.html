@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load core_formatters %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-1">{{ title }}</h1>
+    <p class="text-muted">{{ expense.description }} - <strong>{{ expense.amount|brl }}</strong></p>
+    {% include "financial/_nav.html" %}
+
+    <form method="post" class="card card-body">
+        {% csrf_token %}
+        <div class="row g-3">
+            {% include "includes/form_field.html" with field=form.paid_at field_wrapper_class="col-md-6" %}
+        </div>
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-success">{{ submit_label }}</button>
+            <a href="{% url 'financial:expense_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
