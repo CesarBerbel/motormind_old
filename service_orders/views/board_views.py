@@ -16,8 +16,6 @@ from service_orders.selectors import (
 )
 from service_orders.services import create_service_order_history
 
-from .common import redirect_if_canceled
-
 
 @login_required
 @user_passes_permission(can_access_operational_board)
@@ -175,9 +173,11 @@ def service_order_quick_status_update_view(request, pk):
                 "message": "Status da ordem de serviço atualizado com sucesso.",
                 "status": service_order.status,
                 "status_label": service_order.get_status_display(),
-                "finished_at": service_order.finished_at.isoformat()
-                if service_order.finished_at
-                else None,
+                "finished_at": (
+                    service_order.finished_at.isoformat()
+                    if service_order.finished_at
+                    else None
+                ),
             }
         )
 

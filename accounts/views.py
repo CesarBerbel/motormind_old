@@ -2,13 +2,12 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
-from django.utils import timezone
 
 from inventory.selectors import count_low_stock_parts
-from service_orders.models import ServiceOrder
 
 from .forms import CustomUserCreationForm, EmailAuthenticationForm
 from .permissions import role_required
+from .selectors import get_attendant_dashboard_data, get_main_dashboard_data
 
 
 def register_view(request):
@@ -89,44 +88,13 @@ def dashboard_view(request):
     """
     Show main dashboard with operational counters.
     """
-    today = timezone.localdate()
-
-    overdue_service_orders_count = (
-        ServiceOrder.objects.filter(
-            expected_delivery_date__lt=today,
-        )
-        .exclude(
-            status__in=[
-                ServiceOrder.Status.FINISHED,
-                ServiceOrder.Status.CANCELED,
-            ]
-        )
-        .count()
-    )
-
-    assigned_to_me_count = (
-        ServiceOrder.objects.filter(
-            assigned_mechanic=request.user,
-        )
-        .exclude(
-            status__in=[
-                ServiceOrder.Status.FINISHED,
-                ServiceOrder.Status.CANCELED,
-            ]
-        )
-        .count()
-    )
-
-    low_stock_parts_count = count_low_stock_parts()
+    context = get_main_dashboard_data(request.user)
+    context["low_stock_parts_count"] = count_low_stock_parts()
 
     return render(
         request,
         "accounts/dashboard.html",
-        {
-            "overdue_service_orders_count": overdue_service_orders_count,
-            "assigned_to_me_count": assigned_to_me_count,
-            "low_stock_parts_count": low_stock_parts_count,
-        },
+        context,
     )
 
 
@@ -146,11 +114,14 @@ def admin_area_view(request):
 @role_required("Atendente")
 def attendant_area_view(request):
     """
-    Show attendant area.
+    Show attendant area with reception workflow indicators and quick search.
     """
+    search_query = request.GET.get("q", "")
+
     return render(
         request,
         "accounts/attendant_area.html",
+        get_attendant_dashboard_data(search_query=search_query),
     )
 
 
