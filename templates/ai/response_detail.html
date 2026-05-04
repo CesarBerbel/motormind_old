@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Resposta de IA{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="h3">Resposta de IA #{{ response.pk }}</h1>
+    <div class="alert alert-warning">{{ critical_action_warning }}</div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card mb-3">
+                <div class="card-header">Dados da solicitação</div>
+                <div class="card-body">
+                    <p><strong>Usuário:</strong> {{ response.request.user }}</p>
+                    <p><strong>Caso de uso:</strong> {{ response.request.get_use_case_display }}</p>
+                    <p><strong>Prompt:</strong> {{ response.request.prompt_template }}</p>
+                    <p><strong>Modelo:</strong> {{ response.model_name }}</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">Texto gerado</div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 border rounded" style="white-space: pre-wrap;">{{ response.output_text }}</pre>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header">Revisão humana</div>
+                <div class="card-body">
+                    {% if response.review %}
+                        <div class="alert alert-info">
+                            Revisão atual: {{ response.review.get_status_display }} por {{ response.review.reviewed_by }} em {{ response.review.reviewed_at|date:"d/m/Y H:i" }}.
+                        </div>
+                    {% endif %}
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <button type="submit" class="btn btn-primary">Salvar revisão</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

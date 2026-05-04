@@ -32,4 +32,8 @@ urlpatterns = [
         "mensagens/",
         include(("mensagens.urls", "mensagens"), namespace="mensagens"),
     ),
+    path(
+        "ia/",
+        include(("ai.urls", "ai"), namespace="ai"),
+    ),
 ]

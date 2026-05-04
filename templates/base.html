@@ -172,6 +172,16 @@
                         </li>
                     {% endif %}
 
+
+
+                    {% if user|has_group:"Administrador" or user|has_group:"Atendente" or user|has_group:"Mecânico" or user|has_group:"Financeiro" %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/ia/' in request.path %}active{% endif %}" href="{% url 'ai:dashboard' %}">
+                                IA
+                            </a>
+                        </li>
+                    {% endif %}
+
                     {% if user|has_group:"Administrador" %}
                         <li class="nav-item">
                             <a class="nav-link {% if 'auditoria' in request.path %}active{% endif %}" href="{% url 'auditoria:audit_log_list' %}">

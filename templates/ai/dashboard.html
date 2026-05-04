@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}IA - MotorMind{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Inteligência Artificial</h1>
+            <p class="text-muted mb-0">Uso assistivo, rastreável e revisável.</p>
+        </div>
+        <a href="{% url 'ai:assistant' %}" class="btn btn-primary">Abrir assistente</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted">Requisições</div><div class="display-6">{{ summary.total_requests }}</div></div></div></div>
+        <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted">Concluídas</div><div class="display-6">{{ summary.completed_requests }}</div></div></div></div>
+        <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted">Falhas</div><div class="display-6">{{ summary.failed_requests }}</div></div></div></div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Requisições recentes</div>
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead><tr><th>Data</th><th>Usuário</th><th>Caso</th><th>Status</th><th>Resposta</th></tr></thead>
+                <tbody>
+                    {% for item in recent_requests %}
+                        <tr>
+                            <td>{{ item.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>{{ item.user }}</td>
+                            <td>{{ item.get_use_case_display }}</td>
+                            <td>{{ item.get_status_display }}</td>
+                            <td>{% if item.response %}<a href="{% url 'ai:response_detail' item.response.pk %}">ver</a>{% else %}-{% endif %}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="5" class="text-muted">Nenhuma requisição registrada.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

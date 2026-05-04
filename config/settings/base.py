@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "crm",
     "auditoria",
     "mensagens",
+    "ai",
 ]
 
 MIDDLEWARE = [
@@ -156,3 +157,14 @@ DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
     default="MotorMind <no-reply@localhost>",
 )
+
+
+# Inteligência artificial
+AI_PROVIDER = env("AI_PROVIDER", default="local")
+GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
+GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-2.5-flash")
+AI_TEMPERATURE = env.float("AI_TEMPERATURE", default=0.2)
+
+# Mantido por compatibilidade caso ainda exista configuração antiga no ambiente.
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-4.1-mini")

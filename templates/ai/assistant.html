@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Assistente de IA{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="h3">Assistente de IA</h1>
+    <div class="alert alert-warning">{{ critical_action_warning }}</div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">Nova solicitação</div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <button type="submit" class="btn btn-primary">Gerar sugestão</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">Resposta</div>
+                <div class="card-body">
+                    {% if response %}
+                        <p class="text-muted small">Modelo: {{ response.model_name }} | Latência: {{ response.latency_ms }}ms</p>
+                        <pre class="bg-light p-3 border rounded" style="white-space: pre-wrap;">{{ response.output_text }}</pre>
+                        <a class="btn btn-outline-secondary" href="{% url 'ai:response_detail' response.pk %}">Revisar resposta</a>
+                    {% else %}
+                        <p class="text-muted">A resposta aparecerá aqui após a geração.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
