@@ -62,6 +62,11 @@
                     <a class="sidebar-link {% if '/servicos/' in request.path %}active{% endif %}" href="{% url 'service_orders:service_order_list' %}">
                         <i class="bi bi-clipboard-check"></i><span>Ordens de serviço</span>
                     </a>
+                    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                        <a class="sidebar-link {% if '/catalogo-servicos/' in request.path %}active{% endif %}" href="{% url 'workshop_services:service_catalog_list' %}">
+                            <i class="bi bi-tools"></i><span>Serviços e combos</span>
+                        </a>
+                    {% endif %}
                     <a class="sidebar-link {% if '/estoque/' in request.path %}active{% endif %}" href="{% url 'inventory:part_list' %}">
                         <i class="bi bi-box-seam"></i><span>Estoque</span>
                     </a>
@@ -116,7 +121,7 @@
                     <div>
                         <div class="topbar-eyebrow">Dashboard</div>
                         <div class="topbar-title">
-                            {% if '/oficina/clientes/' in request.path %}Clientes{% elif '/oficina/veiculos/' in request.path %}Veículos{% elif '/servicos/' in request.path %}Ordens de serviço{% elif '/estoque/' in request.path %}Estoque{% elif '/financial/' in request.path %}Financeiro{% elif '/crm/' in request.path %}CRM{% elif '/mensagens/' in request.path %}Mensagens{% elif '/ia/' in request.path %}Inteligência artificial{% elif '/auditoria/' in request.path %}Auditoria{% elif '/conta/administracao/' in request.path %}Administração{% else %}Painel principal{% endif %}
+                            {% if '/oficina/clientes/' in request.path %}Clientes{% elif '/oficina/veiculos/' in request.path %}Veículos{% elif '/servicos/' in request.path %}Ordens de serviço{% elif '/catalogo-servicos/' in request.path %}Serviços e combos{% elif '/estoque/' in request.path %}Estoque{% elif '/financial/' in request.path %}Financeiro{% elif '/crm/' in request.path %}CRM{% elif '/mensagens/' in request.path %}Mensagens{% elif '/ia/' in request.path %}Inteligência artificial{% elif '/auditoria/' in request.path %}Auditoria{% elif '/conta/administracao/' in request.path %}Administração{% else %}Painel principal{% endif %}
                         </div>
                     </div>
                 </div>

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load core_formatters %}
+
+{% block title %}Serviços e combos - MotorMind{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-1">Serviços e combos</h1>
+        <p class="text-muted mb-0">Catálogo comercial usado para montar orçamentos e inserir serviços na OS.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'workshop_services:service_create' %}" class="btn btn-primary">Novo serviço</a>
+        <a href="{% url 'workshop_services:combo_create' %}" class="btn btn-outline-primary">Novo combo</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Serviços</h2>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Serviço</th>
+                        <th>Categoria</th>
+                        <th>Preço padrão</th>
+                        <th>Tempo</th>
+                        <th>Status</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in services %}
+                        <tr>
+                            <td>{{ service.code }}</td>
+                            <td>{{ service.name }}</td>
+                            <td>{{ service.category|default:"-" }}</td>
+                            <td>{{ service.default_price|brl }}</td>
+                            <td>{{ service.estimated_minutes }} min</td>
+                            <td>{% if service.is_active %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</td>
+                            <td class="text-end"><a href="{% url 'workshop_services:service_update' service.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a></td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="7" class="text-center text-muted py-4">Nenhum serviço cadastrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Combos</h2>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Combo</th>
+                        <th>Itens</th>
+                        <th>Subtotal</th>
+                        <th>Desconto</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for combo in combos %}
+                        <tr>
+                            <td>{{ combo.code }}</td>
+                            <td>{{ combo.name }}</td>
+                            <td>{{ combo.items.count }}</td>
+                            <td>{{ combo.gross_total|brl }}</td>
+                            <td>{{ combo.discount_amount|brl }}</td>
+                            <td>{{ combo.total|brl }}</td>
+                            <td>{% if combo.is_active %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</td>
+                            <td class="text-end"><a href="{% url 'workshop_services:combo_update' combo.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a></td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="8" class="text-center text-muted py-4">Nenhum combo cadastrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -6,46 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        (
-            "ai",
-            "0002_rename_ai_aiprompt_use_ca_0d8f1a_idx_ai_aiprompt_use_cas_08be52_idx_and_more",
-        ),
+        ('ai', '0002_rename_ai_aiprompt_use_ca_0d8f1a_idx_ai_aiprompt_use_cas_08be52_idx_and_more'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name="aiprompttemplate",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='aiprompttemplate',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AddField(
-            model_name="airequest",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='airequest',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AddField(
-            model_name="airesponse",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='airesponse',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AddField(
-            model_name="aireview",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='aireview',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AddField(
-            model_name="aiusagelog",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='aiusagelog',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
     ]
