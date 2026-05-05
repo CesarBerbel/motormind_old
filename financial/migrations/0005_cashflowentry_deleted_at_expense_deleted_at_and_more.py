@@ -6,36 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("financial", "0004_alter_cashflowentry_options_alter_expense_status_and_more"),
+        ('financial', '0004_alter_cashflowentry_options_alter_expense_status_and_more'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name="cashflowentry",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='cashflowentry',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AddField(
-            model_name="expense",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='expense',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AddField(
-            model_name="payment",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='payment',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AddField(
-            model_name="receivable",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='receivable',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
     ]

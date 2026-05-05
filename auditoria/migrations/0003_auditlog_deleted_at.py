@@ -6,18 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        (
-            "auditoria",
-            "0002_rename_auditoria_a_action_844d0a_idx_auditoria_a_action_892235_idx_and_more",
-        ),
+        ('auditoria', '0002_rename_auditoria_a_action_844d0a_idx_auditoria_a_action_892235_idx_and_more'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name="auditlog",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='auditlog',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
     ]
