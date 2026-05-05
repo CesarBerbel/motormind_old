@@ -65,7 +65,9 @@ def improve_problem_description_locally(description):
     """
     Fallback deterministic and safe when the external AI provider is unavailable.
 
-    It only normalizes spacing, punctuation and capitalization. It does not add
+    The fallback must visibly improve the text even when the provider returns
+    503/high-demand errors. It standardizes spacing, capitalization and wraps
+    the customer's own words in a professional OS sentence without adding
     diagnosis, parts, values, dates, services or facts not provided by the user.
     """
     text = re.sub(r"\s+", " ", description.strip())
@@ -79,7 +81,11 @@ def improve_problem_description_locally(description):
     if text[-1] not in ".!?":
         text = f"{text}."
 
-    return text
+    lowered = text.lower()
+    if lowered.startswith(("cliente relata", "o cliente relata", "relato do cliente")):
+        return text
+
+    return f"Cliente relata: {text}"
 
 
 def improve_problem_description(*, user, description):

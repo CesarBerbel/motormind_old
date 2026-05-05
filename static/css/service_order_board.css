@@ -86,3 +86,81 @@
     cursor: grab;
     user-select: none;
 }
+
+/* Altura reduzida para manter a barra horizontal sempre visível no quadro operacional. */
+.service-order-board-wrapper {
+    max-height: calc(100vh - 330px);
+}
+
+.service-order-board-scroll::-webkit-scrollbar,
+.workshop-agenda-scroll::-webkit-scrollbar {
+    height: 12px;
+}
+
+.service-order-board-scroll::-webkit-scrollbar-thumb,
+.workshop-agenda-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border: 3px solid #f8fafc;
+    border-radius: 999px;
+}
+
+.service-order-board-scroll::-webkit-scrollbar-track,
+.workshop-agenda-scroll::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 999px;
+}
+
+/* Agenda com o mesmo comportamento horizontal do quadro da oficina. */
+.workshop-agenda-wrapper {
+    height: clamp(360px, calc(100vh - 365px), 520px);
+    min-height: 360px;
+    overflow: hidden;
+}
+
+.workshop-agenda-scroll {
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 14px;
+    scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
+}
+
+.workshop-agenda-columns {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 16px;
+    height: 100%;
+    min-width: max-content;
+}
+
+.workshop-agenda-column {
+    flex: 0 0 300px;
+    width: 300px;
+    height: 100%;
+}
+
+.workshop-agenda-column > .card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.workshop-agenda-column .card-header {
+    flex: 0 0 auto;
+}
+
+.workshop-agenda-column .card-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+@media (max-height: 760px) {
+    .service-order-board-wrapper,
+    .workshop-agenda-wrapper {
+        height: 340px;
+        min-height: 340px;
+    }
+}

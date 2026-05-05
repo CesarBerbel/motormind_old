@@ -156,7 +156,7 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const button = document.getElementById("improve-description-ai-button");
-        const descriptionField = document.getElementById("id_description");
+        const descriptionField = document.getElementById("id_description") || document.querySelector("textarea[name='description']");
         const feedback = document.getElementById("improve-description-ai-feedback");
 
         if (!button || !descriptionField || !feedback) {
@@ -205,8 +205,24 @@
                     });
                 })
                 .then(function (data) {
-                    descriptionField.value = data.description;
-                    showFeedback("Texto melhorado com IA. Revise antes de salvar a OS.", "text-success");
+                    const improvedDescription = (data.description || data.improved_description || "").trim();
+
+                    if (!improvedDescription) {
+                        throw new Error("A IA respondeu, mas não retornou um texto melhorado.");
+                    }
+
+                    if (improvedDescription === description) {
+                        showFeedback(
+                            "A IA revisou o texto, mas não encontrou mudanças relevantes. Você pode salvar ou ajustar manualmente.",
+                            "text-warning"
+                        );
+                        return;
+                    }
+
+                    descriptionField.value = improvedDescription;
+                    descriptionField.dispatchEvent(new Event("input", { bubbles: true }));
+                    descriptionField.dispatchEvent(new Event("change", { bubbles: true }));
+                    showFeedback("Texto aplicado no campo de descrição. Revise antes de salvar a OS.", "text-success");
                 })
                 .catch(function (error) {
                     showFeedback(error.message, "text-danger");
