@@ -90,9 +90,9 @@ class ServiceCombo(SoftDeleteModel):
 
     @property
     def gross_total(self):
-        total = self.items.aggregate(
-            total=Sum(F("quantity") * F("unit_price"))
-        )["total"]
+        total = self.items.aggregate(total=Sum(F("quantity") * F("unit_price")))[
+            "total"
+        ]
         return total or Decimal("0.00")
 
     @property
@@ -106,7 +106,9 @@ class ServiceCombo(SoftDeleteModel):
         super().clean()
         if self.discount_amount > self.gross_total and self.pk:
             raise ValidationError(
-                {"discount_amount": "O desconto não pode ser maior que o subtotal do combo."}
+                {
+                    "discount_amount": "O desconto não pode ser maior que o subtotal do combo."
+                }
             )
 
 
@@ -164,4 +166,6 @@ class ServiceComboItem(SoftDeleteModel):
     def clean(self):
         super().clean()
         if self.service_id and not self.service.is_active:
-            raise ValidationError({"service": "Não é possível adicionar serviço inativo ao combo."})
+            raise ValidationError(
+                {"service": "Não é possível adicionar serviço inativo ao combo."}
+            )

@@ -65,7 +65,9 @@ def test_add_catalog_service_to_order_uses_default_price(service_order):
     assert item.item_type == ServiceOrderItem.ItemType.SERVICE
     assert item.description == "SRV-001 - Alinhamento"
     assert item.total == Decimal("240.0000")
-    assert get_service_order_financial_summary(service_order)["net_total"] == Decimal("240.00")
+    assert get_service_order_financial_summary(service_order)["net_total"] == Decimal(
+        "240.00"
+    )
 
 
 @pytest.mark.django_db
@@ -102,4 +104,6 @@ def test_add_combo_to_order_creates_service_items_with_discount(service_order):
 
     assert len(items) == 2
     assert service_order.items.count() == 2
-    assert get_service_order_financial_summary(service_order)["net_total"] == Decimal("120.00")
+    assert get_service_order_financial_summary(service_order)["net_total"] == Decimal(
+        "120.00"
+    )

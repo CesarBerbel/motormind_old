@@ -6,48 +6,67 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mensagens', '0003_rename_mensagens_m_categor_4b878c_idx_mensagens_m_categor_5f1f56_idx'),
+        (
+            "mensagens",
+            "0003_rename_mensagens_m_categor_4b878c_idx_mensagens_m_categor_5f1f56_idx",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='messageattachment',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="messageattachment",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='messageevent',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="messageevent",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='messagelog',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="messagelog",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='messagepreference',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="messagepreference",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='messageprovider',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="messageprovider",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='messagequeue',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="messagequeue",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='messagetemplate',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="messagetemplate",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='messagevariable',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="messagevariable",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
     ]

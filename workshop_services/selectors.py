@@ -10,10 +10,14 @@ def get_services_for_list():
 
 
 def get_active_combos():
-    return ServiceCombo.objects.filter(is_active=True).prefetch_related(
-        "items",
-        "items__service",
-    ).order_by("name")
+    return (
+        ServiceCombo.objects.filter(is_active=True)
+        .prefetch_related(
+            "items",
+            "items__service",
+        )
+        .order_by("name")
+    )
 
 
 def get_combos_for_list():
