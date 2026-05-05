@@ -28,7 +28,39 @@
 
                     <div class="row g-3">
                         {% for field in form %}
-                            {% include "includes/form_field.html" with field=field field_wrapper_class="col-md-6" %}
+                            {% if show_problem_description_ai and field.name == "description" %}
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                                        <label for="{{ field.id_for_label }}" class="form-label mb-0">
+                                            {{ field.label }}
+                                        </label>
+
+                                        <button
+                                            type="button"
+                                            id="improve-description-ai-button"
+                                            class="btn btn-sm btn-outline-primary"
+                                        >
+                                            Melhorar com IA
+                                        </button>
+                                    </div>
+
+                                    {{ field }}
+
+                                    <div class="form-text">
+                                        Use a IA apenas para organizar o relato do cliente. Revise o texto antes de salvar.
+                                    </div>
+
+                                    <div id="improve-description-ai-feedback" class="small mt-2 d-none"></div>
+
+                                    {% if field.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                {% include "includes/form_field.html" with field=field field_wrapper_class="col-md-6" %}
+                            {% endif %}
                         {% endfor %}
                     </div>
 
@@ -119,4 +151,72 @@
         });
     });
 </script>
+
+{% if show_problem_description_ai %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const button = document.getElementById("improve-description-ai-button");
+        const descriptionField = document.getElementById("id_description");
+        const feedback = document.getElementById("improve-description-ai-feedback");
+
+        if (!button || !descriptionField || !feedback) {
+            return;
+        }
+
+        const improveUrl = "{% url 'service_orders:improve_problem_description' %}";
+        const csrfToken = document.querySelector("input[name='csrfmiddlewaretoken']").value;
+        const defaultButtonText = button.textContent.trim();
+
+        function showFeedback(message, cssClass) {
+            feedback.className = `small mt-2 ${cssClass}`;
+            feedback.textContent = message;
+        }
+
+        button.addEventListener("click", function () {
+            const description = descriptionField.value.trim();
+
+            if (!description) {
+                showFeedback("Digite a descrição do problema antes de usar a IA.", "text-danger");
+                descriptionField.focus();
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = "Melhorando...";
+            showFeedback("A IA está organizando o texto. Revise o resultado antes de salvar.", "text-muted");
+
+            const formData = new FormData();
+            formData.append("description", description);
+
+            fetch(improveUrl, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrfToken,
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: formData
+            })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        if (!response.ok) {
+                            throw new Error(data.error || "Não foi possível melhorar a descrição.");
+                        }
+                        return data;
+                    });
+                })
+                .then(function (data) {
+                    descriptionField.value = data.description;
+                    showFeedback("Texto melhorado com IA. Revise antes de salvar a OS.", "text-success");
+                })
+                .catch(function (error) {
+                    showFeedback(error.message, "text-danger");
+                })
+                .finally(function () {
+                    button.disabled = false;
+                    button.textContent = defaultButtonText;
+                });
+        });
+    });
+</script>
+{% endif %}
 {% endblock %}

@@ -41,6 +41,11 @@ urlpatterns = [
         name="service_order_create",
     ),
     path(
+        "ordens/melhorar-descricao/",
+        order_views.improve_problem_description_view,
+        name="improve_problem_description",
+    ),
+    path(
         "ordens/<int:pk>/",
         order_views.service_order_detail_view,
         name="service_order_detail",

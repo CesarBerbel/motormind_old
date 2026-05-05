@@ -6,38 +6,53 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('crm', '0002_rename_crm_custome_custome_74f7ca_idx_crm_custome_custome_592043_idx_and_more'),
+        (
+            "crm",
+            "0002_rename_crm_custome_custome_74f7ca_idx_crm_custome_custome_592043_idx_and_more",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='campaign',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="campaign",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='campaignaudience',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="campaignaudience",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='customerinteraction',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="customerinteraction",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='customeropportunity',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="customeropportunity",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='customerreminder',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="customerreminder",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='customertag',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="customertag",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
     ]
