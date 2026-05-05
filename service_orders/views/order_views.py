@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from core.exceptions import DomainError, PermissionDeniedError
 from core.permissions import (
     can_cancel_service_order,
     can_manage_service_orders,
@@ -12,8 +13,10 @@ from core.permissions import (
     can_view_service_orders,
     user_passes_permission,
 )
+from service_orders.ai_description import improve_problem_description
 from service_orders.forms import (
     ServiceOrderApprovalForm,
+    ServiceOrderCreateForm,
     ServiceOrderForm,
     ServiceOrderNoteForm,
     ServiceOrderTechnicalForm,
@@ -76,7 +79,7 @@ def service_order_list_view(request):
 @user_passes_permission(can_manage_service_orders)
 def service_order_create_view(request):
     if request.method == "POST":
-        form = ServiceOrderForm(request.POST)
+        form = ServiceOrderCreateForm(request.POST)
 
         if form.is_valid():
             service_order = create_service_order_from_form(
@@ -96,7 +99,7 @@ def service_order_create_view(request):
             "Não foi possível criar a ordem de serviço. Verifique os dados informados.",
         )
     else:
-        form = ServiceOrderForm()
+        form = ServiceOrderCreateForm()
 
     return render(
         request,
@@ -105,7 +108,62 @@ def service_order_create_view(request):
             "form": form,
             "page_title": "Criar ordem de serviço",
             "button_text": "Salvar ordem de serviço",
+            "show_problem_description_ai": True,
         },
+    )
+
+
+@login_required
+@require_POST
+@user_passes_permission(can_manage_service_orders)
+def improve_problem_description_view(request):
+    description = request.POST.get("description", "").strip()
+
+    if not description:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Informe a descrição do problema antes de usar a IA.",
+            },
+            status=400,
+        )
+
+    if len(description) < 10:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "A descrição está muito curta para ser melhorada com segurança.",
+            },
+            status=400,
+        )
+
+    try:
+        improved_description = improve_problem_description(
+            user=request.user,
+            description=description,
+        )
+    except PermissionDeniedError as error:
+        return JsonResponse(
+            {"success": False, "error": str(error)},
+            status=403,
+        )
+    except DomainError:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": (
+                    "Não foi possível usar a IA agora. "
+                    "Tente novamente em alguns instantes ou ajuste o texto manualmente."
+                ),
+            },
+            status=503,
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "description": improved_description,
+        }
     )
 
 

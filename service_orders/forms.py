@@ -232,6 +232,27 @@ class ServiceOrderForm(forms.ModelForm):
         return cleaned_data
 
 
+class ServiceOrderCreateForm(ServiceOrderForm):
+    """
+    Form used only to open a new service order.
+
+    The opening step must capture only commercial/triage data. Technical,
+    financial and delivery fields are intentionally kept out of this form and
+    must be filled later in their own operational flows.
+    """
+
+    class Meta(ServiceOrderForm.Meta):
+        fields = [
+            "customer",
+            "vehicle",
+            "assigned_mechanic",
+            "priority",
+            "title",
+            "description",
+            "status",
+        ]
+
+
 class ServiceOrderTechnicalForm(forms.ModelForm):
     """
     Form used by mechanics to update technical fields only.
