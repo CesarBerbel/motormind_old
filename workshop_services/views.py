@@ -53,7 +53,11 @@ def service_create_view(request):
     return render(
         request,
         "workshop_services/service_form.html",
-        {"form": form, "page_title": "Cadastrar serviço", "button_text": "Salvar serviço"},
+        {
+            "form": form,
+            "page_title": "Cadastrar serviço",
+            "button_text": "Salvar serviço",
+        },
     )
 
 
@@ -75,7 +79,11 @@ def service_update_view(request, pk):
     return render(
         request,
         "workshop_services/service_form.html",
-        {"form": form, "page_title": "Editar serviço", "button_text": "Salvar alterações"},
+        {
+            "form": form,
+            "page_title": "Editar serviço",
+            "button_text": "Salvar alterações",
+        },
     )
 
 
@@ -103,7 +111,12 @@ def combo_create_view(request):
     return render(
         request,
         "workshop_services/combo_form.html",
-        {"form": form, "formset": formset, "page_title": "Cadastrar combo", "button_text": "Salvar combo"},
+        {
+            "form": form,
+            "formset": formset,
+            "page_title": "Cadastrar combo",
+            "button_text": "Salvar combo",
+        },
     )
 
 
@@ -130,7 +143,12 @@ def combo_update_view(request, pk):
     return render(
         request,
         "workshop_services/combo_form.html",
-        {"form": form, "formset": formset, "page_title": "Editar combo", "button_text": "Salvar alterações"},
+        {
+            "form": form,
+            "formset": formset,
+            "page_title": "Editar combo",
+            "button_text": "Salvar alterações",
+        },
     )
 
 
@@ -154,7 +172,9 @@ def add_service_to_order_view(request, service_order_pk):
                 messages.error(request, "Não foi possível adicionar o serviço à OS.")
             else:
                 messages.success(request, "Serviço adicionado à OS com sucesso.")
-                return redirect("service_orders:service_order_detail", pk=service_order.pk)
+                return redirect(
+                    "service_orders:service_order_detail", pk=service_order.pk
+                )
         else:
             messages.error(request, "Verifique os dados informados.")
     else:
@@ -163,7 +183,11 @@ def add_service_to_order_view(request, service_order_pk):
     return render(
         request,
         "workshop_services/add_service_to_order_form.html",
-        {"form": form, "service_order": service_order, "page_title": "Adicionar serviço à OS"},
+        {
+            "form": form,
+            "service_order": service_order,
+            "page_title": "Adicionar serviço à OS",
+        },
     )
 
 
@@ -185,7 +209,9 @@ def add_combo_to_order_view(request, service_order_pk):
                 messages.error(request, "Não foi possível adicionar o combo à OS.")
             else:
                 messages.success(request, "Combo adicionado à OS com sucesso.")
-                return redirect("service_orders:service_order_detail", pk=service_order.pk)
+                return redirect(
+                    "service_orders:service_order_detail", pk=service_order.pk
+                )
         else:
             messages.error(request, "Verifique os dados informados.")
     else:
@@ -194,5 +220,9 @@ def add_combo_to_order_view(request, service_order_pk):
     return render(
         request,
         "workshop_services/add_combo_to_order_form.html",
-        {"form": form, "service_order": service_order, "page_title": "Adicionar combo à OS"},
+        {
+            "form": form,
+            "service_order": service_order,
+            "page_title": "Adicionar combo à OS",
+        },
     )

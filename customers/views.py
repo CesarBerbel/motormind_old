@@ -60,7 +60,9 @@ def customer_list_view(request):
     search = request.GET.get("search", "").strip()
     status = request.GET.get("status", "ativos")
 
-    base_queryset = Customer.all_objects.all() if status != "ativos" else Customer.objects.all()
+    base_queryset = (
+        Customer.all_objects.all() if status != "ativos" else Customer.objects.all()
+    )
     customers = _apply_customer_filters(base_queryset, search, status)
 
     return render(
@@ -142,7 +144,9 @@ def customer_detail_view(request, pk):
     """Show customer details and linked vehicles."""
     customer = get_object_or_404(Customer.all_objects, pk=pk)
     vehicles = customer.vehicles.all()
-    crm_summary = get_customer_crm_summary(customer) if get_customer_crm_summary else None
+    crm_summary = (
+        get_customer_crm_summary(customer) if get_customer_crm_summary else None
+    )
 
     return render(
         request,

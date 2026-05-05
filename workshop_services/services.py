@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from service_orders.models import ServiceOrder, ServiceOrderItem
-from workshop_services.models import ServiceCombo, WorkshopService
 
 
 def validate_order_can_receive_services(service_order):
@@ -66,7 +65,9 @@ def add_combo_to_order(*, service_order, combo):
     validate_combo_has_items(combo)
 
     combo_items = list(combo.items.select_related("service").all())
-    gross_total = sum((item.quantity * item.unit_price for item in combo_items), Decimal("0.00"))
+    gross_total = sum(
+        (item.quantity * item.unit_price for item in combo_items), Decimal("0.00")
+    )
 
     if combo.discount_amount > gross_total:
         raise ValidationError("O desconto do combo não pode ser maior que o subtotal.")
@@ -83,11 +84,15 @@ def add_combo_to_order(*, service_order, combo):
             if index == len(combo_items) - 1:
                 line_discount = remaining_discount
             else:
-                line_discount = (line_total / gross_total * combo.discount_amount).quantize(Decimal("0.01"))
+                line_discount = (
+                    line_total / gross_total * combo.discount_amount
+                ).quantize(Decimal("0.01"))
                 remaining_discount -= line_discount
 
             discounted_line_total = max(line_total - line_discount, Decimal("0.00"))
-            unit_price = (discounted_line_total / combo_item.quantity).quantize(Decimal("0.01"))
+            unit_price = (discounted_line_total / combo_item.quantity).quantize(
+                Decimal("0.01")
+            )
         else:
             unit_price = combo_item.unit_price
 

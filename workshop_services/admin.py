@@ -10,7 +10,14 @@ class ServiceComboItemInline(admin.TabularInline):
 
 @admin.register(WorkshopService)
 class WorkshopServiceAdmin(admin.ModelAdmin):
-    list_display = ["code", "name", "category", "default_price", "estimated_minutes", "is_active"]
+    list_display = [
+        "code",
+        "name",
+        "category",
+        "default_price",
+        "estimated_minutes",
+        "is_active",
+    ]
     list_filter = ["is_active", "category"]
     search_fields = ["name", "code", "category"]
 

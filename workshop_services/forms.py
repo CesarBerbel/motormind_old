@@ -28,11 +28,19 @@ class WorkshopServiceForm(forms.ModelForm):
             "is_active",
         ]
         widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
-            "code": forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
-            "category": forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
+            "name": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "off"}
+            ),
+            "code": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "off"}
+            ),
+            "category": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "off"}
+            ),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
-            "estimated_minutes": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+            "estimated_minutes": forms.NumberInput(
+                attrs={"class": "form-control", "min": "0"}
+            ),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
@@ -58,8 +66,12 @@ class ServiceComboForm(forms.ModelForm):
             "is_active",
         ]
         widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
-            "code": forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
+            "name": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "off"}
+            ),
+            "code": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "off"}
+            ),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
@@ -82,7 +94,9 @@ class ServiceComboItemForm(forms.ModelForm):
         fields = ["service", "quantity", "unit_price"]
         widgets = {
             "service": forms.Select(attrs={"class": "form-select"}),
-            "quantity": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
+            "quantity": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.01", "min": "0.01"}
+            ),
         }
 
 
@@ -109,7 +123,9 @@ class AddCatalogServiceToOrderForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         initial=Decimal("1.00"),
-        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
+        widget=forms.NumberInput(
+            attrs={"class": "form-control", "step": "0.01", "min": "0.01"}
+        ),
     )
     unit_price = BRLDecimalField(
         label="Preço unitário",
@@ -122,7 +138,9 @@ class AddCatalogServiceToOrderForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["service"].queryset = WorkshopService.objects.filter(is_active=True).order_by("name")
+        self.fields["service"].queryset = WorkshopService.objects.filter(
+            is_active=True
+        ).order_by("name")
 
 
 class AddComboToOrderForm(forms.Form):
@@ -134,7 +152,11 @@ class AddComboToOrderForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["combo"].queryset = ServiceCombo.objects.filter(is_active=True).prefetch_related(
-            "items",
-            "items__service",
-        ).order_by("name")
+        self.fields["combo"].queryset = (
+            ServiceCombo.objects.filter(is_active=True)
+            .prefetch_related(
+                "items",
+                "items__service",
+            )
+            .order_by("name")
+        )
