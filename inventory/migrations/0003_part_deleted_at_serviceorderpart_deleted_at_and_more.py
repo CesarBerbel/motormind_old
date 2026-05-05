@@ -6,29 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("inventory", "0002_alter_part_location_serviceorderpart"),
+        ('inventory', '0002_alter_part_location_serviceorderpart'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name="part",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='part',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AddField(
-            model_name="serviceorderpart",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='serviceorderpart',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AddField(
-            model_name="stockmovement",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='stockmovement',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
     ]

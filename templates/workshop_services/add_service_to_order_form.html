@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - MotorMind{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-1">{{ page_title }}</h1>
+        <p class="text-muted mb-0">OS {{ service_order.display_number }} - {{ service_order.customer.name }}</p>
+    </div>
+    <a href="{% url 'service_orders:service_order_detail' service_order.pk %}" class="btn btn-outline-secondary">Voltar para OS</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Adicionar serviço</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -6,22 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("customers", "0004_customer_deleted_at_vehicle_deleted_at"),
+        ('customers', '0004_customer_deleted_at_vehicle_deleted_at'),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name="customer",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='customer',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
         migrations.AlterField(
-            model_name="vehicle",
-            name="deleted_at",
-            field=models.DateTimeField(
-                blank=True, db_index=True, null=True, verbose_name="Excluído em"
-            ),
+            model_name='vehicle',
+            name='deleted_at',
+            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
         ),
     ]
