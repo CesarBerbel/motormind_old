@@ -3,95 +3,40 @@
 
 {% block title %}
     Detalhes do cliente - Sistema de Oficina
-
-{% if crm_summary %}
-<div class="card shadow-sm mt-4">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h5 mb-0">CRM do cliente</h2>
-            <div class="d-flex gap-2">
-                <a href="{% url 'crm:interaction_create' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-primary">Registrar interação</a>
-                <a href="{% url 'crm:reminder_create' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-secondary">Criar lembrete</a>
-            </div>
-        </div>
-
-        <div class="row g-3">
-            <div class="col-lg-6">
-                <h3 class="h6">Últimas interações</h3>
-                {% for interaction in crm_summary.interactions %}
-                    <div class="border-bottom pb-2 mb-2">
-                        <strong>{{ interaction.subject }}</strong><br>
-                        <span class="text-muted small">{{ interaction.interaction_date|date:"d/m/Y H:i" }} · {{ interaction.get_interaction_type_display }}</span>
-                    </div>
-                {% empty %}
-                    <p class="text-muted">Nenhuma interação registrada.</p>
-                {% endfor %}
-            </div>
-            <div class="col-lg-3">
-                <h3 class="h6">Oportunidades abertas</h3>
-                {% for opportunity in crm_summary.open_opportunities %}
-                    <div class="border-bottom pb-2 mb-2">
-                        <strong>{{ opportunity.title }}</strong><br>
-                        <span class="text-muted small">R$ {{ opportunity.estimated_value }}</span>
-                    </div>
-                {% empty %}
-                    <p class="text-muted">Nenhuma oportunidade aberta.</p>
-                {% endfor %}
-            </div>
-            <div class="col-lg-3">
-                <h3 class="h6">Follow-ups pendentes</h3>
-                {% for reminder in crm_summary.pending_reminders %}
-                    <div class="border-bottom pb-2 mb-2">
-                        <strong>{{ reminder.title }}</strong><br>
-                        <span class="text-muted small">{{ reminder.due_date|date:"d/m/Y" }}</span>
-                    </div>
-                {% empty %}
-                    <p class="text-muted">Nenhum follow-up pendente.</p>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
 {% endblock %}
 
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h4 mb-1">
-            {{ customer.name }}
-        </h1>
-
-        <p class="text-muted mb-0">
-            Detalhes do cliente e veículos vinculados.
-        </p>
+        <h1 class="h4 mb-1">{{ customer.name }}</h1>
+        <p class="text-muted mb-0">Detalhes do cliente e veículos vinculados.</p>
     </div>
 
     {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
-        <div>
-            <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-outline-secondary">
-                Editar cliente
-            </a>
-
-            <a href="{% url 'customers:vehicle_create' %}" class="btn btn-primary">
-                Cadastrar veículo
-            </a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-outline-secondary">Editar cliente</a>
+            {% if customer.is_deleted or not customer.is_active %}
+                <a href="{% url 'customers:customer_restore' customer.pk %}" class="btn btn-success">Restaurar cliente</a>
+            {% else %}
+                <a href="{% url 'customers:customer_delete' customer.pk %}" class="btn btn-outline-danger">Inativar cliente</a>
+            {% endif %}
+            <a href="{% url 'customers:vehicle_create' %}" class="btn btn-primary">Cadastrar veículo</a>
         </div>
     {% endif %}
 </div>
 
-<div class="row g-3 mb-4">
+{% if customer.is_deleted or not customer.is_active %}
+    <div class="alert alert-warning">
+        Este cliente está inativo e não aparecerá nas listagens padrão do sistema.
+    </div>
+{% endif %}
 
+<div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card shadow-sm h-100">
             <div class="card-body">
-
-                <h2 class="h6">
-                    Dados do cliente
-                </h2>
-
+                <h2 class="h6">Dados do cliente</h2>
                 <p><strong>Telefone:</strong> {{ customer.phone }}</p>
                 <p><strong>Email:</strong> {{ customer.email|default:"Não informado" }}</p>
                 <p><strong>Documento:</strong> {{ customer.document|default:"Não informado" }}</p>
@@ -102,16 +47,14 @@
                 <p><strong>Bairro:</strong> {{ customer.neighborhood|default:"Não informado" }}</p>
                 <p><strong>Cidade/UF:</strong> {% if customer.city or customer.state %}{{ customer.city|default:"" }}{% if customer.city and customer.state %} / {% endif %}{{ customer.state|default:"" }}{% else %}Não informado{% endif %}</p>
                 <p><strong>Endereço completo:</strong> {{ customer.address|default:"Não informado" }}</p>
-
                 <p class="mb-0">
                     <strong>Situação:</strong>
-                    {% if customer.is_active %}
-                        <span class="badge text-bg-success">Ativo</span>
-                    {% else %}
+                    {% if customer.is_deleted or not customer.is_active %}
                         <span class="badge text-bg-secondary">Inativo</span>
+                    {% else %}
+                        <span class="badge text-bg-success">Ativo</span>
                     {% endif %}
                 </p>
-
             </div>
         </div>
     </div>
@@ -119,28 +62,16 @@
     <div class="col-md-6">
         <div class="card shadow-sm h-100">
             <div class="card-body">
-
-                <h2 class="h6">
-                    Observações
-                </h2>
-
-                <p class="mb-0">
-                    {{ customer.notes|default:"Nenhuma observação registrada." }}
-                </p>
-
+                <h2 class="h6">Observações</h2>
+                <p class="mb-0">{{ customer.notes|default:"Nenhuma observação registrada." }}</p>
             </div>
         </div>
     </div>
-
 </div>
 
 <div class="card shadow-sm">
     <div class="card-body">
-
-        <h2 class="h5 mb-3">
-            Veículos do cliente
-        </h2>
-
+        <h2 class="h5 mb-3">Veículos do cliente</h2>
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead>
@@ -150,10 +81,10 @@
                         <th>Modelo</th>
                         <th>Ano</th>
                         <th>Quilometragem</th>
+                        <th>Situação</th>
                         <th class="text-end">Ações</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     {% for vehicle in vehicles %}
                         <tr>
@@ -162,36 +93,37 @@
                             <td>{{ vehicle.model }}</td>
                             <td>{{ vehicle.year|default:"-" }}</td>
                             <td>{{ vehicle.mileage|default:"-" }}</td>
+                            <td>
+                                {% if vehicle.is_deleted or not vehicle.is_active %}
+                                    <span class="badge text-bg-secondary">Inativo</span>
+                                {% else %}
+                                    <span class="badge text-bg-success">Ativo</span>
+                                {% endif %}
+                            </td>
                             <td class="text-end">
                                 {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
-                                    <a href="{% url 'customers:vehicle_update' vehicle.pk %}" class="btn btn-sm btn-outline-secondary">
-                                        Editar
-                                    </a>
+                                    <a href="{% url 'customers:vehicle_update' vehicle.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                    {% if vehicle.is_deleted or not vehicle.is_active %}
+                                        <a href="{% url 'customers:vehicle_restore' vehicle.pk %}" class="btn btn-sm btn-success">Restaurar</a>
+                                    {% else %}
+                                        <a href="{% url 'customers:vehicle_delete' vehicle.pk %}" class="btn btn-sm btn-outline-danger">Inativar</a>
+                                    {% endif %}
                                 {% else %}
-                                    <span class="text-muted">
-                                        Somente visualização
-                                    </span>
+                                    <span class="text-muted">Somente visualização</span>
                                 {% endif %}
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                Nenhum veículo vinculado a este cliente.
-                            </td>
+                            <td colspan="7" class="text-center text-muted py-4">Nenhum veículo vinculado a este cliente.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-
-        <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
-            Voltar
-        </a>
-
+        <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">Voltar</a>
     </div>
 </div>
-
 
 {% if crm_summary %}
 <div class="card shadow-sm mt-4">
@@ -203,7 +135,6 @@
                 <a href="{% url 'crm:reminder_create' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-secondary">Criar lembrete</a>
             </div>
         </div>
-
         <div class="row g-3">
             <div class="col-lg-6">
                 <h3 class="h6">Últimas interações</h3>

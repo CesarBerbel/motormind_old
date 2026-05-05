@@ -5,6 +5,36 @@ from django.db import models
 from django.utils import timezone
 
 
+class SoftDeleteQuerySet(models.QuerySet):
+    """QuerySet with helpers for logical deletion."""
+
+    def delete(self):
+        return super().update(deleted_at=timezone.now())
+
+    def hard_delete(self):
+        return super().delete()
+
+    def alive(self):
+        return self.filter(deleted_at__isnull=True)
+
+    def deleted(self):
+        return self.filter(deleted_at__isnull=False)
+
+
+class SoftDeleteManager(models.Manager):
+    """Default manager that hides logically deleted records."""
+
+    def get_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db).alive()
+
+
+class SoftDeleteAllManager(models.Manager):
+    """Manager that returns active and logically deleted records."""
+
+    def get_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db)
+
+
 class TimeStampedModel(models.Model):
     """
     Abstract model for created_at and updated_at fields.
@@ -62,15 +92,20 @@ class SoftDeleteModel(models.Model):
     """
     Abstract soft delete behavior.
 
-    This does not physically remove the record. It marks deleted_at and
-    deactivates the record when the model also has is_active.
+    Calling delete() does not physically remove the record. The record receives
+    deleted_at and, when available, is_active=False. Use hard_delete() only for
+    intentional physical deletion.
     """
 
     deleted_at = models.DateTimeField(
         blank=True,
         null=True,
+        db_index=True,
         verbose_name="Excluído em",
     )
+
+    objects = SoftDeleteManager()
+    all_objects = SoftDeleteAllManager()
 
     class Meta:
         abstract = True
@@ -79,6 +114,12 @@ class SoftDeleteModel(models.Model):
     def is_deleted(self):
         return self.deleted_at is not None
 
+    def delete(self, using=None, keep_parents=False):
+        self.soft_delete(save=True)
+
+    def hard_delete(self, using=None, keep_parents=False):
+        return super().delete(using=using, keep_parents=keep_parents)
+
     def soft_delete(self, save=True):
         self.deleted_at = timezone.now()
 
@@ -86,7 +127,10 @@ class SoftDeleteModel(models.Model):
             self.is_active = False
 
         if save:
-            self.save()
+            update_fields = ["deleted_at"]
+            if hasattr(self, "is_active"):
+                update_fields.append("is_active")
+            self.save(update_fields=update_fields)
 
     def restore(self, save=True):
         self.deleted_at = None
@@ -95,7 +139,10 @@ class SoftDeleteModel(models.Model):
             self.is_active = True
 
         if save:
-            self.save()
+            update_fields = ["deleted_at"]
+            if hasattr(self, "is_active"):
+                update_fields.append("is_active")
+            self.save(update_fields=update_fields)
 
 
 class BaseModel(UUIDModel, TimeStampedModel, ActiveModel, SoftDeleteModel):
@@ -118,7 +165,7 @@ class BaseModel(UUIDModel, TimeStampedModel, ActiveModel, SoftDeleteModel):
         abstract = True
 
 
-class CompanySettings(TimeStampedModel):
+class CompanySettings(SoftDeleteModel, TimeStampedModel):
     """
     Stores the official workshop/company data used by the administrative area.
 

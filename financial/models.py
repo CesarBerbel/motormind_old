@@ -6,6 +6,8 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
 
+from core.models import SoftDeleteModel
+
 
 class PaymentMethod(models.TextChoices):
     """
@@ -41,7 +43,7 @@ class CashFlowType(models.TextChoices):
     EXPENSE = "expense", "Saída"
 
 
-class Receivable(models.Model):
+class Receivable(SoftDeleteModel):
     """
     Model that stores amounts to be received from service orders.
     """
@@ -178,7 +180,7 @@ class Receivable(models.Model):
             )
 
 
-class Payment(models.Model):
+class Payment(SoftDeleteModel):
     """
     Model that stores payments received for a receivable.
     """
@@ -245,7 +247,7 @@ class Payment(models.Model):
             )
 
 
-class Expense(models.Model):
+class Expense(SoftDeleteModel):
     """
     Model that stores workshop expenses.
     """
@@ -329,7 +331,7 @@ class Expense(models.Model):
             )
 
 
-class CashFlowEntry(models.Model):
+class CashFlowEntry(SoftDeleteModel):
     """
     Model that stores auditable cash flow entries.
     """

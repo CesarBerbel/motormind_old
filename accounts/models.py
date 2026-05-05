@@ -2,10 +2,12 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from core.models import SoftDeleteModel
+
 from .managers import CustomUserManager
 
 
-class CustomUser(AbstractUser):
+class CustomUser(SoftDeleteModel, AbstractUser):
     """
     Custom user model using email as the unique authentication field.
 

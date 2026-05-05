@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Restaurar cliente - Sistema de Oficina
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-success">
+            <div class="card-body">
+                <h1 class="h4 text-success">Restaurar cliente</h1>
+                <p>Deseja restaurar o cliente <strong>{{ customer.name }}</strong>?</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'customers:customer_list' %}?status=inativos" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success">Restaurar cliente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

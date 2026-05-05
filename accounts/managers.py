@@ -5,12 +5,19 @@ class CustomUserManager(BaseUserManager):
     """
     Custom manager for users that authenticate with email instead of username.
 
-    Creation policy:
-    - create_superuser creates only a pure superuser and must be used by the
-      Django management command createsuperuser;
-    - create_user creates an internal employee by default;
-    - create_customer_user creates a customer portal user.
+    The default queryset hides users removed with soft delete. Use
+    CustomUser.all_objects when an administrative recovery flow needs to see
+    logically deleted users.
     """
+
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+
+    # Creation policy:
+    # - create_superuser creates only a pure superuser and must be used by the
+    #   Django management command createsuperuser;
+    # - create_user creates an internal employee by default;
+    # - create_customer_user creates a customer portal user.
 
     def _create_user(self, email, password=None, **extra_fields):
         """

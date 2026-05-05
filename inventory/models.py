@@ -5,8 +5,10 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from core.models import SoftDeleteModel
 
-class Part(models.Model):
+
+class Part(SoftDeleteModel):
     """
     Model that stores parts available in workshop inventory.
     """
@@ -91,7 +93,7 @@ class Part(models.Model):
         return "Estoque normal"
 
 
-class StockMovement(models.Model):
+class StockMovement(SoftDeleteModel):
     """
     Model that stores inventory movement history.
     """
@@ -194,7 +196,7 @@ class StockMovement(models.Model):
                 )
 
 
-class ServiceOrderPart(models.Model):
+class ServiceOrderPart(SoftDeleteModel):
     """
     Model that links inventory parts to service orders.
     """

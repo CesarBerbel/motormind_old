@@ -3,8 +3,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils import timezone
 
+from core.models import SoftDeleteModel
 
-class AuditLog(models.Model):
+
+class AuditLog(SoftDeleteModel):
     """
     Registro central de auditoria do MotorMind.
 

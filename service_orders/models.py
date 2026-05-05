@@ -6,10 +6,11 @@ from django.db import models
 from django.db.models import F, Sum
 from django.utils import timezone
 
+from core.models import SoftDeleteModel
 from customers.models import Customer, Vehicle
 
 
-class ServiceOrder(models.Model):
+class ServiceOrder(SoftDeleteModel):
     """
     Model that stores workshop service orders.
     """
@@ -247,7 +248,7 @@ class ServiceOrder(models.Model):
         return get_service_order_financial_summary(self)["net_total"]
 
 
-class ServiceOrderHistory(models.Model):
+class ServiceOrderHistory(SoftDeleteModel):
     """
     Model that stores audit history for service order changes.
     """
@@ -299,7 +300,7 @@ class ServiceOrderHistory(models.Model):
         return f"OS #{self.service_order_id} - {self.field_name}"
 
 
-class ServiceOrderItem(models.Model):
+class ServiceOrderItem(SoftDeleteModel):
     """
     Model that stores parts and services linked to a service order.
     """
@@ -377,7 +378,7 @@ class ServiceOrderItem(models.Model):
         return self.quantity * self.unit_price
 
 
-class ServiceOrderNote(models.Model):
+class ServiceOrderNote(SoftDeleteModel):
     """
     Model that stores internal notes linked to service orders.
     """
@@ -438,7 +439,7 @@ class ServiceOrderNote(models.Model):
         return f"OS #{self.service_order_id} - {self.get_note_type_display()}"
 
 
-class ServiceOrderTimeEntry(models.Model):
+class ServiceOrderTimeEntry(SoftDeleteModel):
     """
     Model that stores mechanic time tracking entries for service orders.
     """
@@ -508,7 +509,7 @@ class ServiceOrderTimeEntry(models.Model):
         return end - self.started_at
 
 
-class ServiceOrderApproval(models.Model):
+class ServiceOrderApproval(SoftDeleteModel):
     """
     Model that stores the formal approved budget snapshot for a service order.
     """

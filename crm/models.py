@@ -3,11 +3,12 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from core.models import SoftDeleteModel
 from customers.models import Customer, Vehicle
 from service_orders.models import ServiceOrder
 
 
-class CustomerTag(models.Model):
+class CustomerTag(SoftDeleteModel):
     name = models.CharField(max_length=80, unique=True, verbose_name="Nome")
     color = models.CharField(max_length=20, blank=True, verbose_name="Cor CSS")
     is_active = models.BooleanField(default=True, verbose_name="Ativa")
@@ -23,7 +24,7 @@ class CustomerTag(models.Model):
         return self.name
 
 
-class CustomerInteraction(models.Model):
+class CustomerInteraction(SoftDeleteModel):
     class InteractionType(models.TextChoices):
         CALL = "call", "Ligação"
         WHATSAPP = "whatsapp", "WhatsApp"
@@ -108,7 +109,7 @@ class CustomerInteraction(models.Model):
         return f"{self.customer} - {self.subject}"
 
 
-class CustomerOpportunity(models.Model):
+class CustomerOpportunity(SoftDeleteModel):
     class Status(models.TextChoices):
         OPEN = "open", "Aberta"
         WON = "won", "Ganha"
@@ -178,7 +179,7 @@ class CustomerOpportunity(models.Model):
         return self.title
 
 
-class CustomerReminder(models.Model):
+class CustomerReminder(SoftDeleteModel):
     class Status(models.TextChoices):
         PENDING = "pending", "Pendente"
         DONE = "done", "Concluído"
@@ -236,7 +237,7 @@ class CustomerReminder(models.Model):
         return self.title
 
 
-class Campaign(models.Model):
+class Campaign(SoftDeleteModel):
     class CampaignType(models.TextChoices):
         POST_SALE = "post_sale", "Pós-venda"
         PREVENTIVE_MAINTENANCE = "preventive_maintenance", "Revisão preventiva"
@@ -298,7 +299,7 @@ class Campaign(models.Model):
         return self.name
 
 
-class CampaignAudience(models.Model):
+class CampaignAudience(SoftDeleteModel):
     campaign = models.ForeignKey(
         Campaign,
         on_delete=models.CASCADE,

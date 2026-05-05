@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from core.models import SoftDeleteModel
 from customers.models import Customer
 
 
@@ -31,7 +32,7 @@ class MessageStatus(models.TextChoices):
     CANCELED = "canceled", "Cancelada"
 
 
-class MessageProvider(models.Model):
+class MessageProvider(SoftDeleteModel):
     name = models.CharField(max_length=100, unique=True, verbose_name="Nome")
     channel = models.CharField(
         max_length=20, choices=MessageChannel.choices, verbose_name="Canal"
@@ -50,7 +51,7 @@ class MessageProvider(models.Model):
         return f"{self.name} ({self.get_channel_display()})"
 
 
-class MessageTemplate(models.Model):
+class MessageTemplate(SoftDeleteModel):
     name = models.CharField(max_length=120, verbose_name="Nome")
     code = models.SlugField(max_length=80, unique=True, verbose_name="Código")
     channel = models.CharField(
@@ -78,7 +79,7 @@ class MessageTemplate(models.Model):
         return f"{self.name} ({self.get_channel_display()})"
 
 
-class MessagePreference(models.Model):
+class MessagePreference(SoftDeleteModel):
     customer = models.OneToOneField(
         Customer,
         on_delete=models.CASCADE,
@@ -119,7 +120,7 @@ class MessagePreference(models.Model):
         return f"Preferências de {self.customer}"
 
 
-class MessageQueue(models.Model):
+class MessageQueue(SoftDeleteModel):
     customer = models.ForeignKey(
         Customer,
         on_delete=models.SET_NULL,
@@ -198,7 +199,7 @@ class MessageQueue(models.Model):
         return f"{self.get_channel_display()} para {self.recipient} - {self.get_status_display()}"
 
 
-class MessageLog(models.Model):
+class MessageLog(SoftDeleteModel):
     customer = models.ForeignKey(
         Customer,
         on_delete=models.SET_NULL,
@@ -267,7 +268,7 @@ class MessageLog(models.Model):
         return f"{self.get_channel_display()} para {self.recipient} - {self.get_status_display()}"
 
 
-class MessageEvent(models.Model):
+class MessageEvent(SoftDeleteModel):
     log = models.ForeignKey(
         MessageLog, on_delete=models.CASCADE, related_name="events", verbose_name="Log"
     )
@@ -284,7 +285,7 @@ class MessageEvent(models.Model):
         return f"{self.event_type} - {self.occurred_at:%d/%m/%Y %H:%M}"
 
 
-class MessageAttachment(models.Model):
+class MessageAttachment(SoftDeleteModel):
     queue_message = models.ForeignKey(
         MessageQueue,
         on_delete=models.CASCADE,
@@ -307,7 +308,7 @@ class MessageAttachment(models.Model):
         return self.original_name
 
 
-class MessageVariable(models.Model):
+class MessageVariable(SoftDeleteModel):
     code = models.SlugField(max_length=80, unique=True, verbose_name="Código")
     label = models.CharField(max_length=120, verbose_name="Nome exibido")
     description = models.TextField(blank=True, verbose_name="Descrição")

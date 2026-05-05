@@ -1,10 +1,11 @@
 from django.core.validators import RegexValidator
 from django.db import models
 
+from core.models import SoftDeleteModel
 from core.validators import only_digits, validate_document
 
 
-class Customer(models.Model):
+class Customer(SoftDeleteModel):
     """
     Model that stores workshop customer information.
     """
@@ -175,7 +176,7 @@ class Customer(models.Model):
         return self.name
 
 
-class Vehicle(models.Model):
+class Vehicle(SoftDeleteModel):
     """
     Model that stores vehicles linked to customers.
     """

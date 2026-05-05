@@ -4,6 +4,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils import timezone
 
+from core.models import SoftDeleteModel
+
 
 class AIUseCase(models.TextChoices):
     SERVICE_ORDER_DESCRIPTION = "service_order_description", "Descrição de OS"
@@ -30,7 +32,7 @@ class AIReviewStatus(models.TextChoices):
     EDITED = "edited", "Editada"
 
 
-class AIPromptTemplate(models.Model):
+class AIPromptTemplate(SoftDeleteModel):
     name = models.CharField("nome", max_length=120)
     code = models.SlugField("código", max_length=120)
     use_case = models.CharField("caso de uso", max_length=60, choices=AIUseCase.choices)
@@ -60,7 +62,7 @@ class AIPromptTemplate(models.Model):
         return f"{self.name} v{self.version}"
 
 
-class AIRequest(models.Model):
+class AIRequest(SoftDeleteModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name="usuário",
@@ -112,7 +114,7 @@ class AIRequest(models.Model):
         return f"IA #{self.pk} - {self.get_use_case_display()}"
 
 
-class AIResponse(models.Model):
+class AIResponse(SoftDeleteModel):
     request = models.OneToOneField(
         AIRequest,
         verbose_name="requisição",
@@ -136,7 +138,7 @@ class AIResponse(models.Model):
         return f"Resposta da {self.request}"
 
 
-class AIUsageLog(models.Model):
+class AIUsageLog(SoftDeleteModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name="usuário",
@@ -173,7 +175,7 @@ class AIUsageLog(models.Model):
         return f"{self.feature} - {self.get_status_display()}"
 
 
-class AIReview(models.Model):
+class AIReview(SoftDeleteModel):
     response = models.OneToOneField(
         AIResponse,
         verbose_name="resposta",
