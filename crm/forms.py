@@ -58,7 +58,7 @@ class CRMBaseModelForm(forms.ModelForm):
             self.fields["service_order"].required = False
 
     def _apply_bootstrap_widgets(self):
-        for field in self.fields.items():
+        for field in self.fields.values():
             widget = field.widget
             css_class = (
                 "form-check-input"

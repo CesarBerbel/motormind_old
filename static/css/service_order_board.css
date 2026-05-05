@@ -1,166 +1,385 @@
-
-.service-order-board-scroll {
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: visible;
-    padding-bottom: 1rem;
-    -webkit-overflow-scrolling: touch;
+.board-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 118px);
+    overflow: hidden;
 }
 
-.service-order-board-columns {
+.board-columns {
     display: flex;
     flex-wrap: nowrap;
-    gap: 1rem;
-    align-items: stretch;
-    min-width: max-content;
+    gap: 14px;
+    height: 100%;
+    padding: 14px 4px 14px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
-.service-order-board-column {
-    flex: 0 0 280px;
-    width: 280px;
-    max-width: 280px;
+.board-column {
+    display: flex;
+    flex-direction: column;
+    min-width: 292px;
+    max-width: 292px;
+    height: 100%;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid rgba(159, 127, 99, 0.18);
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(86, 70, 55, 0.07);
 }
 
-@media (min-width: 1400px) {
-    .service-order-board-column {
-        flex-basis: 300px;
-        width: 300px;
-        max-width: 300px;
-    }
+.board-column-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 11px 13px;
+    color: #5f564d;
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: #fffaf4;
+    border-bottom: 1px solid rgba(159, 127, 99, 0.16);
 }
 
-.service-order-board-column > .card {
-    min-height: 100%;
+.board-column-body {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
 }
 
-.service-order-dropzone {
-    min-height: 280px;
-    border: 2px dashed transparent;
-    border-radius: 0.5rem;
-    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+.board-card {
+    padding: 10px;
+    margin-bottom: 10px;
+    color: #3f3a34;
+    font-size: 0.83rem;
+    background: #ffffff;
+    border: 1px solid rgba(159, 127, 99, 0.15);
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(86, 70, 55, 0.06);
 }
 
-.service-order-dropzone.is-drag-over {
-    border-color: #0d6efd;
-    background-color: rgba(13, 110, 253, 0.08) !important;
+.board-card:hover {
+    border-color: rgba(159, 127, 99, 0.32);
+    box-shadow: 0 12px 26px rgba(86, 70, 55, 0.09);
 }
 
-.service-order-drop-hint {
-    display: none;
-    margin-bottom: 0.75rem;
-    padding: 0.5rem;
-    border-radius: 0.375rem;
-    font-size: 0.8rem;
-    color: #084298;
-    background-color: rgba(13, 110, 253, 0.12);
-    text-align: center;
-}
-
-.service-order-dropzone.is-drag-over .service-order-drop-hint,
-.service-order-is-dragging .service-order-drop-hint {
-    display: block;
-}
-
-.service-order-card {
-    cursor: grab;
-}
-
-.service-order-card:active {
-    cursor: grabbing;
-}
-
-.service-order-card.is-dragging {
-    opacity: 0.45;
-}
-
-.service-order-card.is-updating {
-    opacity: 0.65;
-    pointer-events: none;
-}
-
-.service-order-card.was-updated {
-    outline: 2px solid #198754;
-}
-
-.service-order-drag-handle {
-    cursor: grab;
-    user-select: none;
-}
-
-/* Altura reduzida para manter a barra horizontal sempre visível no quadro operacional. */
-.service-order-board-wrapper {
-    max-height: calc(100vh - 330px);
-}
-
-.service-order-board-scroll::-webkit-scrollbar,
-.workshop-agenda-scroll::-webkit-scrollbar {
-    height: 12px;
-}
-
-.service-order-board-scroll::-webkit-scrollbar-thumb,
-.workshop-agenda-scroll::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border: 3px solid #f8fafc;
-    border-radius: 999px;
-}
-
-.service-order-board-scroll::-webkit-scrollbar-track,
-.workshop-agenda-scroll::-webkit-scrollbar-track {
-    background: #f8fafc;
-    border-radius: 999px;
-}
-
-/* Agenda com o mesmo comportamento horizontal do quadro da oficina. */
+/* Agenda da oficina - rolagem horizontal e visual delicado */
 .workshop-agenda-wrapper {
-    height: clamp(360px, calc(100vh - 365px), 520px);
-    min-height: 360px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow: hidden;
 }
 
 .workshop-agenda-scroll {
     width: 100%;
-    height: 100%;
+    max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
-    padding-bottom: 14px;
-    scrollbar-gutter: stable;
-    -webkit-overflow-scrolling: touch;
+    padding: 4px 2px 16px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(159, 127, 99, 0.42) rgba(255, 250, 244, 0.86);
+}
+
+.workshop-agenda-scroll::-webkit-scrollbar {
+    height: 10px;
+}
+
+.workshop-agenda-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 250, 244, 0.86);
+    border-radius: 999px;
+}
+
+.workshop-agenda-scroll::-webkit-scrollbar-thumb {
+    background: rgba(159, 127, 99, 0.42);
+    border: 3px solid rgba(255, 250, 244, 0.86);
+    border-radius: 999px;
 }
 
 .workshop-agenda-columns {
-    display: flex;
+    display: inline-flex;
     flex-wrap: nowrap;
-    gap: 16px;
-    height: 100%;
+    align-items: stretch;
+    gap: 14px;
     min-width: max-content;
 }
 
 .workshop-agenda-column {
-    flex: 0 0 300px;
-    width: 300px;
-    height: 100%;
+    flex: 0 0 286px;
+    width: 286px;
+    min-width: 286px;
 }
 
 .workshop-agenda-column > .card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+    min-height: 420px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(159, 127, 99, 0.14);
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(86, 70, 55, 0.055);
+    overflow: hidden;
 }
 
-.workshop-agenda-column .card-header {
-    flex: 0 0 auto;
+.workshop-agenda-column .card-header,
+.workshop-agenda-column .card-header.bg-dark {
+    color: #665c52 !important;
+    background: linear-gradient(180deg, rgba(255, 250, 244, 0.94), rgba(250, 243, 235, 0.9)) !important;
+    border-bottom: 1px solid rgba(159, 127, 99, 0.13);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.015em;
 }
 
-.workshop-agenda-column .card-body {
-    flex: 1 1 auto;
+.workshop-agenda-column .card-header .badge,
+.workshop-agenda-column .card-header .text-bg-light {
+    color: #796b5f !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    border: 1px solid rgba(159, 127, 99, 0.14);
+}
+
+.workshop-agenda-column > .card > .card-body,
+.workshop-agenda-column > .card > .card-body.bg-light {
+    background: rgba(255, 252, 248, 0.72) !important;
+    padding: 12px;
+}
+
+.workshop-agenda-column > .card > .card-body > .card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(159, 127, 99, 0.12) !important;
+    border-radius: 16px;
+    box-shadow: 0 8px 18px rgba(86, 70, 55, 0.045) !important;
+}
+
+.workshop-agenda-column > .card > .card-body > .card:hover {
+    border-color: rgba(159, 127, 99, 0.24) !important;
+    box-shadow: 0 10px 22px rgba(86, 70, 55, 0.07) !important;
+}
+
+.workshop-agenda-column .card-body .card-body {
+    padding: 12px !important;
+}
+
+.workshop-agenda-column strong {
+    color: #4f4840;
+    font-weight: 700;
+}
+
+.workshop-agenda-column h2,
+.workshop-agenda-column .h6 {
+    color: #5d534a;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.workshop-agenda-column p,
+.workshop-agenda-column .small {
+    color: #81756a;
+    font-size: 0.74rem;
+    line-height: 1.38;
+}
+
+.workshop-agenda-column .badge {
+    border-radius: 999px;
+    padding: 0.32rem 0.52rem;
+    font-size: 0.66rem;
+    font-weight: 650;
+}
+
+.workshop-agenda-column .text-bg-secondary {
+    color: #6a6158 !important;
+    background: rgba(226, 216, 204, 0.72) !important;
+}
+
+.workshop-agenda-column .text-bg-danger {
+    color: #9b5d57 !important;
+    background: rgba(210, 126, 118, 0.16) !important;
+}
+
+.workshop-agenda-column .text-bg-warning {
+    color: #8a6f38 !important;
+    background: rgba(229, 190, 112, 0.22) !important;
+}
+
+.workshop-agenda-column .text-bg-success {
+    color: #5f7b6d !important;
+    background: rgba(137, 169, 153, 0.18) !important;
+}
+
+.workshop-agenda-column .btn-outline-primary {
+    color: #8f735d;
+    background: rgba(255, 250, 244, 0.7);
+    border-color: rgba(159, 127, 99, 0.26);
+}
+
+.workshop-agenda-column .btn-outline-primary:hover {
+    color: #ffffff;
+    background: #a0846e;
+    border-color: #a0846e;
+}
+
+@media (max-width: 767.98px) {
+    .workshop-agenda-column {
+        flex-basis: 260px;
+        width: 260px;
+        min-width: 260px;
+    }
+}
+
+/* Ajuste pontual: agenda mais baixa para caber melhor na tela */
+.workshop-agenda-column > .card {
+    min-height: clamp(300px, calc(100vh - 330px), 360px);
+}
+
+.workshop-agenda-column > .card > .card-body,
+.workshop-agenda-column > .card > .card-body.bg-light {
+    max-height: clamp(250px, calc(100vh - 390px), 310px);
     overflow-y: auto;
     overflow-x: hidden;
 }
 
-@media (max-height: 760px) {
-    .service-order-board-wrapper,
-    .workshop-agenda-wrapper {
-        height: 340px;
-        min-height: 340px;
-    }
+.workshop-agenda-column > .card > .card-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.workshop-agenda-column > .card > .card-body::-webkit-scrollbar-track {
+    background: rgba(255, 250, 244, 0.7);
+    border-radius: 999px;
+}
+
+.workshop-agenda-column > .card > .card-body::-webkit-scrollbar-thumb {
+    background: rgba(159, 127, 99, 0.32);
+    border: 2px solid rgba(255, 250, 244, 0.7);
+    border-radius: 999px;
+}
+
+/* Suavizacao visual dos cards do board sem alterar drag and drop, altura ou scroll horizontal */
+.service-order-board-column > .card {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(159, 127, 99, 0.14);
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(86, 70, 55, 0.055) !important;
+    overflow: hidden;
+}
+
+.service-order-board-column .card-header,
+.service-order-board-column .card-header.bg-dark {
+    color: #665c52 !important;
+    background: linear-gradient(180deg, rgba(255, 250, 244, 0.94), rgba(250, 243, 235, 0.9)) !important;
+    border-bottom: 1px solid rgba(159, 127, 99, 0.13);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.015em;
+}
+
+.service-order-board-column .card-header .badge,
+.service-order-board-column .card-header .text-bg-light {
+    color: #796b5f !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    border: 1px solid rgba(159, 127, 99, 0.14);
+}
+
+.service-order-dropzone,
+.service-order-board-column .card-body.bg-light.service-order-dropzone {
+    background: rgba(255, 252, 248, 0.72) !important;
+    padding: 12px;
+}
+
+.service-order-card.card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(159, 127, 99, 0.12) !important;
+    border-radius: 16px;
+    box-shadow: 0 8px 18px rgba(86, 70, 55, 0.045) !important;
+    color: #514941;
+    font-size: 0.8rem;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.service-order-card.card:hover {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(159, 127, 99, 0.24) !important;
+    box-shadow: 0 10px 22px rgba(86, 70, 55, 0.07) !important;
+}
+
+.service-order-card .card-body {
+    padding: 12px !important;
+}
+
+.service-order-card h2,
+.service-order-card .h6 {
+    color: #5d534a;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.service-order-card strong {
+    color: #4f4840;
+    font-weight: 700;
+}
+
+.service-order-card p,
+.service-order-card .small,
+.service-order-card .form-label {
+    color: #81756a;
+    font-size: 0.74rem;
+    line-height: 1.38;
+}
+
+.service-order-card .badge {
+    border-radius: 999px;
+    padding: 0.32rem 0.52rem;
+    font-size: 0.66rem;
+    font-weight: 650;
+}
+
+.service-order-card .text-bg-secondary,
+.service-order-status-badge.text-bg-secondary {
+    color: #6a6158 !important;
+    background: rgba(226, 216, 204, 0.72) !important;
+}
+
+.service-order-card .text-bg-danger,
+.service-order-status-badge.text-bg-danger {
+    color: #9b5d57 !important;
+    background: rgba(210, 126, 118, 0.16) !important;
+}
+
+.service-order-card .text-bg-warning {
+    color: #8a6f38 !important;
+    background: rgba(229, 190, 112, 0.22) !important;
+}
+
+.service-order-card .text-bg-success {
+    color: #5f7b6d !important;
+    background: rgba(137, 169, 153, 0.18) !important;
+}
+
+.service-order-card .form-select-sm {
+    color: #6a6158;
+    font-size: 0.76rem;
+    background-color: rgba(255, 252, 248, 0.9);
+    border-color: rgba(159, 127, 99, 0.2);
+    border-radius: 12px;
+}
+
+.service-order-card .btn-outline-primary {
+    color: #8f735d;
+    background: rgba(255, 250, 244, 0.7);
+    border-color: rgba(159, 127, 99, 0.26);
+}
+
+.service-order-card .btn-outline-primary:hover {
+    color: #ffffff;
+    background: #a0846e;
+    border-color: #a0846e;
+}
+
+.service-order-drag-handle {
+    color: #aa9a8c !important;
+}
+
+.service-order-drop-hint,
+.service-order-empty-message {
+    color: #9a8d80 !important;
 }

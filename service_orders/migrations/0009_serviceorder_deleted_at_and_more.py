@@ -6,38 +6,50 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('service_orders', '0008_service_order_state_machine'),
+        ("service_orders", "0008_service_order_state_machine"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='serviceorder',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="serviceorder",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='serviceorderapproval',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="serviceorderapproval",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='serviceorderhistory',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="serviceorderhistory",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='serviceorderitem',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="serviceorderitem",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='serviceordernote',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="serviceordernote",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
         migrations.AddField(
-            model_name='serviceordertimeentry',
-            name='deleted_at',
-            field=models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Excluído em'),
+            model_name="serviceordertimeentry",
+            name="deleted_at",
+            field=models.DateTimeField(
+                blank=True, db_index=True, null=True, verbose_name="Excluído em"
+            ),
         ),
     ]
