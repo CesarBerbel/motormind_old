@@ -121,13 +121,19 @@ def improve_problem_description_view(request):
 
     if not description:
         return JsonResponse(
-            {"success": False, "error": "Informe a descrição do problema antes de usar a IA."},
+            {
+                "success": False,
+                "error": "Informe a descrição do problema antes de usar a IA.",
+            },
             status=400,
         )
 
     if len(description) < 10:
         return JsonResponse(
-            {"success": False, "error": "A descrição está muito curta para ser melhorada com segurança."},
+            {
+                "success": False,
+                "error": "A descrição está muito curta para ser melhorada com segurança.",
+            },
             status=400,
         )
 
