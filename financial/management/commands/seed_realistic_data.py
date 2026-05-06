@@ -5,19 +5,14 @@ from decimal import Decimal
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from faker import Faker
 
 from customers.models import Customer, Vehicle
-from financial.models import (
-    CashFlowEntry,
-    Expense,
-    Payment,
-    PaymentMethod,
-    Receivable,
-)
+from financial.models import PaymentMethod
 from financial.services import (
     create_receivable_from_service_order,
     register_expense,
@@ -42,19 +37,16 @@ class Command(BaseCommand):
             action="store_true",
             help="Only populate data without deleting existing data.",
         )
-
         parser.add_argument(
             "--reset-and-seed",
             action="store_true",
             help="Delete data, recreate admin and populate data.",
         )
-
         parser.add_argument(
             "--reset-only",
             action="store_true",
             help="Delete data and recreate only admin user.",
         )
-
         parser.add_argument(
             "--orders",
             type=int,
@@ -93,7 +85,9 @@ class Command(BaseCommand):
         else:
             self.admin_user = self.get_or_create_admin_user()
 
+        self.ensure_default_groups()
         self.create_users_by_existing_groups()
+
         employees = self.create_employees()
         parts = self.create_parts()
 
@@ -115,39 +109,59 @@ class Command(BaseCommand):
 
     def reset_database(self):
         """
-        Delete development data and recreate admin user.
+        Delete development data in dependency-safe order and recreate admin user.
         """
         self.stdout.write(self.style.WARNING("Resetting database..."))
 
+        delete_order = [
+            # Financial children.
+            ("financial", "CashFlowEntry"),
+            ("financial", "Payment"),
+            ("financial", "Receivable"),
+            ("financial", "Expense"),
+            # Inventory/order integration.
+            ("inventory", "StockMovement"),
+            ("inventory", "PartStockMovement"),
+            ("inventory", "ServiceOrderPart"),
+            # Service order children.
+            ("service_orders", "ServiceOrderItem"),
+            ("service_orders", "ServiceOrderHistory"),
+            ("service_orders", "ServiceOrderNote"),
+            ("service_orders", "ServiceOrderTimeEntry"),
+            # Service orders.
+            ("service_orders", "ServiceOrder"),
+            # Extra inventory movement aliases.
+            ("inventory", "InventoryMovement"),
+            ("inventory", "Movement"),
+            ("inventory", "PartMovement"),
+            # Parts before lookup tables protected by FK.
+            ("inventory", "Part"),
+            ("service_orders", "Part"),
+            # Lookup tables after parts.
+            ("inventory", "PartBrand"),
+            ("inventory", "PartCategory"),
+            ("inventory", "Brand"),
+            ("inventory", "Category"),
+            # Optional legacy service models.
+            ("service_orders", "Employee"),
+            # Vehicles before customers.
+            ("customers", "Vehicle"),
+            ("vehicles", "Vehicle"),
+            ("customers", "Customer"),
+        ]
+
+        for app_label, model_name in delete_order:
+            self.delete_model_objects_if_exists(app_label, model_name)
+
         User = get_user_model()
 
-        CashFlowEntry.objects.all().delete()
-        Payment.objects.all().delete()
-        Receivable.objects.all().delete()
-        Expense.objects.all().delete()
-
-        # Delete dependent/child objects first to avoid FK protection errors.
-        self.delete_model_objects_if_exists("financial", "CashFlowEntry")
-        self.delete_model_objects_if_exists("financial", "Payment")
-        self.delete_model_objects_if_exists("financial", "Receivable")
-        self.delete_model_objects_if_exists("financial", "Expense")
-
-        self.delete_model_objects_if_exists("inventory", "PartStockMovement")
-        self.delete_model_objects_if_exists("inventory", "ServiceOrderPart")
-
-        ServiceOrderItem.objects.all().delete()
-        ServiceOrder.objects.all().delete()
-
-        self.delete_model_objects_if_exists("inventory", "Part")
-        self.delete_model_objects_if_exists("service_orders", "Part")
-        self.delete_model_objects_if_exists("service_orders", "Employee")
-
-        Vehicle.objects.all().delete()
-        Customer.objects.all().delete()
-
-        User.objects.all().delete()
+        self.delete_objects_referencing_model(User)
+        self.delete_model_objects_if_exists(
+            User._meta.app_label, User._meta.object_name
+        )
 
         self.admin_user = self.create_admin_user()
+        self.ensure_default_groups()
 
         self.stdout.write(self.style.SUCCESS("Database reset completed."))
 
@@ -160,11 +174,115 @@ class Command(BaseCommand):
         except LookupError:
             return
 
-        model_class.objects.all().delete()
+        queryset = model_class.objects.all()
+
+        if not queryset.exists():
+            return
+
+        try:
+            result = queryset.delete()
+        except ProtectedError as error:
+            protected_models = sorted(
+                {
+                    protected_object.__class__._meta.label
+                    for protected_object in error.protected_objects
+                }
+            )
+
+            raise CommandError(
+                f"Cannot delete {model_class._meta.label}. "
+                f"Protected by: {', '.join(protected_models)}"
+            ) from error
+
+        deleted_count = result[0] if isinstance(result, tuple) else result
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Deleted {deleted_count} object(s) from {model_class._meta.label}."
+            )
+        )
+
+    def delete_objects_referencing_model(self, target_model):
+        """
+        Delete objects from installed business models that directly reference target_model.
+
+        Only concrete FK/OneToOne fields are considered. Reverse relations and
+        many-to-many relations are ignored to avoid deleting auth groups.
+        """
+        ignored_models = {
+            "auth.Group",
+            "auth.Permission",
+            "contenttypes.ContentType",
+            target_model._meta.label,
+        }
+
+        for model_class in apps.get_models():
+            if model_class._meta.label in ignored_models:
+                continue
+
+            references_target = False
+
+            for field in model_class._meta.fields:
+                if not getattr(field, "is_relation", False):
+                    continue
+
+                if not getattr(field, "remote_field", None):
+                    continue
+
+                if field.remote_field.model == target_model:
+                    references_target = True
+                    break
+
+            if not references_target:
+                continue
+
+            queryset = model_class.objects.all()
+
+            if not queryset.exists():
+                continue
+
+            try:
+                result = queryset.delete()
+            except ProtectedError as error:
+                protected_models = sorted(
+                    {
+                        protected_object.__class__._meta.label
+                        for protected_object in error.protected_objects
+                    }
+                )
+
+                raise CommandError(
+                    f"Cannot delete objects from {model_class._meta.label} "
+                    f"before deleting {target_model._meta.label}. "
+                    f"Protected by: {', '.join(protected_models)}"
+                ) from error
+
+            deleted_count = result[0] if isinstance(result, tuple) else result
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Deleted {deleted_count} object(s) from {model_class._meta.label} "
+                    f"because it references {target_model._meta.label}."
+                )
+            )
 
     # =========================
-    # USERS
+    # USERS / GROUPS
     # =========================
+
+    def ensure_default_groups(self):
+        """
+        Ensure default role groups exist before creating group users.
+        """
+        group_names = [
+            "Administrador",
+            "Atendente",
+            "Mecanico",
+            "Financeiro",
+        ]
+
+        for group_name in group_names:
+            Group.objects.get_or_create(name=group_name)
 
     def create_admin_user(self):
         """
@@ -197,11 +315,6 @@ class Command(BaseCommand):
     def normalize_group_slug_for_email(self, group_name):
         """
         Convert a group name into a deterministic ASCII slug safe for email local-part.
-
-        Examples:
-        - "Mecânico" becomes "mecanico";
-        - "Financeiro" becomes "financeiro";
-        - "Atendente Geral" becomes "atendente_geral".
         """
         normalized = unicodedata.normalize("NFKD", group_name)
         ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
@@ -266,8 +379,6 @@ class Command(BaseCommand):
                 user.last_name = last_name
                 user.is_active = True
                 user.is_staff = False
-
-                # Keep seeded group users deterministic and testable.
                 user.set_password("123456")
                 user.save()
                 user.groups.clear()
@@ -278,15 +389,6 @@ class Command(BaseCommand):
     # =========================
     # HELPERS
     # =========================
-
-    def get_service_order_part_model(self):
-        """
-        Return inventory ServiceOrderPart model if it exists.
-        """
-        try:
-            return apps.get_model("inventory", "ServiceOrderPart")
-        except LookupError:
-            return None
 
     def has_field(self, model_class, field_name):
         """
@@ -314,6 +416,16 @@ class Command(BaseCommand):
 
         return random.choice(choices)
 
+    def get_first_existing_field(self, model_class, field_names):
+        """
+        Return the first field name that exists in the model.
+        """
+        for field_name in field_names:
+            if self.has_field(model_class, field_name):
+                return field_name
+
+        return None
+
     def get_employee_model(self):
         """
         Return Employee model if it exists.
@@ -335,6 +447,15 @@ class Command(BaseCommand):
             except LookupError:
                 return None
 
+    def get_service_order_part_model(self):
+        """
+        Return inventory ServiceOrderPart model if it exists.
+        """
+        try:
+            return apps.get_model("inventory", "ServiceOrderPart")
+        except LookupError:
+            return None
+
     def get_part_stock_movement_model(self):
         """
         Return PartStockMovement model if it exists.
@@ -344,15 +465,80 @@ class Command(BaseCommand):
         except LookupError:
             return None
 
-    def get_first_existing_field(self, model_class, field_names):
+    def get_stock_movement_model(self):
         """
-        Return the first field name that exists in the model.
+        Return StockMovement model if it exists.
         """
-        for field_name in field_names:
-            if self.has_field(model_class, field_name):
-                return field_name
+        try:
+            return apps.get_model("inventory", "StockMovement")
+        except LookupError:
+            return None
 
-        return None
+    def get_or_create_random_part_brand(self, preferred_name=None):
+        """
+        Return a random or preferred PartBrand instance.
+        """
+        PartBrand = apps.get_model("inventory", "PartBrand")
+
+        brand_names = [
+            "Bosch",
+            "Mobil",
+            "Mann",
+            "Tecfil",
+            "Fras-le",
+            "Moura",
+            "Gates",
+            "SKF",
+            "Urba",
+            "Nakata",
+            "Schaeffler",
+            "Mahle",
+            "NGK",
+            "Denso",
+            "Monroe",
+            "TRW",
+            "Cobreq",
+            "Varga",
+            "Magneti Marelli",
+            "Continental",
+        ]
+
+        brand_name = preferred_name or random.choice(brand_names)
+
+        brand, _created = PartBrand.objects.get_or_create(
+            name=brand_name,
+            defaults={"is_active": True},
+        )
+
+        return brand
+
+    def get_or_create_random_part_category(self, preferred_name=None):
+        """
+        Return a random or preferred PartCategory instance.
+        """
+        PartCategory = apps.get_model("inventory", "PartCategory")
+
+        category_names = [
+            "Freio",
+            "Motor",
+            "Suspensão",
+            "Filtros",
+            "Lubrificantes",
+            "Elétrica",
+            "Arrefecimento",
+            "Correias",
+            "Bateria",
+            "Direção",
+        ]
+
+        category_name = preferred_name or random.choice(category_names)
+
+        category, _created = PartCategory.objects.get_or_create(
+            name=category_name,
+            defaults={"is_active": True},
+        )
+
+        return category
 
     # =========================
     # CPF
@@ -444,6 +630,9 @@ class Command(BaseCommand):
             if self.has_field(Employee, "cpf"):
                 data["cpf"] = self.generate_unique_employee_cpf(Employee)
 
+            if self.has_field(Employee, "document"):
+                data["document"] = self.generate_unique_employee_cpf(Employee)
+
             if self.has_field(Employee, "role"):
                 data["role"] = self.get_choice_value(
                     Employee,
@@ -482,11 +671,11 @@ class Command(BaseCommand):
             return []
 
         parts_data = [
-            # Above minimum stock
             (
                 "Óleo sintético 5W30",
                 "OIL-5W30",
                 "Mobil",
+                "Lubrificantes",
                 Decimal("32.00"),
                 Decimal("48.00"),
                 Decimal("60.00"),
@@ -495,7 +684,8 @@ class Command(BaseCommand):
             (
                 "Filtro de óleo",
                 "FILTER-OIL-001",
-                "Tecfil",
+                "Mann",
+                "Filtros",
                 Decimal("25.00"),
                 Decimal("42.00"),
                 Decimal("40.00"),
@@ -505,16 +695,17 @@ class Command(BaseCommand):
                 "Filtro de ar",
                 "FILTER-AIR-001",
                 "Tecfil",
+                "Filtros",
                 Decimal("34.00"),
                 Decimal("58.00"),
                 Decimal("35.00"),
                 Decimal("10.00"),
             ),
-            # Below minimum stock
             (
                 "Jogo de pastilhas dianteiras",
                 "BRAKE-PAD-FRONT",
                 "Fras-le",
+                "Freio",
                 Decimal("120.00"),
                 Decimal("190.00"),
                 Decimal("3.00"),
@@ -524,26 +715,27 @@ class Command(BaseCommand):
                 "Fluido de freio DOT 4",
                 "BRAKE-FLUID-DOT4",
                 "Bosch",
+                "Freio",
                 Decimal("31.00"),
                 Decimal("52.00"),
                 Decimal("4.00"),
                 Decimal("12.00"),
             ),
-            # Equal to minimum stock
             (
                 "Bateria 60Ah",
                 "BATTERY-60AH",
                 "Moura",
+                "Bateria",
                 Decimal("320.00"),
                 Decimal("440.00"),
                 Decimal("5.00"),
                 Decimal("5.00"),
             ),
-            # More normal parts
             (
                 "Kit correia dentada",
                 "TIMING-BELT-KIT",
                 "Gates",
+                "Correias",
                 Decimal("290.00"),
                 Decimal("430.00"),
                 Decimal("10.00"),
@@ -553,6 +745,7 @@ class Command(BaseCommand):
                 "Tensor da correia",
                 "BELT-TENSIONER",
                 "SKF",
+                "Correias",
                 Decimal("105.00"),
                 Decimal("165.00"),
                 Decimal("15.00"),
@@ -562,6 +755,7 @@ class Command(BaseCommand):
                 "Bomba d'água",
                 "WATER-PUMP",
                 "Urba",
+                "Arrefecimento",
                 Decimal("170.00"),
                 Decimal("250.00"),
                 Decimal("10.00"),
@@ -571,6 +765,7 @@ class Command(BaseCommand):
                 "Par de bieletas",
                 "STABILIZER-LINK-PAIR",
                 "Nakata",
+                "Suspensão",
                 Decimal("95.00"),
                 Decimal("155.00"),
                 Decimal("18.00"),
@@ -599,7 +794,8 @@ class Command(BaseCommand):
         for (
             name,
             code,
-            brand,
+            brand_name,
+            category_name,
             cost_price,
             sale_price,
             current_stock,
@@ -614,7 +810,24 @@ class Command(BaseCommand):
                 defaults["description"] = name
 
             if self.has_field(Part, "brand"):
-                defaults["brand"] = brand
+                brand_field = Part._meta.get_field("brand")
+
+                if brand_field.is_relation:
+                    defaults["brand"] = self.get_or_create_random_part_brand(
+                        preferred_name=brand_name
+                    )
+                else:
+                    defaults["brand"] = brand_name
+
+            if self.has_field(Part, "category"):
+                category_field = Part._meta.get_field("category")
+
+                if category_field.is_relation:
+                    defaults["category"] = self.get_or_create_random_part_category(
+                        preferred_name=category_name
+                    )
+                else:
+                    defaults["category"] = category_name
 
             if self.has_field(Part, "cost_price"):
                 defaults["cost_price"] = cost_price
@@ -633,6 +846,12 @@ class Command(BaseCommand):
 
             if minimum_stock_field:
                 defaults[minimum_stock_field] = minimum_stock
+
+            if self.has_field(Part, "unit"):
+                defaults["unit"] = "un"
+
+            if self.has_field(Part, "location"):
+                defaults["location"] = f"Prateleira {random.choice(['A1', 'B2', 'C3'])}"
 
             if self.has_field(Part, "is_active"):
                 defaults["is_active"] = True
@@ -659,7 +878,7 @@ class Command(BaseCommand):
 
     def find_part_by_sku(self, parts, sku):
         """
-        Find part by internal_code (real field in inventory.Part).
+        Find part by internal code, sku or code.
         """
         for part in parts:
             if hasattr(part, "internal_code") and part.internal_code == sku:
@@ -674,7 +893,7 @@ class Command(BaseCommand):
         return None
 
     # =========================
-    # Peças das ordens de serviço
+    # SERVICE ORDER PARTS
     # =========================
 
     def create_inventory_service_order_part_if_possible(
@@ -686,9 +905,9 @@ class Command(BaseCommand):
         """
         Create inventory ServiceOrderPart record correctly.
         """
-        ServiceOrderPart = self.get_service_order_part_model()
+        ServiceOrderPartModel = self.get_service_order_part_model()
 
-        if not ServiceOrderPart:
+        if not ServiceOrderPartModel:
             return None
 
         unit_price = getattr(
@@ -698,21 +917,39 @@ class Command(BaseCommand):
         )
 
         if not unit_price or unit_price <= Decimal("0.00"):
-            unit_price = Decimal("10.00")  # fallback
+            unit_price = Decimal("10.00")
 
         quantity = quantity or Decimal("1.00")
 
-        data = {
-            "service_order": service_order,
-            "part": part,
-            "quantity": quantity,
-            "unit_price": unit_price,
-            "created_by": self.admin_user,
-            "status": "used",  # mais realista que reserved
-            "discount": Decimal("0.00"),
-        }
+        data = {}
 
-        return ServiceOrderPart.objects.create(**data)
+        if self.has_field(ServiceOrderPartModel, "service_order"):
+            data["service_order"] = service_order
+
+        if self.has_field(ServiceOrderPartModel, "part"):
+            data["part"] = part
+
+        if self.has_field(ServiceOrderPartModel, "quantity"):
+            data["quantity"] = quantity
+
+        if self.has_field(ServiceOrderPartModel, "unit_price"):
+            data["unit_price"] = unit_price
+
+        if self.has_field(ServiceOrderPartModel, "created_by"):
+            data["created_by"] = self.admin_user
+
+        if self.has_field(ServiceOrderPartModel, "status"):
+            data["status"] = self.get_choice_value(
+                ServiceOrderPartModel,
+                "status",
+                ["used", "reserved"],
+                "used",
+            )
+
+        if self.has_field(ServiceOrderPartModel, "discount"):
+            data["discount"] = Decimal("0.00")
+
+        return ServiceOrderPartModel.objects.create(**data)
 
     # =========================
     # CUSTOMERS AND VEHICLES
@@ -775,6 +1012,9 @@ class Command(BaseCommand):
             if self.has_field(Customer, "email"):
                 customer_data["email"] = email
 
+            if self.has_field(Customer, "is_active"):
+                customer_data["is_active"] = True
+
             customer = Customer.objects.create(**customer_data)
             customers.append(customer)
 
@@ -798,6 +1038,9 @@ class Command(BaseCommand):
 
                 if self.has_field(Vehicle, "plate"):
                     vehicle_data["plate"] = plate
+
+                if self.has_field(Vehicle, "is_active"):
+                    vehicle_data["is_active"] = True
 
                 Vehicle.objects.create(**vehicle_data)
 
@@ -1077,39 +1320,44 @@ class Command(BaseCommand):
         quantity,
     ):
         """
-        Create stock movement record if PartStockMovement exists.
+        Create stock movement record if StockMovement or PartStockMovement exists.
         """
-        PartStockMovement = self.get_part_stock_movement_model()
+        StockMovementModel = (
+            self.get_stock_movement_model() or self.get_part_stock_movement_model()
+        )
 
-        if not PartStockMovement:
+        if not StockMovementModel:
             return
 
         movement_data = {}
 
-        if self.has_field(PartStockMovement, "part"):
+        if self.has_field(StockMovementModel, "part"):
             movement_data["part"] = part
 
-        if self.has_field(PartStockMovement, "service_order"):
+        if self.has_field(StockMovementModel, "service_order"):
             movement_data["service_order"] = service_order
 
-        if self.has_field(PartStockMovement, "service_order_item"):
+        if self.has_field(StockMovementModel, "service_order_item"):
             movement_data["service_order_item"] = service_order_item
 
-        if self.has_field(PartStockMovement, "movement_type"):
+        if self.has_field(StockMovementModel, "movement_type"):
             movement_data["movement_type"] = self.get_choice_value(
-                PartStockMovement,
+                StockMovementModel,
                 "movement_type",
                 ["out"],
                 "out",
             )
 
-        if self.has_field(PartStockMovement, "quantity"):
+        if self.has_field(StockMovementModel, "quantity"):
             movement_data["quantity"] = quantity
 
-        if self.has_field(PartStockMovement, "created_by"):
+        if self.has_field(StockMovementModel, "created_by"):
             movement_data["created_by"] = self.admin_user
 
-        PartStockMovement.objects.create(**movement_data)
+        if self.has_field(StockMovementModel, "reason"):
+            movement_data["reason"] = "Baixa por ordem de serviço seed."
+
+        StockMovementModel.objects.create(**movement_data)
 
     def decrease_part_stock_if_possible(self, part, quantity):
         """

@@ -10,7 +10,32 @@ from .models import Part, PartBrand, PartCategory, ServiceOrderPart, StockMoveme
 class PartForm(forms.ModelForm):
     """
     Form to create and update inventory parts.
+    Accepts brand and category as text and converts them to related model instances.
     """
+
+    brand = forms.CharField(
+        label="Marca",
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Ex: Bosch",
+                "autocomplete": "off",
+            }
+        ),
+    )
+
+    category = forms.CharField(
+        label="Categoria",
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Ex: Freio, Motor, Suspensão",
+                "autocomplete": "off",
+            }
+        ),
+    )
 
     cost_price = BRLDecimalField(
         label="Preço de custo",
@@ -54,99 +79,60 @@ class PartForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "placeholder": "Ex: Pastilha de freio dianteira",
-                    "autocomplete": "off",
                 }
             ),
             "internal_code": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: BRK-001",
-                    "autocomplete": "off",
-                }
+                attrs={"class": "form-control", "placeholder": "Ex: BRK-001"}
             ),
             "barcode": forms.TextInput(
                 attrs={
                     "class": "form-control",
                     "placeholder": "Código de barras, se houver",
-                    "autocomplete": "off",
-                }
-            ),
-            "brand": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
-            "category": forms.Select(
-                attrs={
-                    "class": "form-select",
                 }
             ),
             "unit": forms.TextInput(
                 attrs={
                     "class": "form-control",
                     "placeholder": "Ex: un, par, litro, kit",
-                    "autocomplete": "off",
                 }
             ),
             "current_stock": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "min": "0",
-                    "placeholder": "Ex: 10",
-                }
+                attrs={"class": "form-control", "step": "0.01", "min": "0"}
             ),
             "minimum_stock": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "min": "0",
-                    "placeholder": "Ex: 3",
-                }
+                attrs={"class": "form-control", "step": "0.01", "min": "0"}
             ),
             "location": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: Prateleira A1",
-                    "autocomplete": "off",
-                }
+                attrs={"class": "form-control", "placeholder": "Ex: Prateleira A1"}
             ),
-            "is_active": forms.CheckboxInput(
-                attrs={
-                    "class": "form-check-input",
-                }
-            ),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
-        labels = {
-            "name": "Nome da peça",
-            "internal_code": "Código interno",
-            "barcode": "Código de barras",
-            "brand": "Marca",
-            "category": "Categoria",
-            "unit": "Unidade",
-            "current_stock": "Estoque atual",
-            "minimum_stock": "Estoque mínimo",
-            "location": "Localização",
-            "is_active": "Peça ativa",
-        }
+    def clean_brand(self):
+        brand_name = (self.cleaned_data.get("brand") or "").strip()
 
-        help_texts = {
-            "internal_code": "Código único usado internamente para localizar a peça.",
-            "current_stock": "Quantidade disponível no estoque no momento do cadastro.",
-            "minimum_stock": "Quando o estoque atual ficar igual ou abaixo deste valor, a peça será considerada crítica.",
-        }
+        if not brand_name:
+            return None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["brand"].queryset = PartBrand.objects.filter(
-            is_active=True
-        ).order_by("name")
-        self.fields["category"].queryset = PartCategory.objects.filter(
-            is_active=True
-        ).order_by("name")
-        self.fields["brand"].empty_label = "Selecione a marca"
-        self.fields["category"].empty_label = "Selecione a categoria"
+        brand, _created = PartBrand.objects.get_or_create(
+            name=brand_name,
+            defaults={"is_active": True},
+        )
+
+        return brand
+
+    def clean_category(self):
+        category_name = (self.cleaned_data.get("category") or "").strip()
+
+        if not category_name:
+            return None
+
+        category, _created = PartCategory.objects.get_or_create(
+            name=category_name,
+            defaults={"is_active": True},
+        )
+
+        return category
 
     def clean_cost_price(self):
         return self.cleaned_data.get("cost_price") or Decimal("0.00")

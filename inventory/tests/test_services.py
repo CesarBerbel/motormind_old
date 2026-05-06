@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
-from inventory.models import Part, StockMovement
+from inventory.models import Part, PartBrand, PartCategory, StockMovement
 from inventory.services import (
     adjust_stock,
     create_stock_entry,
@@ -35,11 +35,14 @@ def part():
     Create part for inventory service tests.
     """
     # Create an initial part with 10 units in stock[cite: 22]
+    category = PartCategory.objects.get_or_create(name="Freio")[0]
+    brand, _ = PartBrand.objects.get_or_create(name="Mann")
+
     return Part.objects.create(
         name="Filtro de óleo",
         internal_code="FLT-001",
-        brand="Mann",
-        category="Motor",
+        brand=brand,
+        category=category,
         unit="un",
         cost_price=Decimal("30.00"),
         sale_price=Decimal("60.00"),
