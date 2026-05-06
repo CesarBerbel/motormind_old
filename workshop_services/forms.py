@@ -8,8 +8,36 @@ from workshop_services.models import (
     ServiceCombo,
     ServiceComboItem,
     WorkshopService,
+    WorkshopServiceCategory,
     WorkshopServicePart,
 )
+
+
+COMPACT_TEXT_ATTRS = {
+    "class": "form-control form-control-sm",
+    "autocomplete": "off",
+}
+COMPACT_SELECT_ATTRS = {"class": "form-select form-select-sm"}
+COMPACT_NUMBER_ATTRS = {"class": "form-control form-control-sm"}
+
+
+def compact_money_widget(placeholder="Ex: R$ 150,00"):
+    widget = money_widget(placeholder)
+    widget.attrs["class"] = "form-control form-control-sm money-input"
+    return widget
+
+
+class WorkshopServiceCategoryForm(forms.ModelForm):
+    class Meta:
+        model = WorkshopServiceCategory
+        fields = ["name", "description", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs=COMPACT_TEXT_ATTRS),
+            "description": forms.Textarea(
+                attrs={"class": "form-control form-control-sm", "rows": 3}
+            ),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
 
 
 class WorkshopServiceForm(forms.ModelForm):
@@ -18,7 +46,7 @@ class WorkshopServiceForm(forms.ModelForm):
         min_value=Decimal("0.00"),
         max_digits=10,
         decimal_places=2,
-        widget=money_widget("Ex: R$ 180,00"),
+        widget=compact_money_widget("Ex: R$ 180,00"),
     )
 
     class Meta:
@@ -33,21 +61,24 @@ class WorkshopServiceForm(forms.ModelForm):
             "is_active",
         ]
         widgets = {
-            "name": forms.TextInput(
-                attrs={"class": "form-control", "autocomplete": "off"}
+            "name": forms.TextInput(attrs=COMPACT_TEXT_ATTRS),
+            "code": forms.TextInput(attrs=COMPACT_TEXT_ATTRS),
+            "category": forms.Select(attrs=COMPACT_SELECT_ATTRS),
+            "description": forms.Textarea(
+                attrs={"class": "form-control form-control-sm", "rows": 3}
             ),
-            "code": forms.TextInput(
-                attrs={"class": "form-control", "autocomplete": "off"}
-            ),
-            "category": forms.TextInput(
-                attrs={"class": "form-control", "autocomplete": "off"}
-            ),
-            "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
             "estimated_minutes": forms.NumberInput(
-                attrs={"class": "form-control", "min": "0"}
+                attrs={**COMPACT_NUMBER_ATTRS, "min": "0"}
             ),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = WorkshopServiceCategory.objects.filter(
+            is_active=True
+        ).order_by("name")
+        self.fields["category"].required = False
 
 
 class WorkshopServicePartForm(forms.ModelForm):
@@ -57,16 +88,21 @@ class WorkshopServicePartForm(forms.ModelForm):
         max_digits=10,
         decimal_places=2,
         required=False,
-        widget=money_widget("Vazio = preço de venda da peça"),
+        widget=compact_money_widget("Vazio = preço de venda da peça"),
     )
 
     class Meta:
         model = WorkshopServicePart
         fields = ["part", "quantity", "unit_price", "is_active"]
         widgets = {
-            "part": forms.Select(attrs={"class": "form-select"}),
+            "part": forms.Select(attrs={"class": "form-select form-select-sm"}),
             "quantity": forms.NumberInput(
-                attrs={"class": "form-control", "step": "0.01", "min": "0.01"}
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "step": "0.01",
+                    "min": "0.01",
+                    "inputmode": "decimal",
+                }
             ),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
@@ -76,7 +112,7 @@ WorkshopServicePartFormSet = inlineformset_factory(
     WorkshopService,
     WorkshopServicePart,
     form=WorkshopServicePartForm,
-    extra=1,
+    extra=0,
     can_delete=True,
 )
 
@@ -89,7 +125,7 @@ class ServiceComboForm(forms.ModelForm):
         decimal_places=2,
         required=False,
         initial=Decimal("0.00"),
-        widget=money_widget("Ex: R$ 50,00"),
+        widget=compact_money_widget("Ex: R$ 50,00"),
     )
 
     class Meta:
@@ -102,13 +138,11 @@ class ServiceComboForm(forms.ModelForm):
             "is_active",
         ]
         widgets = {
-            "name": forms.TextInput(
-                attrs={"class": "form-control", "autocomplete": "off"}
+            "name": forms.TextInput(attrs=COMPACT_TEXT_ATTRS),
+            "code": forms.TextInput(attrs=COMPACT_TEXT_ATTRS),
+            "description": forms.Textarea(
+                attrs={"class": "form-control form-control-sm", "rows": 3}
             ),
-            "code": forms.TextInput(
-                attrs={"class": "form-control", "autocomplete": "off"}
-            ),
-            "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
@@ -122,16 +156,21 @@ class ServiceComboItemForm(forms.ModelForm):
         min_value=Decimal("0.00"),
         max_digits=10,
         decimal_places=2,
-        widget=money_widget("Ex: R$ 120,00"),
+        widget=compact_money_widget("Ex: R$ 120,00"),
     )
 
     class Meta:
         model = ServiceComboItem
         fields = ["service", "quantity", "unit_price"]
         widgets = {
-            "service": forms.Select(attrs={"class": "form-select"}),
+            "service": forms.Select(attrs={"class": "form-select form-select-sm"}),
             "quantity": forms.NumberInput(
-                attrs={"class": "form-control", "step": "0.01", "min": "0.01"}
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "step": "0.01",
+                    "min": "0.01",
+                    "inputmode": "decimal",
+                }
             ),
         }
 
@@ -140,7 +179,7 @@ ServiceComboItemFormSet = inlineformset_factory(
     ServiceCombo,
     ServiceComboItem,
     form=ServiceComboItemForm,
-    extra=1,
+    extra=0,
     can_delete=True,
     min_num=1,
     validate_min=True,

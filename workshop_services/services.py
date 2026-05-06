@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from inventory.models import ServiceOrderPart
+from inventory.services import reserve_stock
 from service_orders.models import ServiceOrder, ServiceOrderItem
 
 
@@ -31,74 +33,92 @@ def validate_combo_has_items(combo):
         raise ValidationError("O combo precisa ter pelo menos um serviço ativo.")
 
 
+def create_service_order_item_with_default_parts(
+    *,
+    service_order,
+    service,
+    quantity,
+    unit_price,
+    created_by,
+    description_prefix="",
+):
+    service_order_item = ServiceOrderItem.objects.create(
+        service_order=service_order,
+        item_type=ServiceOrderItem.ItemType.SERVICE,
+        description=f"{description_prefix}{service.code} - {service.name}",
+        quantity=quantity,
+        unit_price=unit_price,
+    )
+
+    default_parts = list(
+        service.default_parts.select_related("part").filter(is_active=True)
+    )
+
+    for default_part in default_parts:
+        total_part_quantity = default_part.quantity * quantity
+        part_unit_price = default_part.effective_unit_price
+
+        reserve_stock(
+            part=default_part.part,
+            quantity=total_part_quantity,
+            created_by=created_by,
+            reason=(
+                f"Reserva automática da peça {default_part.part.internal_code} "
+                f"ao adicionar o serviço {service.code} na OS {service_order.display_number}."
+            ),
+            service_order=service_order,
+        )
+
+        ServiceOrderPart.objects.create(
+            service_order=service_order,
+            service_order_item=service_order_item,
+            part=default_part.part,
+            quantity=total_part_quantity,
+            unit_price=part_unit_price,
+            discount=Decimal("0.00"),
+            status=ServiceOrderPart.Status.RESERVED,
+            created_by=created_by,
+        )
+
+    return service_order_item
+
+
 @transaction.atomic
 def add_catalog_service_to_order(
     *,
     service_order,
-    catalog_service=None,
-    service=None,
-    quantity=Decimal("1.00"),
-    discount=Decimal("0.00"),
-    created_by=None,
+    service,
+    quantity,
+    unit_price=None,
+    created_by,
 ):
-    """
-    Add a catalog service to a service order using the catalog default price.
+    validate_order_can_receive_services(service_order)
+    validate_active_service(service)
 
-    Accepts both catalog_service and service for backward compatibility with
-    older tests/views.
-    """
-    catalog_service = catalog_service or service
-
-    if catalog_service is None:
-        raise ValueError("Informe o serviço do catálogo.")
-
-    quantity = quantity or Decimal("1.00")
-    discount = discount or Decimal("0.00")
+    quantity = Decimal(str(quantity))
 
     if quantity <= Decimal("0.00"):
-        raise ValueError("A quantidade deve ser maior que zero.")
+        raise ValidationError("A quantidade deve ser maior que zero.")
 
-    if discount < Decimal("0.00"):
-        raise ValueError("O desconto não pode ser negativo.")
-
-    unit_price = catalog_service.default_price
-    subtotal = quantity * unit_price
-
-    if discount > subtotal:
-        raise ValueError("O desconto não pode ser maior que o subtotal.")
-
-    service_code = getattr(catalog_service, "internal_code", None) or getattr(
-        catalog_service,
-        "code",
-        "",
-    )
-
-    service_name = getattr(catalog_service, "name", "")
-
-    if service_code:
-        description = f"{service_code} - {service_name}"
+    if unit_price in [None, ""]:
+        unit_price = service.default_price
     else:
-        description = service_name
+        unit_price = Decimal(str(unit_price))
 
-    item_data = {
-        "service_order": service_order,
-        "item_type": "service",
-        "description": description,
-        "quantity": quantity,
-        "unit_price": unit_price,
-    }
+    if unit_price < Decimal("0.00"):
+        raise ValidationError("O preço unitário não pode ser negativo.")
 
-    if any(field.name == "discount" for field in ServiceOrderItem._meta.fields):
-        item_data["discount"] = discount
-
-    if any(field.name == "created_by" for field in ServiceOrderItem._meta.fields):
-        item_data["created_by"] = created_by
-
-    return ServiceOrderItem.objects.create(**item_data)
+    return create_service_order_item_with_default_parts(
+        service_order=service_order,
+        service=service,
+        quantity=quantity,
+        unit_price=unit_price,
+        created_by=created_by,
+    )
 
 
 @transaction.atomic
-def add_combo_to_order(*, service_order, combo):
+def add_combo_to_order(*, service_order, combo, created_by):
     validate_order_can_receive_services(service_order)
     validate_active_combo(combo)
     validate_combo_has_items(combo)
@@ -136,15 +156,13 @@ def add_combo_to_order(*, service_order, combo):
             unit_price = combo_item.unit_price
 
         created_items.append(
-            ServiceOrderItem.objects.create(
+            create_service_order_item_with_default_parts(
                 service_order=service_order,
-                item_type=ServiceOrderItem.ItemType.SERVICE,
-                description=(
-                    f"Combo {combo.code} - {combo.name}: "
-                    f"{combo_item.service.code} - {combo_item.service.name}"
-                ),
+                service=combo_item.service,
                 quantity=combo_item.quantity,
                 unit_price=unit_price,
+                created_by=created_by,
+                description_prefix=f"Combo {combo.code} - {combo.name}: ",
             )
         )
 

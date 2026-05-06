@@ -1,76 +1,140 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - MotorMind{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h1 class="h4 mb-1">{{ page_title }}</h1>
-        <p class="text-muted mb-0">Cadastre o serviço e as peças padrão que serão adicionadas automaticamente à OS.</p>
+        <p class="text-muted mb-0">Cadastre o serviço e as peças padrão adicionadas automaticamente na OS.</p>
     </div>
-    <a href="{% url 'workshop_services:service_catalog_list' %}" class="btn btn-outline-secondary">Voltar</a>
+    <a href="{% url 'workshop_services:service_catalog_list' %}" class="btn btn-sm btn-outline-secondary">Voltar</a>
 </div>
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        <form method="post" novalidate>
-            {% csrf_token %}
+<form method="post" novalidate>
+    {% csrf_token %}
 
-            <h2 class="h5 mb-3">Dados do serviço</h2>
-            {{ form.as_p }}
+    <div class="card shadow-sm mb-3">
+        <div class="card-header py-2">
+            <h2 class="h6 mb-0">Dados do serviço</h2>
+        </div>
+        <div class="card-body">
+            <div class="row g-2 align-items-start">
+                <div class="col-12 col-md-5">
+                    <label for="{{ form.name.id_for_label }}" class="form-label small fw-semibold">{{ form.name.label }}</label>
+                    {{ form.name }}
+                    {{ form.name.errors }}
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="{{ form.code.id_for_label }}" class="form-label small fw-semibold">{{ form.code.label }}</label>
+                    {{ form.code }}
+                    {{ form.code.errors }}
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label for="{{ form.category.id_for_label }}" class="form-label small fw-semibold mb-2">{{ form.category.label }}</label>
+                        <a href="{% url 'workshop_services:category_create' %}" class="small">Nova</a>
+                    </div>
+                    {{ form.category }}
+                    {{ form.category.errors }}
+                </div>
+                <div class="col-6 col-md-2 pt-md-4">
+                    <div class="form-check mt-md-1">
+                        {{ form.is_active }}
+                        <label for="{{ form.is_active.id_for_label }}" class="form-check-label small">{{ form.is_active.label }}</label>
+                    </div>
+                    {{ form.is_active.errors }}
+                </div>
 
-            <hr class="my-4">
+                <div class="col-6 col-md-2">
+                    <label for="{{ form.default_price.id_for_label }}" class="form-label small fw-semibold">{{ form.default_price.label }}</label>
+                    {{ form.default_price }}
+                    {{ form.default_price.errors }}
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="{{ form.estimated_minutes.id_for_label }}" class="form-label small fw-semibold">{{ form.estimated_minutes.label }}</label>
+                    {{ form.estimated_minutes }}
+                    {{ form.estimated_minutes.errors }}
+                </div>
+                <div class="col-12 col-md-8">
+                    <label for="{{ form.description.id_for_label }}" class="form-label small fw-semibold">{{ form.description.label }}</label>
+                    {{ form.description }}
+                    {{ form.description.errors }}
+                </div>
+            </div>
 
-            <h2 class="h5 mb-1">Peças padrão do serviço</h2>
-            <p class="text-muted">
-                As peças ativas abaixo serão reservadas automaticamente quando este serviço for adicionado a uma OS.
-            </p>
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mt-3">{{ form.non_field_errors }}</div>
+            {% endif %}
+        </div>
+    </div>
 
+    <div class="card shadow-sm">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="h6 mb-0">Peças padrão do serviço</h2>
+                <p class="text-muted small mb-0">Os inlines ficam maiores para facilitar seleção de peça, quantidade e valor.</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add-formset-row="service-parts-formset">
+                + Adicionar peça
+            </button>
+        </div>
+        <div class="card-body">
             {{ formset.management_form }}
 
             <div class="table-responsive">
-                <table class="table table-sm align-middle">
+                <table class="table table-sm align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Peça</th>
-                            <th style="width: 160px;">Quantidade</th>
-                            <th style="width: 180px;">Preço unitário</th>
-                            <th style="width: 100px;">Ativa</th>
-                            <th style="width: 100px;">Excluir</th>
+                            <th style="min-width: 320px;">Peça</th>
+                            <th style="width: 150px;">Quantidade</th>
+                            <th style="width: 220px;">Preço unitário</th>
+                            <th style="width: 90px;">Ativa</th>
+                            <th style="width: 90px;">Excluir</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="service-parts-formset" data-prefix="{{ formset.prefix }}">
                         {% for part_form in formset %}
-                            <tr>
+                            <tr class="formset-row">
                                 {% for hidden in part_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <td>{{ part_form.part }}{{ part_form.part.errors }}</td>
                                 <td>{{ part_form.quantity }}{{ part_form.quantity.errors }}</td>
                                 <td>{{ part_form.unit_price }}{{ part_form.unit_price.errors }}</td>
-                                <td>{{ part_form.is_active }}{{ part_form.is_active.errors }}</td>
-                                <td>
-                                    {% if part_form.DELETE %}
-                                        {{ part_form.DELETE }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
+                                <td class="text-center">{{ part_form.is_active }}{{ part_form.is_active.errors }}</td>
+                                <td class="text-center">{% if part_form.DELETE %}{{ part_form.DELETE }}{% endif %}</td>
                             </tr>
                             {% if part_form.non_field_errors %}
-                                <tr>
-                                    <td colspan="5" class="text-danger small">{{ part_form.non_field_errors }}</td>
-                                </tr>
+                                <tr><td colspan="5" class="text-danger small">{{ part_form.non_field_errors }}</td></tr>
                             {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
 
-            {% if formset.non_form_errors %}
-                <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
-            {% endif %}
+            <template id="service-parts-formset-empty">
+                <tr class="formset-row">
+                    {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <td>{{ formset.empty_form.part }}</td>
+                    <td>{{ formset.empty_form.quantity }}</td>
+                    <td>{{ formset.empty_form.unit_price }}</td>
+                    <td class="text-center">{{ formset.empty_form.is_active }}</td>
+                    <td class="text-center">{% if formset.empty_form.DELETE %}{{ formset.empty_form.DELETE }}{% endif %}</td>
+                </tr>
+            </template>
 
-            <button type="submit" class="btn btn-primary">{{ button_text }}</button>
-        </form>
+            {% if formset.non_form_errors %}
+                <div class="alert alert-danger mt-3">{{ formset.non_form_errors }}</div>
+            {% endif %}
+        </div>
     </div>
-</div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+        <a href="{% url 'workshop_services:service_catalog_list' %}" class="btn btn-sm btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-sm btn-primary">{{ button_text }}</button>
+    </div>
+</form>
+
+<script src="{% static 'js/brl_money_mask.js' %}"></script>
+<script src="{% static 'js/dynamic_formset.js' %}"></script>
 {% endblock %}

@@ -60,6 +60,7 @@ def test_add_catalog_service_to_order_uses_default_price(service_order):
         service_order=service_order,
         service=service,
         quantity=Decimal("2.00"),
+        created_by=service_order.created_by,
     )
 
     assert item.item_type == ServiceOrderItem.ItemType.SERVICE
@@ -100,7 +101,11 @@ def test_add_combo_to_order_creates_service_items_with_discount(service_order):
         unit_price=Decimal("50.00"),
     )
 
-    items = add_combo_to_order(service_order=service_order, combo=combo)
+    items = add_combo_to_order(
+        service_order=service_order,
+        combo=combo,
+        created_by=service_order.created_by,
+    )
 
     assert len(items) == 2
     assert service_order.items.count() == 2

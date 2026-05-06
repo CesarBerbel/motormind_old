@@ -4,8 +4,16 @@ from workshop_services.models import (
     ServiceCombo,
     ServiceComboItem,
     WorkshopService,
+    WorkshopServiceCategory,
     WorkshopServicePart,
 )
+
+
+@admin.register(WorkshopServiceCategory)
+class WorkshopServiceCategoryAdmin(admin.ModelAdmin):
+    list_display = ["name", "is_active", "created_at", "updated_at"]
+    list_filter = ["is_active"]
+    search_fields = ["name", "description"]
 
 
 class WorkshopServicePartInline(admin.TabularInline):
@@ -29,7 +37,7 @@ class WorkshopServiceAdmin(admin.ModelAdmin):
         "is_active",
     ]
     list_filter = ["is_active", "category"]
-    search_fields = ["name", "code", "category"]
+    search_fields = ["name", "code", "category__name"]
     inlines = [WorkshopServicePartInline]
 
 

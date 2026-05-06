@@ -8,6 +8,26 @@ from django.db.models import F, Sum
 from core.models import SoftDeleteModel
 
 
+class WorkshopServiceCategory(SoftDeleteModel):
+    """
+    Independent category catalog for workshop services.
+    """
+
+    name = models.CharField(max_length=80, unique=True, verbose_name="Nome")
+    description = models.TextField(blank=True, null=True, verbose_name="Descrição")
+    is_active = models.BooleanField(default=True, verbose_name="Ativa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criada em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizada em")
+
+    class Meta:
+        verbose_name = "Categoria de serviço"
+        verbose_name_plural = "Categorias de serviços"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class WorkshopService(SoftDeleteModel):
     """
     Catalog item for services sold by the workshop.
@@ -19,8 +39,10 @@ class WorkshopService(SoftDeleteModel):
         unique=True,
         verbose_name="Código interno",
     )
-    category = models.CharField(
-        max_length=80,
+    category = models.ForeignKey(
+        WorkshopServiceCategory,
+        on_delete=models.PROTECT,
+        related_name="services",
         blank=True,
         null=True,
         verbose_name="Categoria",
@@ -119,9 +141,7 @@ class WorkshopServicePart(SoftDeleteModel):
         super().clean()
 
         if self.part_id and not self.part.is_active:
-            raise ValidationError(
-                {"part": "Não é possível vincular uma peça inativa ao serviço."}
-            )
+            raise ValidationError({"part": "Não é possível vincular uma peça inativa ao serviço."})
 
 
 class ServiceCombo(SoftDeleteModel):
