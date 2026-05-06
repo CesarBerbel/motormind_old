@@ -6,6 +6,17 @@ app_name = "inventory"
 
 
 urlpatterns = [
+    # =========================================================
+    # DASHBOARD DO ESTOQUE
+    # =========================================================
+    path(
+        "",
+        part_views.dashboard_view,
+        name="dashboard",
+    ),
+    # =========================================================
+    # MARCAS
+    # =========================================================
     path(
         "marcas/",
         part_views.brand_list_view,
@@ -21,6 +32,9 @@ urlpatterns = [
         part_views.brand_update_view,
         name="brand_update",
     ),
+    # =========================================================
+    # CATEGORIAS
+    # =========================================================
     path(
         "categorias/",
         part_views.category_list_view,
@@ -36,6 +50,9 @@ urlpatterns = [
         part_views.category_update_view,
         name="category_update",
     ),
+    # =========================================================
+    # PEÇAS
+    # =========================================================
     path(
         "pecas/",
         part_views.part_list_view,
@@ -67,6 +84,22 @@ urlpatterns = [
         name="stock_movement_create",
     ),
     path(
+        "pecas/autocomplete/",
+        part_views.part_autocomplete,
+        name="part_autocomplete",
+    ),
+    # =========================================================
+    # PEDIDOS DE COMPRA
+    # =========================================================
+    path(
+        "pedidos-compra/",
+        part_views.purchase_order_list_view,
+        name="purchase_order_list",
+    ),
+    # =========================================================
+    # PEÇAS DA ORDEM DE SERVIÇO
+    # =========================================================
+    path(
         "ordens/<int:service_order_pk>/pecas/adicionar/",
         service_order_part_views.service_order_part_add_view,
         name="service_order_part_add",
@@ -86,5 +119,4 @@ urlpatterns = [
         service_order_part_views.service_order_part_return_view,
         name="service_order_part_return",
     ),
-    path("pecas/autocomplete/", part_views.part_autocomplete, name="part_autocomplete"),
 ]

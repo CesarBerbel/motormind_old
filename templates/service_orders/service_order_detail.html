@@ -379,7 +379,8 @@
                 <thead>
                     <tr>
                         <th>Peça</th>
-                        <th>Quantidade</th>
+                        <th>Quantidade solicitada</th>
+                        <th>Reservada</th>
                         <th>Preço unitário</th>
                         <th>Desconto</th>
                         <th>Total</th>
@@ -397,6 +398,10 @@
 
                             <td>
                                 {{ inventory_part.quantity }}
+                            </td>
+
+                            <td>
+                                {{ inventory_part.reserved_quantity }}
                             </td>
 
                             <td>
@@ -430,6 +435,13 @@
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                                     Cancelar reserva
+                                                </button>
+                                            </form>
+                                        {% elif inventory_part.status == "waiting_purchase" %}
+                                            <form method="post" action="{% url 'inventory:service_order_part_cancel' service_order.pk inventory_part.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    Cancelar solicitação
                                                 </button>
                                             </form>
                                         {% elif inventory_part.status == "used" %}
@@ -501,7 +513,8 @@
                     <tr>
                         <th>Tipo</th>
                         <th>Descrição</th>
-                        <th>Quantidade</th>
+                        <th>Quantidade solicitada</th>
+                        <th>Reservada</th>
                         <th>Preço unitário</th>
                         <th>Total</th>
                         <th class="text-end">Ações</th>

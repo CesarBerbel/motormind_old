@@ -159,14 +159,44 @@ def ensure_service_order_can_change_financial_data(service_order, old_instance):
             )
 
 
+@transaction.atomic
 def create_service_order_from_form(form, created_by):
     """
-    Create a service order from a valid form.
+    Create a service order from a valid form and attach optional catalog items.
     """
+    from workshop_services.services import (
+        add_catalog_service_to_order,
+        add_combo_to_order,
+    )
+
     service_order = form.save(commit=False)
     service_order.created_by = created_by
+
+    if service_order.order_type in [
+        ServiceOrder.OrderType.WARRANTY,
+        ServiceOrder.OrderType.RETURN,
+    ]:
+        service_order.warranty_approved_by = created_by
+        service_order.warranty_approved_at = timezone.now()
+
     service_order = apply_finished_at_by_status(service_order)
     service_order.save()
+
+    for catalog_service in form.cleaned_data.get("catalog_services", []):
+        add_catalog_service_to_order(
+            service_order=service_order,
+            service=catalog_service,
+            quantity=Decimal("1.00"),
+            unit_price=None,
+            created_by=created_by,
+        )
+
+    for combo in form.cleaned_data.get("service_combos", []):
+        add_combo_to_order(
+            service_order=service_order,
+            combo=combo,
+            created_by=created_by,
+        )
 
     log_event(
         action=AuditLog.Action.SERVICE_ORDER_OPENED,

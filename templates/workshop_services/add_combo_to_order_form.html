@@ -16,6 +16,12 @@
         <form method="post" novalidate>
             {% csrf_token %}
             {{ form.as_p }}
+            {% if form.quantity.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.quantity.errors|striptags }}
+                </div>
+            {% endif %}
+            </div>
             <div class="alert alert-info">
                 Ao adicionar um combo, os serviços são lançados como itens de serviço na OS. O desconto do combo é rateado nos preços dos itens para manter o cálculo financeiro da OS consistente.
             </div>

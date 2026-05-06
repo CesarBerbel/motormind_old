@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+{% load group_tags %}
+
+{% block title %}Dashboard do estoque - MotorMind{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Dashboard do estoque</h1>
+            <p class="text-muted mb-0">
+                Visão gerencial de peças, saldos, compras automáticas, movimentações e alertas críticos.
+            </p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-primary">
+                <i class="bi bi-box-seam me-1"></i>
+                Peças
+            </a>
+
+            <a href="{% url 'inventory:critical_parts' %}" class="btn btn-outline-danger">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Críticas
+            </a>
+
+            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-warning">
+                <i class="bi bi-cart-plus me-1"></i>
+                Pedidos de compra
+            </a>
+
+            {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                <a href="{% url 'inventory:part_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>
+                    Nova peça
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small">Peças ativas</div>
+                            <div class="display-6 fw-semibold">
+                                {{ stock_totals.total_parts|default:0 }}
+                            </div>
+                        </div>
+                        <span class="badge text-bg-primary">
+                            <i class="bi bi-box"></i>
+                        </span>
+                    </div>
+
+                    <div class="text-muted small mt-2">
+                        Inativas: {{ inactive_parts_count|default:0 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <a href="{% url 'inventory:critical_parts' %}" class="card shadow-sm h-100 border-0 text-decoration-none">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small">Peças críticas/baixo estoque</div>
+                            <div class="display-6 fw-semibold text-danger">
+                                {{ low_stock_count|default:0 }}
+                            </div>
+                        </div>
+                        <span class="badge text-bg-danger">
+                            <i class="bi bi-exclamation-octagon"></i>
+                        </span>
+                    </div>
+
+                    <div class="text-muted small mt-2">
+                        Clique para ver prioridades e sugestão de compra.
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <a href="{% url 'inventory:purchase_order_list' %}?status=open" class="card shadow-sm h-100 border-0 text-decoration-none">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small">Pedidos de compra abertos</div>
+                            <div class="display-6 fw-semibold text-warning">
+                                {{ purchase_order_counts.open_count|default:0 }}
+                            </div>
+                        </div>
+                        <span class="badge text-bg-warning">
+                            <i class="bi bi-cart-plus"></i>
+                        </span>
+                    </div>
+
+                    <div class="text-muted small mt-2">
+                        Qtd. pendente: {{ purchase_order_counts.pending_quantity|default:"0,00" }}
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small">Valor de venda em estoque</div>
+                            <div class="h2 fw-semibold mb-0">
+                                R$ {{ stock_totals.stock_sale_value|floatformat:2 }}
+                            </div>
+                        </div>
+                        <span class="badge text-bg-success">
+                            <i class="bi bi-currency-dollar"></i>
+                        </span>
+                    </div>
+
+                    <div class="text-muted small mt-2">
+                        Custo estimado: R$ {{ stock_totals.stock_cost_value|floatformat:2 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-12 col-xl-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="h5 mb-0">Peças em alerta</h2>
+                        <p class="text-muted small mb-0">
+                            Itens abaixo ou iguais ao estoque mínimo, ordenados por prioridade.
+                        </p>
+                    </div>
+
+                    <a href="{% url 'inventory:critical_parts' %}" class="btn btn-sm btn-outline-danger">
+                        Ver todas
+                    </a>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Peça</th>
+                                <th>Estoque</th>
+                                <th>Mínimo</th>
+                                <th>Prioridade</th>
+                                <th>Sugestão</th>
+                                {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                                    <th class="text-end">Ação</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for row in critical_parts %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ row.part.name }}</strong><br>
+                                        <span class="text-muted small">
+                                            {{ row.part.internal_code }}
+                                        </span>
+                                    </td>
+
+                                    <td>{{ row.part.current_stock }}</td>
+                                    <td>{{ row.part.minimum_stock }}</td>
+
+                                    <td>
+                                        <span class="badge text-bg-{{ row.priority.css_class }}">
+                                            {{ row.priority.label }}
+                                        </span>
+                                    </td>
+
+                                    <td>{{ row.suggestion_quantity }}</td>
+
+                                    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                                        <td class="text-end">
+                                            <a href="{% url 'inventory:stock_movement_create' row.part.pk %}" class="btn btn-sm btn-outline-success">
+                                                Entrada
+                                            </a>
+                                        </td>
+                                    {% endif %}
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        Nenhuma peça crítica no momento.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Resumo operacional</h2>
+                </div>
+
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Quantidade total em estoque</span>
+                        <strong>{{ stock_totals.total_stock_quantity|default:"0,00" }}</strong>
+                    </div>
+
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Reservas de OS</span>
+                        <strong>{{ service_order_part_counts.reserved_count|default:0 }}</strong>
+                    </div>
+
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Itens aguardando compra</span>
+                        <strong>{{ service_order_part_counts.waiting_purchase_count|default:0 }}</strong>
+                    </div>
+
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Quantidade faltante em OS</span>
+                        <strong>{{ service_order_part_counts.pending_purchase_quantity|default:"0,00" }}</strong>
+                    </div>
+
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Compras solicitadas</span>
+                        <strong>{{ purchase_order_counts.ordered_count|default:0 }}</strong>
+                    </div>
+
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Compras recebidas</span>
+                        <strong>{{ purchase_order_counts.received_count|default:0 }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="h5 mb-0">Pedidos de compra recentes</h2>
+                        <p class="text-muted small mb-0">
+                            Abertos automaticamente por falta de estoque em OS.
+                        </p>
+                    </div>
+
+                    <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-sm btn-outline-warning">
+                        Abrir lista
+                    </a>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Peça</th>
+                                <th>OS</th>
+                                <th>Qtd.</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for purchase_order in recent_purchase_orders %}
+                                <tr>
+                                    <td>{{ purchase_order.part.name }}</td>
+
+                                    <td>
+                                        <a href="{% url 'service_orders:service_order_detail' purchase_order.service_order.pk %}">
+                                            {{ purchase_order.service_order.display_number }}
+                                        </a>
+                                    </td>
+
+                                    <td>{{ purchase_order.requested_quantity }}</td>
+
+                                    <td>
+                                        <span class="badge text-bg-secondary">
+                                            {{ purchase_order.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        Nenhum pedido de compra gerado.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Últimas movimentações</h2>
+                    <p class="text-muted small mb-0">
+                        Entradas, saídas, reservas, perdas, ajustes e devoluções.
+                    </p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Peça</th>
+                                <th>Tipo</th>
+                                <th>Qtd.</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for movement in recent_movements %}
+                                <tr>
+                                    <td>{{ movement.created_at|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ movement.part.name }}</td>
+                                    <td>{{ movement.get_movement_type_display }}</td>
+                                    <td>{{ movement.quantity }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        Nenhuma movimentação registrada.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row g-3">
+
+        <div class="col-12 col-xl-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Estoque por categoria</h2>
+                    <p class="text-muted small mb-0">
+                        Quantidade, valor de venda e alertas por agrupamento.
+                    </p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Categoria</th>
+                                <th>Peças</th>
+                                <th>Baixo estoque</th>
+                                <th>Qtd. em estoque</th>
+                                <th>Valor venda</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for row in category_rows %}
+                                <tr>
+                                    <td>{{ row.category__name|default:"Sem categoria" }}</td>
+                                    <td>{{ row.parts_count }}</td>
+
+                                    <td>
+                                        {% if row.low_stock_count %}
+                                            <span class="badge text-bg-danger">
+                                                {{ row.low_stock_count }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge text-bg-success">
+                                                0
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>{{ row.stock_quantity }}</td>
+                                    <td>R$ {{ row.stock_sale_value|floatformat:2 }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        Nenhuma categoria com peças ativas.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Movimentações por tipo</h2>
+                    <p class="text-muted small mb-0">
+                        Contadores históricos para auditoria rápida.
+                    </p>
+                </div>
+
+                <div class="card-body">
+                    <div class="row g-3">
+
+                        <div class="col-6">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="text-muted small">Entradas</div>
+                                <div class="h3 mb-0">
+                                    {{ movement_counts.entries_count|default:0 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-6">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="text-muted small">Saídas/reservas/perdas</div>
+                                <div class="h3 mb-0">
+                                    {{ movement_counts.exits_count|default:0 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-6">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="text-muted small">Devoluções/liberações</div>
+                                <div class="h3 mb-0">
+                                    {{ movement_counts.returns_count|default:0 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-6">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="text-muted small">Ajustes</div>
+                                <div class="h3 mb-0">
+                                    {{ movement_counts.adjustments_count|default:0 }}
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <hr>
+
+                    <div class="alert alert-info mb-0">
+                        <strong>Regra atual:</strong>
+                        quando uma OS pede mais peças do que o estoque disponível,
+                        o sistema mantém a solicitação e abre pedido de compra para a quantidade faltante.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

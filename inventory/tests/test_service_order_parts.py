@@ -12,6 +12,7 @@ from inventory.models import (
     Part,
     PartBrand,
     PartCategory,
+    PurchaseOrder,
     ServiceOrderPart,
     StockMovement,
 )
@@ -136,9 +137,12 @@ def test_reserve_part_for_service_order_decreases_stock(service_order, part, use
 
 
 @pytest.mark.django_db
-def test_reserve_part_blocks_insufficient_stock(service_order, part, users):
+def test_reserve_part_opens_purchase_order_when_stock_is_insufficient(
+    service_order, part, users
+):
     """
-    Test if reserving a part blocks insufficient stock.
+    Reservar mais do que o estoque disponível não deve bloquear a OS.
+    O sistema reserva o saldo existente e abre pedido de compra para a diferença.
     """
     form = ServiceOrderPartForm(
         data={
@@ -151,16 +155,26 @@ def test_reserve_part_blocks_insufficient_stock(service_order, part, users):
 
     assert form.is_valid()
 
-    with pytest.raises(ValidationError):
-        reserve_part_for_service_order(
-            service_order=service_order,
-            form=form,
-            created_by=users["attendant"],
-        )
+    service_order_part = reserve_part_for_service_order(
+        service_order=service_order,
+        form=form,
+        created_by=users["attendant"],
+    )
 
     part.refresh_from_db()
 
-    assert part.current_stock == Decimal("10.00")
+    assert service_order_part.status == ServiceOrderPart.Status.WAITING_PURCHASE
+    assert service_order_part.quantity == Decimal("50.00")
+    assert service_order_part.reserved_quantity == Decimal("10.00")
+    assert part.current_stock == Decimal("0.00")
+
+    purchase_order = PurchaseOrder.objects.get(
+        service_order=service_order,
+        service_order_part=service_order_part,
+        part=part,
+    )
+    assert purchase_order.requested_quantity == Decimal("40.00")
+    assert purchase_order.status == PurchaseOrder.Status.OPEN
 
 
 @pytest.mark.django_db

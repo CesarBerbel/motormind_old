@@ -40,6 +40,15 @@ class ServiceOrder(SoftDeleteModel):
         MEDIUM = "medium", "Média"
         HIGH = "high", "Alta"
 
+    class OrderType(models.TextChoices):
+        """
+        Controlled operational type choices for service orders.
+        """
+
+        NORMAL = "normal", "Normal"
+        WARRANTY = "warranty", "Garantia"
+        RETURN = "return", "Retorno"
+
     number = models.CharField(
         max_length=20,
         unique=True,
@@ -77,6 +86,43 @@ class ServiceOrder(SoftDeleteModel):
         blank=True,
         null=True,
         verbose_name="Mecânico responsável",
+    )
+
+    order_type = models.CharField(
+        max_length=20,
+        choices=OrderType.choices,
+        default=OrderType.NORMAL,
+        verbose_name="Tipo da OS",
+    )
+
+    warranty_origin_order = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        related_name="warranty_orders",
+        blank=True,
+        null=True,
+        verbose_name="OS original da garantia/retorno",
+    )
+
+    warranty_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Motivo da garantia/retorno",
+    )
+
+    warranty_approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="approved_warranty_service_orders",
+        blank=True,
+        null=True,
+        verbose_name="Garantia aprovada por",
+    )
+
+    warranty_approved_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Garantia aprovada em",
     )
 
     title = models.CharField(

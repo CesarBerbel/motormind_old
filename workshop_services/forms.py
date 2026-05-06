@@ -1,9 +1,14 @@
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django import forms
 from django.forms import inlineformset_factory, modelformset_factory
 
-from core.form_fields import BRLDecimalField, money_widget
+from core.form_fields import (
+    BRLDecimalField,
+    money_widget,
+    normalize_money_value,
+    normalize_quantity_value,
+)
 from workshop_services.models import (
     ServiceCombo,
     ServiceComboItem,
@@ -18,6 +23,12 @@ COMPACT_TEXT_ATTRS = {
 }
 COMPACT_SELECT_ATTRS = {"class": "form-select form-select-sm"}
 COMPACT_NUMBER_ATTRS = {"class": "form-control form-control-sm"}
+
+
+def normalize_money(value):
+    if value in [None, ""]:
+        return None
+    return Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def compact_money_widget(placeholder="Ex: R$ 150,00"):
@@ -322,21 +333,20 @@ class AddCatalogServiceToOrderForm(forms.Form):
         queryset=WorkshopService.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
     )
-    quantity = forms.DecimalField(
+    quantity = forms.CharField(
         label="Quantidade",
-        min_value=Decimal("0.01"),
-        max_digits=10,
-        decimal_places=2,
-        initial=Decimal("1.00"),
-        widget=forms.NumberInput(
-            attrs={"class": "form-control", "step": "0.01", "min": "0.01"}
+        required=True,
+        initial="1,00",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "inputmode": "decimal",
+                "placeholder": "Ex: 1,00",
+            }
         ),
     )
-    unit_price = BRLDecimalField(
+    unit_price = forms.CharField(
         label="Preço unitário",
-        min_value=Decimal("0.00"),
-        max_digits=10,
-        decimal_places=2,
         required=False,
         widget=money_widget("Deixe vazio para usar o preço padrão"),
     )
@@ -347,6 +357,37 @@ class AddCatalogServiceToOrderForm(forms.Form):
             is_active=True
         ).order_by("name")
 
+    def clean_quantity(self):
+        value = self.cleaned_data.get("quantity")
+        try:
+            value = normalize_quantity_value(value, default=Decimal("1.00"))
+        except Exception as exc:
+            raise forms.ValidationError(
+                "Informe uma quantidade válida. Exemplo: 1,00."
+            ) from exc
+
+        if value <= Decimal("0.00"):
+            raise forms.ValidationError("A quantidade deve ser maior que zero.")
+
+        return value
+
+    def clean_unit_price(self):
+        value = self.cleaned_data.get("unit_price")
+        if value in (None, ""):
+            return None
+
+        try:
+            value = normalize_money_value(value, default=None)
+        except Exception as exc:
+            raise forms.ValidationError(
+                "Informe um preço válido. Exemplo: R$ 150,00."
+            ) from exc
+
+        if value < Decimal("0.00"):
+            raise forms.ValidationError("O preço unitário não pode ser negativo.")
+
+        return value
+
 
 class AddComboToOrderForm(forms.Form):
     combo = forms.ModelChoiceField(
@@ -354,14 +395,36 @@ class AddComboToOrderForm(forms.Form):
         queryset=ServiceCombo.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
     )
+    quantity = forms.CharField(
+        label="Quantidade",
+        required=True,
+        initial="1,00",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "inputmode": "decimal",
+                "placeholder": "Ex: 1,00",
+            }
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["combo"].queryset = (
-            ServiceCombo.objects.filter(is_active=True)
-            .prefetch_related(
-                "items",
-                "items__service",
-            )
-            .order_by("name")
-        )
+        self.fields["combo"].queryset = ServiceCombo.objects.filter(
+            is_active=True
+        ).order_by("name")
+
+    def clean_quantity(self):
+        value = self.cleaned_data.get("quantity")
+
+        try:
+            value = normalize_quantity_value(value, default=Decimal("1.00"))
+        except Exception as exc:
+            raise forms.ValidationError(
+                "Informe uma quantidade válida. Exemplo: 1,00."
+            ) from exc
+
+        if value <= Decimal("0.00"):
+            raise forms.ValidationError("A quantidade deve ser maior que zero.")
+
+        return value

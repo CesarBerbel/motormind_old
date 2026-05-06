@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Pedidos de compra - Estoque{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Pedidos de compra</h1>
+            <p class="text-muted mb-0">
+                Solicitações abertas automaticamente quando uma OS pede mais peças do que o estoque disponível.
+            </p>
+        </div>
+
+        <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary">
+            Voltar para peças
+        </a>
+    </div>
+
+    <form method="get" class="card card-body mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-select">
+                    <option value="">Todos</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-outline-secondary">Limpar</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Peça</th>
+                        <th>OS</th>
+                        <th>Cliente</th>
+                        <th>Quantidade a comprar</th>
+                        <th>Status</th>
+                        <th>Criado por</th>
+                        <th>Criado em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for purchase_order in purchase_orders %}
+                        <tr>
+                            <td>{{ purchase_order.part.internal_code }} - {{ purchase_order.part.name }}</td>
+                            <td>
+                                <a href="{% url 'service_orders:service_order_detail' purchase_order.service_order.pk %}">
+                                    {{ purchase_order.service_order.display_number }}
+                                </a>
+                            </td>
+                            <td>{{ purchase_order.service_order.customer.name }}</td>
+                            <td>{{ purchase_order.requested_quantity }}</td>
+                            <td>{{ purchase_order.get_status_display }}</td>
+                            <td>{{ purchase_order.created_by.get_full_name|default:purchase_order.created_by.email }}</td>
+                            <td>{{ purchase_order.created_at|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                Nenhum pedido de compra encontrado.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

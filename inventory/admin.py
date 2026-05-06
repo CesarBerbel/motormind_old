@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import Part, PartBrand, PartCategory, ServiceOrderPart, StockMovement
+from .models import (
+    Part,
+    PartBrand,
+    PartCategory,
+    PurchaseOrder,
+    ServiceOrderPart,
+    StockMovement,
+)
 
 
 @admin.register(Part)
@@ -66,6 +73,7 @@ class ServiceOrderPartAdmin(admin.ModelAdmin):
         "service_order_item",
         "part",
         "quantity",
+        "reserved_quantity",
         "unit_price",
         "discount",
         "total",
@@ -83,6 +91,33 @@ class ServiceOrderPartAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = ("service_order", "service_order_item", "part", "created_by")
     readonly_fields = ("subtotal", "total", "created_at", "updated_at")
+
+
+@admin.register(PurchaseOrder)
+class PurchaseOrderAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for automatic purchase orders opened by OS shortages.
+    """
+
+    list_display = (
+        "part",
+        "service_order",
+        "service_order_part",
+        "requested_quantity",
+        "status",
+        "created_by",
+        "created_at",
+    )
+    list_filter = ("status", "created_at", "part__brand", "part__category")
+    search_fields = (
+        "part__name",
+        "part__internal_code",
+        "service_order__title",
+        "service_order__customer__name",
+        "reason",
+    )
+    autocomplete_fields = ("part", "service_order", "service_order_part", "created_by")
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(PartBrand)
