@@ -10,6 +10,7 @@ from workshop_services.forms import (
     AddCatalogServiceToOrderForm,
     AddComboToOrderForm,
     ServiceComboForm,
+    ServiceComboItemCreateFormSet,
     ServiceComboItemFormSet,
     WorkshopServiceCategoryForm,
     WorkshopServiceForm,
@@ -17,6 +18,7 @@ from workshop_services.forms import (
 )
 from workshop_services.models import (
     ServiceCombo,
+    ServiceComboItem,
     WorkshopService,
     WorkshopServiceCategory,
 )
@@ -29,7 +31,13 @@ from workshop_services.selectors import (
     get_combos_for_list,
     get_services_for_list,
 )
-from workshop_services.services import add_catalog_service_to_order, add_combo_to_order
+from workshop_services.services import (
+    add_catalog_service_to_order,
+    add_combo_to_order,
+    save_category_with_audit,
+    save_combo_with_items_and_audit,
+    save_service_with_parts_and_audit,
+)
 
 
 @login_required
@@ -56,7 +64,7 @@ def category_create_view(request):
     if request.method == "POST":
         form = WorkshopServiceCategoryForm(request.POST)
         if form.is_valid():
-            form.save()
+            save_category_with_audit(form=form, user=request.user)
             messages.success(request, "Categoria cadastrada com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível cadastrar a categoria.")
@@ -82,7 +90,7 @@ def category_update_view(request, pk):
     if request.method == "POST":
         form = WorkshopServiceCategoryForm(request.POST, instance=category)
         if form.is_valid():
-            form.save()
+            save_category_with_audit(form=form, user=request.user, instance=category)
             messages.success(request, "Categoria atualizada com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível atualizar a categoria.")
@@ -109,10 +117,7 @@ def service_create_view(request):
         form = WorkshopServiceForm(request.POST, instance=service)
         formset = WorkshopServicePartFormSet(request.POST, instance=service)
         if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                service = form.save()
-                formset.instance = service
-                formset.save()
+            save_service_with_parts_and_audit(form=form, formset=formset, user=request.user, instance=None)
             messages.success(request, "Serviço cadastrado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível cadastrar o serviço.")
@@ -141,9 +146,7 @@ def service_update_view(request, pk):
         form = WorkshopServiceForm(request.POST, instance=service)
         formset = WorkshopServicePartFormSet(request.POST, instance=service)
         if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                form.save()
-                formset.save()
+            save_service_with_parts_and_audit(form=form, formset=formset, user=request.user, instance=service)
             messages.success(request, "Serviço atualizado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível atualizar o serviço.")
@@ -166,24 +169,41 @@ def service_update_view(request, pk):
 @login_required
 @user_passes_permission(can_manage_workshop_services)
 def combo_create_view(request):
-    combo = ServiceCombo()
+    """
+    Cria combo com múltiplos serviços.
 
+    Correção definitiva para:
+    "ServiceCombo instance needs to have a primary key value before this relationship can be used".
+
+    Na criação, NÃO usamos inline formset ligado a instance=combo, porque o combo
+    ainda não existe no banco. Usamos um modelformset independente para validar
+    as linhas e, só depois de salvar o combo principal, gravamos cada item com
+    obj.combo = combo.
+    """
     if request.method == "POST":
-        form = ServiceComboForm(request.POST, instance=combo)
-        formset = ServiceComboItemFormSet(request.POST, instance=combo)
+        form = ServiceComboForm(request.POST)
+        formset = ServiceComboItemCreateFormSet(
+            request.POST,
+            queryset=ServiceComboItem.objects.none(),
+            prefix="items",
+        )
 
         if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                combo = form.save()
-                formset.instance = combo
-                formset.save()
+            save_combo_with_items_and_audit(
+                form=form,
+                formset=formset,
+                user=request.user,
+            )
             messages.success(request, "Combo cadastrado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
 
-        messages.error(request, "Não foi possível cadastrar o combo.")
+        messages.error(request, "Não foi possível cadastrar o combo. Verifique os dados informados.")
     else:
-        form = ServiceComboForm(instance=combo)
-        formset = ServiceComboItemFormSet(instance=combo)
+        form = ServiceComboForm()
+        formset = ServiceComboItemCreateFormSet(
+            queryset=ServiceComboItem.objects.none(),
+            prefix="items",
+        )
 
     return render(
         request,
@@ -196,7 +216,6 @@ def combo_create_view(request):
         },
     )
 
-
 @login_required
 @user_passes_permission(can_manage_workshop_services)
 def combo_update_view(request, pk):
@@ -204,19 +223,17 @@ def combo_update_view(request, pk):
 
     if request.method == "POST":
         form = ServiceComboForm(request.POST, instance=combo)
-        formset = ServiceComboItemFormSet(request.POST, instance=combo)
+        formset = ServiceComboItemFormSet(request.POST, instance=combo, prefix="items")
 
         if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                form.save()
-                formset.save()
+            save_combo_with_items_and_audit(form=form, formset=formset, user=request.user, instance=combo)
             messages.success(request, "Combo atualizado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
 
         messages.error(request, "Não foi possível atualizar o combo.")
     else:
         form = ServiceComboForm(instance=combo)
-        formset = ServiceComboItemFormSet(instance=combo)
+        formset = ServiceComboItemFormSet(instance=combo, prefix="items")
 
     return render(
         request,
@@ -282,6 +299,7 @@ def add_combo_to_order_view(request, service_order_pk):
                 add_combo_to_order(
                     service_order=service_order,
                     combo=form.cleaned_data["combo"],
+                    created_by=request.user,
                 )
             except ValidationError as error:
                 form.add_error(None, error)

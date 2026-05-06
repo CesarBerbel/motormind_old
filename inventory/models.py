@@ -269,12 +269,12 @@ class ServiceOrderPart(SoftDeleteModel):
 
     service_order_item = models.ForeignKey(
         "service_orders.ServiceOrderItem",
-        on_delete=models.CASCADE,
-        related_name="linked_parts",
+        on_delete=models.PROTECT,
+        related_name="inventory_parts",
         blank=True,
         null=True,
         verbose_name="Serviço da OS",
-        help_text="Serviço da OS que originou esta peça.",
+        help_text="Serviço específico da OS que originou esta peça.",
     )
 
     part = models.ForeignKey(
@@ -358,6 +358,9 @@ class ServiceOrderPart(SoftDeleteModel):
         Validate service order part.
         """
         super().clean()
+
+        if self.service_order_item_id and self.service_order_item.service_order_id != self.service_order_id:
+            raise ValidationError({"service_order_item": "O serviço vinculado deve pertencer à mesma OS."})
 
         if self.part_id and not self.part.is_active:
             raise ValidationError({"part": "Não é possível usar uma peça inativa."})

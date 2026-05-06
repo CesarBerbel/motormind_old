@@ -63,6 +63,7 @@ class ServiceOrderPartAdmin(admin.ModelAdmin):
 
     list_display = (
         "service_order",
+        "service_order_item",
         "part",
         "quantity",
         "unit_price",
@@ -80,7 +81,7 @@ class ServiceOrderPartAdmin(admin.ModelAdmin):
         "part__name",
         "part__internal_code",
     )
-    autocomplete_fields = ("service_order", "part", "created_by")
+    autocomplete_fields = ("service_order", "service_order_item", "part", "created_by")
     readonly_fields = ("subtotal", "total", "created_at", "updated_at")
 
 
