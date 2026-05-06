@@ -8,7 +8,7 @@
 {% block content %}
 
 <div class="row justify-content-center">
-    <div class="col-lg-9">
+    <div class="col-lg-10">
 
         <div class="card shadow-sm">
             <div class="card-body">
@@ -26,15 +26,45 @@
                         </div>
                     {% endif %}
 
-                    <div class="row g-3">
-                        {% for field in form %}
-                            {% if show_problem_description_ai and field.name == "description" %}
-                                <div class="col-12">
-                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-                                        <label for="{{ field.id_for_label }}" class="form-label mb-0">
-                                            {{ field.label }}
-                                        </label>
+                    <div class="border rounded-3 p-3 mb-3 bg-light">
+                        <h2 class="h6 mb-3">Dados principais</h2>
+                        <div class="row g-3">
+                            {% include "includes/form_field.html" with field=form.customer field_wrapper_class="col-md-6" %}
+                            {% include "includes/form_field.html" with field=form.vehicle field_wrapper_class="col-md-6" %}
+                            {% include "includes/form_field.html" with field=form.assigned_mechanic field_wrapper_class="col-md-6" %}
+                            {% include "includes/form_field.html" with field=form.priority field_wrapper_class="col-md-3" %}
+                            {% include "includes/form_field.html" with field=form.status field_wrapper_class="col-md-3" %}
+                        </div>
+                    </div>
 
+                    <div class="border rounded-3 p-3 mb-3">
+                        <h2 class="h6 mb-3">Fluxo da OS</h2>
+                        <div class="row g-3">
+                            {% include "includes/form_field.html" with field=form.order_type field_wrapper_class="col-md-4" %}
+                            <div class="col-md-8 warranty-flow-field">
+                                {% include "includes/form_field.html" with field=form.warranty_origin_order field_wrapper_class="" %}
+                            </div>
+                            <div class="col-12 warranty-flow-field">
+                                {% include "includes/form_field.html" with field=form.warranty_reason field_wrapper_class="" %}
+                            </div>
+                        </div>
+                        <div class="form-text mt-2">
+                            Use garantia ou retorno apenas quando existir uma OS original vinculada. O sistema registra quem abriu/aprovou esse fluxo.
+                        </div>
+                    </div>
+
+                    <div class="border rounded-3 p-3 mb-3">
+                        <h2 class="h6 mb-3">Relato do cliente</h2>
+                        <div class="row g-3">
+                            {% include "includes/form_field.html" with field=form.title field_wrapper_class="col-12" %}
+
+                            <div class="col-12">
+                                <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                                    <label for="{{ form.description.id_for_label }}" class="form-label mb-0">
+                                        {{ form.description.label }}
+                                    </label>
+
+                                    {% if show_problem_description_ai %}
                                         <button
                                             type="button"
                                             id="improve-description-ai-button"
@@ -42,27 +72,38 @@
                                         >
                                             Melhorar com IA
                                         </button>
-                                    </div>
-
-                                    {{ field }}
-
-                                    <div class="form-text">
-                                        Use a IA apenas para organizar o relato do cliente. Revise o texto antes de salvar.
-                                    </div>
-
-                                    <div id="improve-description-ai-feedback" class="small mt-2 d-none"></div>
-
-                                    {% if field.errors %}
-                                        <div class="text-danger small mt-1">
-                                            {{ field.errors }}
-                                        </div>
                                     {% endif %}
                                 </div>
-                            {% else %}
-                                {% include "includes/form_field.html" with field=field field_wrapper_class="col-md-6" %}
-                            {% endif %}
-                        {% endfor %}
+
+                                {{ form.description }}
+
+                                <div class="form-text">
+                                    Use a IA apenas para organizar o relato do cliente. Revise o texto antes de salvar.
+                                </div>
+
+                                <div id="improve-description-ai-feedback" class="small mt-2 d-none"></div>
+
+                                {% if form.description.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.description.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
+
+                    {% if form.catalog_services or form.service_combos %}
+                        <div class="border rounded-3 p-3 mb-3">
+                            <h2 class="h6 mb-3">Serviços e combos na abertura</h2>
+                            <div class="alert alert-info small">
+                                Os itens selecionados serão adicionados automaticamente à OS após salvar. Serviços entram com quantidade 1 e preço padrão do catálogo.
+                            </div>
+                            <div class="row g-3">
+                                {% include "includes/form_field.html" with field=form.catalog_services field_wrapper_class="col-md-6" %}
+                                {% include "includes/form_field.html" with field=form.service_combos field_wrapper_class="col-md-6" %}
+                            </div>
+                        </div>
+                    {% endif %}
 
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{% url 'service_orders:service_order_list' %}" class="btn btn-outline-secondary">
@@ -84,7 +125,6 @@
 <script src="{% static 'js/brl_money_mask.js' %}"></script>
 
 <script>
-    // This script loads only vehicles that belong to the selected customer.
     document.addEventListener("DOMContentLoaded", function () {
         const customerSelect = document.getElementById("id_customer");
         const vehicleSelect = document.getElementById("id_vehicle");
@@ -149,6 +189,27 @@
         customerSelect.addEventListener("change", function () {
             loadVehicles(customerSelect.value);
         });
+    });
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const orderTypeSelect = document.getElementById("id_order_type");
+        const warrantyFields = document.querySelectorAll(".warranty-flow-field");
+
+        if (!orderTypeSelect || !warrantyFields.length) {
+            return;
+        }
+
+        function toggleWarrantyFields() {
+            const shouldShow = ["warranty", "return"].includes(orderTypeSelect.value);
+            warrantyFields.forEach(function (field) {
+                field.classList.toggle("d-none", !shouldShow);
+            });
+        }
+
+        orderTypeSelect.addEventListener("change", toggleWarrantyFields);
+        toggleWarrantyFields();
     });
 </script>
 

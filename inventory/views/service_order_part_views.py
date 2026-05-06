@@ -41,13 +41,25 @@ def service_order_part_add_view(request, service_order_pk):
 
         if form.is_valid():
             try:
-                reserve_part_for_service_order(
+                service_order_part = reserve_part_for_service_order(
                     service_order=service_order,
                     form=form,
                     created_by=request.user,
                 )
 
-                messages.success(request, "Peça reservada para a OS com sucesso.")
+                if (
+                    service_order_part.status
+                    == ServiceOrderPart.Status.WAITING_PURCHASE
+                ):
+                    messages.warning(
+                        request,
+                        (
+                            "Peça adicionada à OS. O saldo disponível foi reservado "
+                            "e um pedido de compra foi aberto para a quantidade faltante."
+                        ),
+                    )
+                else:
+                    messages.success(request, "Peça reservada para a OS com sucesso.")
 
                 return redirect(
                     "service_orders:service_order_detail", pk=service_order.pk

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load group_tags %}
 
 {% block title %}
     Estoque - Sistema de Oficina
@@ -18,9 +19,54 @@
         </p>
     </div>
 
-    <a href="{% url 'inventory:part_create' %}" class="btn btn-primary">
-        Nova peça
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-primary">
+            Dashboard
+        </a>
+
+        <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-outline-warning">
+            Pedidos de compra
+            {% if open_purchase_orders_count %}
+                <span class="badge text-bg-warning ms-1">
+                    {{ open_purchase_orders_count }}
+                </span>
+            {% endif %}
+        </a>
+
+        {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+            <a href="{% url 'inventory:part_create' %}" class="btn btn-primary">
+                Nova peça
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <a href="{% url 'inventory:purchase_order_list' %}" class="card text-decoration-none shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2 class="h6 text-muted mb-1">
+                            Pedidos de compra abertos
+                        </h2>
+
+                        <div class="h3 mb-0">
+                            {{ open_purchase_orders_count|default:0 }}
+                        </div>
+                    </div>
+
+                    <span class="badge text-bg-warning">
+                        Compra
+                    </span>
+                </div>
+
+                <p class="text-muted small mb-0 mt-2">
+                    Acesse as compras geradas automaticamente quando uma OS solicita mais peças do que o estoque disponível.
+                </p>
+            </div>
+        </a>
+    </div>
 </div>
 
 <form method="get" class="card card-body shadow-sm mb-4">
@@ -41,9 +87,11 @@
         <div class="col-md-3">
             <select name="status" class="form-select">
                 <option value="">Todas</option>
+
                 <option value="active" {% if status == "active" %}selected{% endif %}>
                     Ativas
                 </option>
+
                 <option value="inactive" {% if status == "inactive" %}selected{% endif %}>
                     Inativas
                 </option>
@@ -53,6 +101,7 @@
         <div class="col-md-2">
             <select name="low_stock" class="form-select">
                 <option value="">Todo estoque</option>
+
                 <option value="1" {% if low_stock == "1" %}selected{% endif %}>
                     Estoque baixo
                 </option>
@@ -96,12 +145,30 @@
                 <tbody>
                     {% for part in parts %}
                         <tr>
-                            <td>{{ part.internal_code }}</td>
-                            <td>{{ part.name }}</td>
-                            <td>{{ part.brand|default:"-" }}</td>
-                            <td>{{ part.category|default:"-" }}</td>
-                            <td>{{ part.current_stock }}</td>
-                            <td>{{ part.minimum_stock }}</td>
+                            <td>
+                                {{ part.internal_code }}
+                            </td>
+
+                            <td>
+                                {{ part.name }}
+                            </td>
+
+                            <td>
+                                {{ part.brand|default:"-" }}
+                            </td>
+
+                            <td>
+                                {{ part.category|default:"-" }}
+                            </td>
+
+                            <td>
+                                {{ part.current_stock }}
+                            </td>
+
+                            <td>
+                                {{ part.minimum_stock }}
+                            </td>
+
                             <td>
                                 {% if part.is_low_stock %}
                                     <span class="badge text-bg-danger">
@@ -113,6 +180,7 @@
                                     </span>
                                 {% endif %}
                             </td>
+
                             <td>
                                 {% if part.is_active %}
                                     Sim
@@ -120,18 +188,21 @@
                                     Não
                                 {% endif %}
                             </td>
+
                             <td class="text-end">
                                 <a href="{% url 'inventory:part_detail' part.pk %}" class="btn btn-sm btn-outline-primary">
                                     Abrir
                                 </a>
 
-                                <a href="{% url 'inventory:stock_movement_create' part.pk %}" class="btn btn-sm btn-outline-success">
-                                    Movimentar
-                                </a>
+                                {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                                    <a href="{% url 'inventory:stock_movement_create' part.pk %}" class="btn btn-sm btn-outline-success">
+                                        Movimentar
+                                    </a>
 
-                                <a href="{% url 'inventory:part_update' part.pk %}" class="btn btn-sm btn-outline-secondary">
-                                    Editar
-                                </a>
+                                    <a href="{% url 'inventory:part_update' part.pk %}" class="btn btn-sm btn-outline-secondary">
+                                        Editar
+                                    </a>
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}
@@ -147,8 +218,10 @@
 
     </div>
 </div>
+
+{% endblock %}
+
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'js/part_list_autocomplete.js' %}"></script>
-{% endblock %}
 {% endblock %}

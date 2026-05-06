@@ -82,17 +82,24 @@ def service_order_create_view(request):
         form = ServiceOrderCreateForm(request.POST)
 
         if form.is_valid():
-            service_order = create_service_order_from_form(
-                form=form,
-                created_by=request.user,
-            )
+            try:
+                service_order = create_service_order_from_form(
+                    form=form,
+                    created_by=request.user,
+                )
+            except ValidationError as error:
+                form.add_error(None, error)
+                messages.error(
+                    request,
+                    error.messages[0] if hasattr(error, "messages") else str(error),
+                )
+            else:
+                messages.success(request, "Ordem de serviço criada com sucesso.")
 
-            messages.success(request, "Ordem de serviço criada com sucesso.")
-
-            return redirect(
-                "service_orders:service_order_detail",
-                pk=service_order.pk,
-            )
+                return redirect(
+                    "service_orders:service_order_detail",
+                    pk=service_order.pk,
+                )
 
         messages.error(
             request,

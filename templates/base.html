@@ -166,6 +166,11 @@
                         Críticas
                     </a>
 
+                    <a href="{% url 'inventory:purchase_order_list' %}" 
+                        class="submenu-link {% if request.resolver_match.url_name == 'purchase_order_list' %}active{% endif %}">
+                        Pedidos de compra
+                    </a>
+
                     <!-- 🔥 NOVO: MARCAS -->
                     {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
                         <a href="{% url 'inventory:brand_list' %}" 

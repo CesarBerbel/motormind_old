@@ -12,8 +12,11 @@ from core.permissions import (
     user_passes_permission,
 )
 from inventory.forms import PartBrandForm, PartCategoryForm, PartForm, StockMovementForm
-from inventory.models import Part, PartBrand, PartCategory
-from inventory.selectors import get_critical_parts_with_priority
+from inventory.models import Part, PartBrand, PartCategory, PurchaseOrder
+from inventory.selectors import (
+    get_critical_parts_with_priority,
+    get_inventory_dashboard_data,
+)
 from inventory.services import (
     adjust_stock,
     create_stock_entry,
@@ -27,19 +30,43 @@ from inventory.services import (
 
 @login_required
 @user_passes_permission(can_access_inventory)
+def dashboard_view(request):
+    """
+    Exibe o dashboard completo do estoque.
+
+    A view fica fina e delega os cálculos para inventory.selectors.
+    """
+    dashboard_data = get_inventory_dashboard_data()
+
+    return render(
+        request,
+        "inventory/dashboard.html",
+        dashboard_data,
+    )
+
+
+@login_required
+@user_passes_permission(can_access_inventory)
 def part_list_view(request):
     """
-    List inventory parts.
+    Lista peças do estoque.
     """
-
-    # 🔥 CORREÇÃO AQUI
     search = request.GET.get("q") or request.GET.get("search", "")
     search = search.strip()
 
     low_stock = request.GET.get("low_stock", "").strip()
     status = request.GET.get("status", "").strip()
 
-    parts = Part.objects.select_related("brand", "category").all().order_by("name")
+    parts = (
+        Part.objects.select_related(
+            "brand",
+            "category",
+        )
+        .all()
+        .order_by(
+            "name",
+        )
+    )
 
     if search:
         parts = parts.filter(
@@ -51,13 +78,21 @@ def part_list_view(request):
         )
 
     if status == "active":
-        parts = parts.filter(is_active=True)
+        parts = parts.filter(
+            is_active=True,
+        )
 
-    if status == "inactive":
-        parts = parts.filter(is_active=False)
+    elif status == "inactive":
+        parts = parts.filter(
+            is_active=False,
+        )
 
     if low_stock == "1":
         parts = [part for part in parts if part.is_low_stock]
+
+    open_purchase_orders_count = PurchaseOrder.objects.filter(
+        status=PurchaseOrder.Status.OPEN,
+    ).count()
 
     return render(
         request,
@@ -67,6 +102,41 @@ def part_list_view(request):
             "search": search,
             "low_stock": low_stock,
             "status": status,
+            "open_purchase_orders_count": open_purchase_orders_count,
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_access_inventory)
+def purchase_order_list_view(request):
+    """
+    Lista pedidos de compra abertos automaticamente quando uma OS solicita
+    quantidade maior que o estoque disponível.
+    """
+    status = request.GET.get("status", "").strip()
+
+    purchase_orders = PurchaseOrder.objects.select_related(
+        "part",
+        "service_order",
+        "service_order__customer",
+        "created_by",
+    ).order_by(
+        "-created_at",
+    )
+
+    if status:
+        purchase_orders = purchase_orders.filter(
+            status=status,
+        )
+
+    return render(
+        request,
+        "inventory/purchase_order_list.html",
+        {
+            "purchase_orders": purchase_orders,
+            "status": status,
+            "status_choices": PurchaseOrder.Status.choices,
         },
     )
 
@@ -75,7 +145,7 @@ def part_list_view(request):
 @user_passes_permission(can_access_inventory)
 def critical_parts_view(request):
     """
-    Show critical parts with restock priority.
+    Mostra peças críticas com prioridade e sugestão de reposição.
     """
     critical_parts = get_critical_parts_with_priority()
 
@@ -93,7 +163,7 @@ def critical_parts_view(request):
 @user_passes_permission(can_access_inventory)
 def part_detail_view(request, pk):
     """
-    Show inventory part detail and stock movement history.
+    Mostra detalhe da peça e histórico de movimentações.
     """
     part = get_object_or_404(
         Part,
@@ -119,7 +189,7 @@ def part_detail_view(request, pk):
 @user_passes_permission(can_manage_inventory)
 def part_create_view(request):
     """
-    Create inventory part.
+    Cadastra peça no estoque.
     """
     if request.method == "POST":
         form = PartForm(request.POST)
@@ -160,7 +230,7 @@ def part_create_view(request):
 @user_passes_permission(can_manage_inventory)
 def part_update_view(request, pk):
     """
-    Update inventory part.
+    Atualiza peça do estoque.
     """
     part = get_object_or_404(
         Part,
@@ -192,7 +262,9 @@ def part_update_view(request, pk):
         )
 
     else:
-        form = PartForm(instance=part)
+        form = PartForm(
+            instance=part,
+        )
 
     return render(
         request,
@@ -210,7 +282,7 @@ def part_update_view(request, pk):
 @user_passes_permission(can_move_inventory_stock)
 def stock_movement_create_view(request, pk):
     """
-    Create stock movement for a part.
+    Cria movimentação manual de estoque para uma peça.
     """
     part = get_object_or_404(
         Part,
@@ -326,21 +398,29 @@ def stock_movement_create_view(request, pk):
 @user_passes_permission(can_access_inventory)
 def brand_list_view(request):
     """
-    List part brands.
+    Lista marcas de peças.
     """
     search = request.GET.get("search", "").strip()
     status = request.GET.get("status", "").strip()
 
-    brands = PartBrand.objects.all().order_by("name")
+    brands = PartBrand.objects.all().order_by(
+        "name",
+    )
 
     if search:
-        brands = brands.filter(name__icontains=search)
+        brands = brands.filter(
+            name__icontains=search,
+        )
 
     if status == "active":
-        brands = brands.filter(is_active=True)
+        brands = brands.filter(
+            is_active=True,
+        )
 
-    if status == "inactive":
-        brands = brands.filter(is_active=False)
+    elif status == "inactive":
+        brands = brands.filter(
+            is_active=False,
+        )
 
     return render(
         request,
@@ -357,15 +437,22 @@ def brand_list_view(request):
 @user_passes_permission(can_manage_inventory)
 def brand_create_view(request):
     """
-    Create part brand.
+    Cadastra marca de peça.
     """
     if request.method == "POST":
         form = PartBrandForm(request.POST)
 
         if form.is_valid():
             form.save()
-            messages.success(request, "Marca cadastrada com sucesso.")
-            return redirect("inventory:brand_list")
+
+            messages.success(
+                request,
+                "Marca cadastrada com sucesso.",
+            )
+
+            return redirect(
+                "inventory:brand_list",
+            )
 
         messages.error(
             request,
@@ -373,7 +460,11 @@ def brand_create_view(request):
         )
 
     else:
-        form = PartBrandForm(initial={"is_active": True})
+        form = PartBrandForm(
+            initial={
+                "is_active": True,
+            },
+        )
 
     return render(
         request,
@@ -391,17 +482,30 @@ def brand_create_view(request):
 @user_passes_permission(can_manage_inventory)
 def brand_update_view(request, pk):
     """
-    Update part brand.
+    Atualiza marca de peça.
     """
-    brand = get_object_or_404(PartBrand, pk=pk)
+    brand = get_object_or_404(
+        PartBrand,
+        pk=pk,
+    )
 
     if request.method == "POST":
-        form = PartBrandForm(request.POST, instance=brand)
+        form = PartBrandForm(
+            request.POST,
+            instance=brand,
+        )
 
         if form.is_valid():
             form.save()
-            messages.success(request, "Marca atualizada com sucesso.")
-            return redirect("inventory:brand_list")
+
+            messages.success(
+                request,
+                "Marca atualizada com sucesso.",
+            )
+
+            return redirect(
+                "inventory:brand_list",
+            )
 
         messages.error(
             request,
@@ -409,7 +513,9 @@ def brand_update_view(request, pk):
         )
 
     else:
-        form = PartBrandForm(instance=brand)
+        form = PartBrandForm(
+            instance=brand,
+        )
 
     return render(
         request,
@@ -428,12 +534,14 @@ def brand_update_view(request, pk):
 @user_passes_permission(can_access_inventory)
 def category_list_view(request):
     """
-    List part categories.
+    Lista categorias de peças.
     """
     search = request.GET.get("search", "").strip()
     status = request.GET.get("status", "").strip()
 
-    categories = PartCategory.objects.all().order_by("name")
+    categories = PartCategory.objects.all().order_by(
+        "name",
+    )
 
     if search:
         categories = categories.filter(
@@ -441,10 +549,14 @@ def category_list_view(request):
         )
 
     if status == "active":
-        categories = categories.filter(is_active=True)
+        categories = categories.filter(
+            is_active=True,
+        )
 
-    if status == "inactive":
-        categories = categories.filter(is_active=False)
+    elif status == "inactive":
+        categories = categories.filter(
+            is_active=False,
+        )
 
     return render(
         request,
@@ -461,15 +573,22 @@ def category_list_view(request):
 @user_passes_permission(can_manage_inventory)
 def category_create_view(request):
     """
-    Create part category.
+    Cadastra categoria de peça.
     """
     if request.method == "POST":
         form = PartCategoryForm(request.POST)
 
         if form.is_valid():
             form.save()
-            messages.success(request, "Categoria cadastrada com sucesso.")
-            return redirect("inventory:category_list")
+
+            messages.success(
+                request,
+                "Categoria cadastrada com sucesso.",
+            )
+
+            return redirect(
+                "inventory:category_list",
+            )
 
         messages.error(
             request,
@@ -477,7 +596,11 @@ def category_create_view(request):
         )
 
     else:
-        form = PartCategoryForm(initial={"is_active": True})
+        form = PartCategoryForm(
+            initial={
+                "is_active": True,
+            },
+        )
 
     return render(
         request,
@@ -495,17 +618,30 @@ def category_create_view(request):
 @user_passes_permission(can_manage_inventory)
 def category_update_view(request, pk):
     """
-    Update part category.
+    Atualiza categoria de peça.
     """
-    category = get_object_or_404(PartCategory, pk=pk)
+    category = get_object_or_404(
+        PartCategory,
+        pk=pk,
+    )
 
     if request.method == "POST":
-        form = PartCategoryForm(request.POST, instance=category)
+        form = PartCategoryForm(
+            request.POST,
+            instance=category,
+        )
 
         if form.is_valid():
             form.save()
-            messages.success(request, "Categoria atualizada com sucesso.")
-            return redirect("inventory:category_list")
+
+            messages.success(
+                request,
+                "Categoria atualizada com sucesso.",
+            )
+
+            return redirect(
+                "inventory:category_list",
+            )
 
         messages.error(
             request,
@@ -513,7 +649,9 @@ def category_update_view(request, pk):
         )
 
     else:
-        form = PartCategoryForm(instance=category)
+        form = PartCategoryForm(
+            instance=category,
+        )
 
     return render(
         request,
@@ -528,14 +666,22 @@ def category_update_view(request, pk):
     )
 
 
+@login_required
+@user_passes_permission(can_access_inventory)
 def part_autocomplete(request):
+    """
+    Retorna autocomplete de peças para telas com busca dinâmica.
+    """
     query = request.GET.get("q", "").strip()
 
     results = []
 
     if query:
         parts = (
-            Part.objects.select_related("brand", "category")
+            Part.objects.select_related(
+                "brand",
+                "category",
+            )
             .filter(
                 Q(name__icontains=query)
                 | Q(internal_code__icontains=query)
@@ -558,7 +704,14 @@ def part_autocomplete(request):
                     "cost_price": str(part.cost_price),
                     "unit": part.unit,
                     "location": part.location,
+                    "current_stock": str(part.current_stock),
+                    "minimum_stock": str(part.minimum_stock),
+                    "is_low_stock": part.is_low_stock,
                 }
             )
 
-    return JsonResponse({"results": results})
+    return JsonResponse(
+        {
+            "results": results,
+        },
+    )

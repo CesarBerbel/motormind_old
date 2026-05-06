@@ -6,6 +6,7 @@ from django.contrib.auth.models import Group
 
 from core.form_fields import BRLDecimalField, money_widget
 from customers.models import Vehicle
+from workshop_services.models import ServiceCombo, WorkshopService
 
 from .models import (
     ServiceOrder,
@@ -18,10 +19,6 @@ from .services import get_allowed_next_status_choices
 
 
 class ServiceOrderForm(forms.ModelForm):
-    """
-    Form used by administrators and attendants to create and update service orders.
-    """
-
     labor_cost = BRLDecimalField(
         label="Valor da mão de obra",
         min_value=Decimal("0.00"),
@@ -52,6 +49,20 @@ class ServiceOrderForm(forms.ModelForm):
         widget=money_widget("Ex: R$ 50,00"),
     )
 
+    selected_services = forms.ModelMultipleChoiceField(
+        label="Serviços",
+        queryset=WorkshopService.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "form-select"}),
+    )
+
+    selected_combos = forms.ModelMultipleChoiceField(
+        label="Combos",
+        queryset=ServiceCombo.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "form-select"}),
+    )
+
     class Meta:
         model = ServiceOrder
         fields = [
@@ -68,31 +79,18 @@ class ServiceOrderForm(forms.ModelForm):
             "parts_cost",
             "discount",
             "expected_delivery_date",
+            "order_type",
+            "warranty_origin_order",
+            "warranty_reason",
         ]
 
         widgets = {
             "customer": forms.Select(
-                attrs={
-                    "class": "form-select",
-                    "id": "id_customer",
-                }
+                attrs={"class": "form-select", "id": "id_customer"}
             ),
-            "vehicle": forms.Select(
-                attrs={
-                    "class": "form-select",
-                    "id": "id_vehicle",
-                }
-            ),
-            "assigned_mechanic": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
-            "priority": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
+            "vehicle": forms.Select(attrs={"class": "form-select", "id": "id_vehicle"}),
+            "assigned_mechanic": forms.Select(attrs={"class": "form-select"}),
+            "priority": forms.Select(attrs={"class": "form-select"}),
             "title": forms.TextInput(
                 attrs={
                     "class": "form-control",
@@ -120,17 +118,19 @@ class ServiceOrderForm(forms.ModelForm):
                     "rows": 4,
                 }
             ),
-            "status": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
+            "status": forms.Select(attrs={"class": "form-select"}),
             "expected_delivery_date": forms.DateInput(
                 format="%Y-%m-%d",
+                attrs={"class": "form-control", "type": "date"},
+            ),
+            "order_type": forms.Select(attrs={"class": "form-select"}),
+            "warranty_origin_order": forms.Select(attrs={"class": "form-select"}),
+            "warranty_reason": forms.Textarea(
                 attrs={
                     "class": "form-control",
-                    "type": "date",
-                },
+                    "rows": 3,
+                    "placeholder": "Informe o motivo da garantia ou retorno",
+                }
             ),
         }
 
@@ -145,15 +145,37 @@ class ServiceOrderForm(forms.ModelForm):
             "solution": "Serviço executado",
             "status": "Status",
             "expected_delivery_date": "Previsão de entrega",
+            "order_type": "Tipo da OS",
+            "warranty_origin_order": "OS original",
+            "warranty_reason": "Motivo da garantia/retorno",
         }
 
     def __init__(self, *args, **kwargs):
-        """
-        Limit vehicle options according to selected customer and mechanic group.
-        """
         super().__init__(*args, **kwargs)
 
         self.fields["vehicle"].queryset = Vehicle.objects.none()
+
+        self.fields["selected_services"].queryset = WorkshopService.objects.filter(
+            is_active=True
+        ).order_by("name")
+
+        self.fields["selected_combos"].queryset = ServiceCombo.objects.filter(
+            is_active=True
+        ).order_by("name")
+
+        if "warranty_origin_order" in self.fields:
+            self.fields["warranty_origin_order"].required = False
+            self.fields["warranty_origin_order"].queryset = (
+                ServiceOrder.objects.all().order_by("-created_at")
+            )
+
+            if self.instance and self.instance.pk:
+                self.fields["warranty_origin_order"].queryset = self.fields[
+                    "warranty_origin_order"
+                ].queryset.exclude(pk=self.instance.pk)
+
+        if "warranty_reason" in self.fields:
+            self.fields["warranty_reason"].required = False
 
         User = get_user_model()
         mechanic_group = Group.objects.filter(name="Mecânico").first()
@@ -180,6 +202,7 @@ class ServiceOrderForm(forms.ModelForm):
                 (ServiceOrder.Status.OPEN, ServiceOrder.Status.OPEN.label),
             ]
             self.fields["status"].initial = ServiceOrder.Status.OPEN
+            self.fields["status"].required = False
 
         if "customer" in self.data:
             try:
@@ -190,7 +213,6 @@ class ServiceOrderForm(forms.ModelForm):
                 ).order_by("plate")
             except (TypeError, ValueError):
                 self.fields["vehicle"].queryset = Vehicle.objects.none()
-
         elif self.instance.pk and self.instance.customer_id:
             self.fields["vehicle"].queryset = Vehicle.objects.filter(
                 customer_id=self.instance.customer_id,
@@ -198,49 +220,46 @@ class ServiceOrderForm(forms.ModelForm):
             ).order_by("plate")
 
     def clean_labor_cost(self):
-        """
-        Return zero when labor cost is empty.
-        """
         return self.cleaned_data.get("labor_cost") or Decimal("0.00")
 
     def clean_parts_cost(self):
-        """
-        Return zero when parts cost is empty.
-        """
         return self.cleaned_data.get("parts_cost") or Decimal("0.00")
 
     def clean_discount(self):
-        """
-        Return zero when discount is empty.
-        """
         return self.cleaned_data.get("discount") or Decimal("0.00")
 
     def clean(self):
-        """
-        Validate if vehicle belongs to selected customer.
-        """
         cleaned_data = super().clean()
 
         customer = cleaned_data.get("customer")
         vehicle = cleaned_data.get("vehicle")
+        order_type = cleaned_data.get("order_type")
+        warranty_origin_order = cleaned_data.get("warranty_origin_order")
+        warranty_reason = cleaned_data.get("warranty_reason")
 
-        if customer and vehicle and vehicle.customer != customer:
-            raise forms.ValidationError(
-                "O veículo selecionado não pertence ao cliente informado."
+        if customer and vehicle and vehicle.customer_id != customer.pk:
+            self.add_error(
+                "vehicle",
+                "O veículo selecionado não pertence ao cliente informado.",
             )
+
+        if order_type in ["warranty", "return"]:
+            if not warranty_origin_order:
+                self.add_error(
+                    "warranty_origin_order",
+                    "Informe a OS original para garantia ou retorno.",
+                )
+
+            if not warranty_reason:
+                self.add_error(
+                    "warranty_reason",
+                    "Informe o motivo da garantia ou retorno.",
+                )
 
         return cleaned_data
 
 
 class ServiceOrderCreateForm(ServiceOrderForm):
-    """
-    Form used only to open a new service order.
-
-    The opening step must capture only commercial/triage data. Technical,
-    financial and delivery fields are intentionally kept out of this form and
-    must be filled later in their own operational flows.
-    """
-
     class Meta(ServiceOrderForm.Meta):
         fields = [
             "customer",
@@ -250,14 +269,13 @@ class ServiceOrderCreateForm(ServiceOrderForm):
             "title",
             "description",
             "status",
+            "order_type",
+            "warranty_origin_order",
+            "warranty_reason",
         ]
 
 
 class ServiceOrderTechnicalForm(forms.ModelForm):
-    """
-    Form used by mechanics to update technical fields only.
-    """
-
     class Meta:
         model = ServiceOrder
         fields = [
@@ -281,11 +299,7 @@ class ServiceOrderTechnicalForm(forms.ModelForm):
                     "rows": 5,
                 }
             ),
-            "status": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
+            "status": forms.Select(attrs={"class": "form-select"}),
         }
 
         labels = {
@@ -296,10 +310,6 @@ class ServiceOrderTechnicalForm(forms.ModelForm):
 
 
 class ServiceOrderItemForm(forms.ModelForm):
-    """
-    Form used to create and update service order items.
-    """
-
     unit_price = BRLDecimalField(
         label="Preço unitário",
         min_value=Decimal("0.00"),
@@ -318,11 +328,7 @@ class ServiceOrderItemForm(forms.ModelForm):
         ]
 
         widgets = {
-            "item_type": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
+            "item_type": forms.Select(attrs={"class": "form-select"}),
             "description": forms.TextInput(
                 attrs={
                     "class": "form-control",
@@ -347,10 +353,6 @@ class ServiceOrderItemForm(forms.ModelForm):
 
 
 class ServiceOrderNoteForm(forms.ModelForm):
-    """
-    Form used to create internal service order notes.
-    """
-
     class Meta:
         model = ServiceOrderNote
         fields = [
@@ -359,11 +361,7 @@ class ServiceOrderNoteForm(forms.ModelForm):
         ]
 
         widgets = {
-            "note_type": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
+            "note_type": forms.Select(attrs={"class": "form-select"}),
             "text": forms.Textarea(
                 attrs={
                     "class": "form-control",
@@ -380,10 +378,6 @@ class ServiceOrderNoteForm(forms.ModelForm):
 
 
 class ServiceOrderTimeEntryFinishForm(forms.ModelForm):
-    """
-    Form used to finish a mechanic time entry.
-    """
-
     class Meta:
         model = ServiceOrderTimeEntry
         fields = [
@@ -406,10 +400,6 @@ class ServiceOrderTimeEntryFinishForm(forms.ModelForm):
 
 
 class ServiceOrderApprovalForm(forms.ModelForm):
-    """
-    Form used to register a formal service order budget approval.
-    """
-
     class Meta:
         model = ServiceOrderApproval
         fields = [
@@ -418,11 +408,7 @@ class ServiceOrderApprovalForm(forms.ModelForm):
         ]
 
         widgets = {
-            "channel": forms.Select(
-                attrs={
-                    "class": "form-select",
-                }
-            ),
+            "channel": forms.Select(attrs={"class": "form-select"}),
             "notes": forms.Textarea(
                 attrs={
                     "class": "form-control",

@@ -256,6 +256,7 @@ class ServiceOrderPart(SoftDeleteModel):
 
     class Status(models.TextChoices):
         RESERVED = "reserved", "Reservada"
+        WAITING_PURCHASE = "waiting_purchase", "Aguardando compra"
         USED = "used", "Usada"
         RETURNED = "returned", "Devolvida"
         CANCELED = "canceled", "Cancelada"
@@ -288,7 +289,16 @@ class ServiceOrderPart(SoftDeleteModel):
         max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
-        verbose_name="Quantidade",
+        verbose_name="Quantidade solicitada",
+    )
+
+    reserved_quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+        verbose_name="Quantidade reservada em estoque",
+        help_text="Quantidade efetivamente baixada/reservada do estoque. A diferença abre pedido de compra.",
     )
 
     unit_price = models.DecimalField(
@@ -370,7 +380,92 @@ class ServiceOrderPart(SoftDeleteModel):
         if self.part_id and not self.part.is_active:
             raise ValidationError({"part": "Não é possível usar uma peça inativa."})
 
+        if self.reserved_quantity > self.quantity:
+            raise ValidationError(
+                {
+                    "reserved_quantity": (
+                        "A quantidade reservada não pode ser maior que a "
+                        "quantidade solicitada."
+                    )
+                }
+            )
+
         if self.discount > self.subtotal:
             raise ValidationError(
                 {"discount": "O desconto não pode ser maior que o subtotal."}
+            )
+
+
+class PurchaseOrder(SoftDeleteModel):
+    """
+    Pedido de compra aberto automaticamente quando uma OS solicita mais peças
+    do que o saldo disponível em estoque.
+    """
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Aberto"
+        ORDERED = "ordered", "Compra solicitada"
+        RECEIVED = "received", "Recebido"
+        CANCELED = "canceled", "Cancelado"
+
+    part = models.ForeignKey(
+        Part,
+        on_delete=models.PROTECT,
+        related_name="purchase_orders",
+        verbose_name="Peça",
+    )
+    service_order = models.ForeignKey(
+        "service_orders.ServiceOrder",
+        on_delete=models.PROTECT,
+        related_name="purchase_orders",
+        verbose_name="Ordem de serviço",
+    )
+    service_order_part = models.ForeignKey(
+        ServiceOrderPart,
+        on_delete=models.PROTECT,
+        related_name="purchase_orders",
+        blank=True,
+        null=True,
+        verbose_name="Peça da OS",
+    )
+    requested_quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+        verbose_name="Quantidade a comprar",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.OPEN,
+        verbose_name="Status",
+    )
+    reason = models.TextField(verbose_name="Motivo")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="created_purchase_orders",
+        verbose_name="Criado por",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Pedido de compra"
+        verbose_name_plural = "Pedidos de compra"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Compra {self.part.name} - OS #{self.service_order_id}"
+
+    def clean(self):
+        super().clean()
+
+        if self.requested_quantity is not None and self.requested_quantity <= Decimal(
+            "0.00"
+        ):
+            raise ValidationError(
+                {
+                    "requested_quantity": "A quantidade a comprar deve ser maior que zero."
+                }
             )

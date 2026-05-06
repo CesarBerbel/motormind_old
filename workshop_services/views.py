@@ -308,6 +308,7 @@ def add_combo_to_order_view(request, service_order_pk):
                 add_combo_to_order(
                     service_order=service_order,
                     combo=form.cleaned_data["combo"],
+                    quantity=form.cleaned_data["quantity"],
                     created_by=request.user,
                 )
             except ValidationError as error:
