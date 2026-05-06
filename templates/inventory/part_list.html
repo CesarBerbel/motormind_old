@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}
     Estoque - Sistema de Oficina
@@ -28,10 +29,12 @@
         <div class="col-md-5">
             <input
                 type="text"
-                name="search"
-                value="{{ search }}"
+                id="part-search-input"
+                name="q"
+                value="{{ request.GET.q }}"
                 class="form-control"
-                placeholder="Buscar por nome, código, marca ou categoria"
+                placeholder="Buscar por peça, código interno ou código de barras"
+                autocomplete="off"
             >
         </div>
 
@@ -144,5 +147,8 @@
 
     </div>
 </div>
-
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'js/part_list_autocomplete.js' %}"></script>
+{% endblock %}
 {% endblock %}

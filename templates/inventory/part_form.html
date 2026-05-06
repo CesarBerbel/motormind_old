@@ -160,6 +160,9 @@
     </div>
 </div>
 
-<script src="{% static 'js/brl_money_mask.js' %}"></script>
-
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/brl_money_mask.js' %}"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{% static 'js/part_autocomplete.js' %}"></script>
 {% endblock %}
