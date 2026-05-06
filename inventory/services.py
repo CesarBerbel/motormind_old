@@ -339,3 +339,55 @@ def return_service_order_part(*, order_part, user):
         service_order_part=order_part,
         changed_by=user,
     )
+
+
+@transaction.atomic
+def reserve_catalog_part_for_service_order_item(
+    *,
+    service_order,
+    service_order_item,
+    part,
+    quantity,
+    unit_price,
+    created_by,
+    reason,
+):
+    """
+    Reserve an inventory part automatically because a catalog service was added to an OS.
+
+    The link is stored on ServiceOrderPart.service_order_item so the part belongs to the
+    chosen service line in the OS, not to a loose OS-level bucket.
+    """
+    validate_service_order_can_receive_part(service_order)
+
+    if service_order_item.service_order_id != service_order.pk:
+        raise ValidationError(
+            "O serviço informado não pertence à mesma ordem de serviço da peça."
+        )
+
+    quantity = to_decimal(quantity)
+    unit_price = to_decimal(unit_price, field_name="unit_price")
+    validate_positive_quantity(quantity)
+
+    service_order_part = ServiceOrderPart(
+        service_order=service_order,
+        service_order_item=service_order_item,
+        part=part,
+        quantity=quantity,
+        unit_price=unit_price,
+        discount=Decimal("0.00"),
+        status=ServiceOrderPart.Status.RESERVED,
+        created_by=created_by,
+    )
+    service_order_part.full_clean()
+
+    reserve_stock(
+        part=part,
+        quantity=quantity,
+        created_by=created_by,
+        reason=reason,
+        service_order=service_order,
+    )
+
+    service_order_part.save()
+    return service_order_part

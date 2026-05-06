@@ -7,7 +7,11 @@ app_name = "workshop_services"
 urlpatterns = [
     path("", views.service_catalog_list_view, name="service_catalog_list"),
     path("categorias/criar/", views.category_create_view, name="category_create"),
-    path("categorias/<int:pk>/editar/", views.category_update_view, name="category_update"),
+    path(
+        "categorias/<int:pk>/editar/",
+        views.category_update_view,
+        name="category_update",
+    ),
     path("criar/", views.service_create_view, name="service_create"),
     path("<int:pk>/editar/", views.service_update_view, name="service_update"),
     path("combos/criar/", views.combo_create_view, name="combo_create"),

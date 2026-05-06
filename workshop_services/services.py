@@ -3,9 +3,14 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from inventory.models import ServiceOrderPart
-from inventory.services import reserve_stock
+from inventory.services import reserve_catalog_part_for_service_order_item
 from service_orders.models import ServiceOrder, ServiceOrderItem
+from workshop_services.models import (
+    ServiceCombo,
+    WorkshopCatalogAuditLog,
+    WorkshopService,
+    WorkshopServiceVersion,
+)
 
 
 def validate_order_can_receive_services(service_order):
@@ -33,68 +38,252 @@ def validate_combo_has_items(combo):
         raise ValidationError("O combo precisa ter pelo menos um serviço ativo.")
 
 
-def create_service_order_item_with_default_parts(
+def service_snapshot(service):
+    return {
+        "id": service.pk,
+        "code": service.code,
+        "name": service.name,
+        "category": str(service.category) if service.category_id else "",
+        "description": service.description or "",
+        "default_price": str(service.default_price),
+        "estimated_minutes": service.estimated_minutes,
+        "current_version": service.current_version,
+        "default_parts": [
+            {
+                "id": item.pk,
+                "part_id": item.part_id,
+                "part": str(item.part),
+                "quantity": str(item.quantity),
+                "unit_price": str(item.effective_unit_price),
+                "is_active": item.is_active,
+            }
+            for item in service.default_parts.select_related("part").order_by(
+                "created_at"
+            )
+        ],
+    }
+
+
+def combo_snapshot(combo):
+    return {
+        "id": combo.pk,
+        "code": combo.code,
+        "name": combo.name,
+        "description": combo.description or "",
+        "discount_amount": str(combo.discount_amount),
+        "is_active": combo.is_active,
+        "items": [
+            {
+                "id": item.pk,
+                "service_id": item.service_id,
+                "service": str(item.service),
+                "quantity": str(item.quantity),
+                "unit_price": str(item.unit_price),
+            }
+            for item in combo.items.select_related("service").order_by("created_at")
+        ],
+    }
+
+
+def create_service_version(service, *, created_by=None):
+    next_version = service.versions.count() + 1
+    service.current_version = next_version
+    service.save(update_fields=["current_version", "updated_at"])
+
+    version = WorkshopServiceVersion.objects.create(
+        service=service,
+        version_number=next_version,
+        code_snapshot=service.code,
+        name_snapshot=service.name,
+        category_snapshot=str(service.category) if service.category_id else "",
+        description_snapshot=service.description or "",
+        default_price_snapshot=service.default_price,
+        estimated_minutes_snapshot=service.estimated_minutes,
+        parts_snapshot=service_snapshot(service)["default_parts"],
+        created_by=(
+            created_by if getattr(created_by, "is_authenticated", False) else None
+        ),
+    )
+    return version
+
+
+def log_catalog_change(
     *,
-    service_order,
-    service,
-    quantity,
-    unit_price,
-    created_by,
-    description_prefix="",
+    action,
+    user=None,
+    service=None,
+    combo=None,
+    category=None,
+    old_data=None,
+    new_data=None,
 ):
-    service_order_item = ServiceOrderItem.objects.create(
+    return WorkshopCatalogAuditLog.objects.create(
+        action=action,
+        service=service,
+        combo=combo,
+        category=category,
+        changed_by=user if getattr(user, "is_authenticated", False) else None,
+        old_data=old_data or {},
+        new_data=new_data or {},
+    )
+
+
+@transaction.atomic
+def save_category_with_audit(*, form, user=None, instance=None):
+    old_data = {}
+    if instance and instance.pk:
+        old_data = {
+            "name": instance.name,
+            "parent_id": instance.parent_id,
+            "is_active": instance.is_active,
+        }
+    category = form.save()
+    action = (
+        WorkshopCatalogAuditLog.Action.CATEGORY_UPDATED
+        if old_data
+        else WorkshopCatalogAuditLog.Action.CATEGORY_CREATED
+    )
+    log_catalog_change(
+        action=action,
+        user=user,
+        category=category,
+        old_data=old_data,
+        new_data={
+            "name": category.name,
+            "parent_id": category.parent_id,
+            "is_active": category.is_active,
+        },
+    )
+    return category
+
+
+@transaction.atomic
+def save_service_with_parts_and_audit(*, form, formset, user=None, instance=None):
+    old_data = service_snapshot(instance) if instance and instance.pk else {}
+    service = form.save()
+    formset.instance = service
+    formset.save()
+    service.refresh_from_db()
+
+    create_service_version(service, created_by=user)
+    new_data = service_snapshot(service)
+    action = (
+        WorkshopCatalogAuditLog.Action.SERVICE_UPDATED
+        if old_data
+        else WorkshopCatalogAuditLog.Action.SERVICE_CREATED
+    )
+    log_catalog_change(
+        action=action, user=user, service=service, old_data=old_data, new_data=new_data
+    )
+    log_catalog_change(
+        action=WorkshopCatalogAuditLog.Action.SERVICE_PARTS_UPDATED,
+        user=user,
+        service=service,
+        old_data={"default_parts": old_data.get("default_parts", [])},
+        new_data={"default_parts": new_data.get("default_parts", [])},
+    )
+    return service
+
+
+@transaction.atomic
+def save_combo_with_items_and_audit(*, form, formset, user=None, instance=None):
+    """
+    Salva o combo e seus serviços com auditoria.
+
+    Compatível com dois cenários:
+    - edição: inline formset com instance=combo;
+    - criação: model formset sem instance, para evitar acessar combo.items antes do pk.
+    """
+    old_data = combo_snapshot(instance) if instance and instance.pk else {}
+    combo = form.save()
+
+    if hasattr(formset, "instance"):
+        formset.instance = combo
+        formset.save()
+    else:
+        # Formset de criação baseado em modelformset_factory.
+        # Como ServiceComboItem.combo não está no formulário, ele precisa ser
+        # preenchido manualmente após o combo principal receber pk.
+        for obj in formset.save(commit=False):
+            obj.combo = combo
+            obj.save()
+        for obj in getattr(formset, "deleted_objects", []):
+            obj.delete()
+        formset.save_m2m()
+
+    combo.refresh_from_db()
+
+    new_data = combo_snapshot(combo)
+    action = (
+        WorkshopCatalogAuditLog.Action.COMBO_UPDATED
+        if old_data
+        else WorkshopCatalogAuditLog.Action.COMBO_CREATED
+    )
+    log_catalog_change(
+        action=action, user=user, combo=combo, old_data=old_data, new_data=new_data
+    )
+    log_catalog_change(
+        action=WorkshopCatalogAuditLog.Action.COMBO_ITEMS_UPDATED,
+        user=user,
+        combo=combo,
+        old_data={"items": old_data.get("items", [])},
+        new_data={"items": new_data.get("items", [])},
+    )
+    return combo
+
+
+def _create_order_service_item(
+    *, service_order, service, quantity, unit_price, prefix=""
+):
+    description = f"{prefix}{service.code} - {service.name}"
+    if service.current_version:
+        description = f"{description} (v{service.current_version})"
+
+    return ServiceOrderItem.objects.create(
         service_order=service_order,
         item_type=ServiceOrderItem.ItemType.SERVICE,
-        description=f"{description_prefix}{service.code} - {service.name}",
+        description=description,
         quantity=quantity,
         unit_price=unit_price,
     )
 
-    default_parts = list(
-        service.default_parts.select_related("part").filter(is_active=True)
+
+def _copy_default_parts_to_order_service(
+    *, service_order, service_order_item, service, service_quantity, created_by
+):
+    created_parts = []
+    default_parts = (
+        service.default_parts.filter(is_active=True)
+        .select_related("part")
+        .order_by("created_at")
     )
-
     for default_part in default_parts:
-        total_part_quantity = default_part.quantity * quantity
-        part_unit_price = default_part.effective_unit_price
-
-        reserve_stock(
-            part=default_part.part,
-            quantity=total_part_quantity,
-            created_by=created_by,
-            reason=(
-                f"Reserva automática da peça {default_part.part.internal_code} "
-                f"ao adicionar o serviço {service.code} na OS {service_order.display_number}."
-            ),
-            service_order=service_order,
+        created_parts.append(
+            reserve_catalog_part_for_service_order_item(
+                service_order=service_order,
+                service_order_item=service_order_item,
+                part=default_part.part,
+                quantity=default_part.quantity * service_quantity,
+                unit_price=default_part.effective_unit_price,
+                created_by=created_by,
+                reason=f"Reserva automática da peça do serviço {service.code} na OS #{service_order.pk}.",
+            )
         )
-
-        ServiceOrderPart.objects.create(
-            service_order=service_order,
-            service_order_item=service_order_item,
-            part=default_part.part,
-            quantity=total_part_quantity,
-            unit_price=part_unit_price,
-            discount=Decimal("0.00"),
-            status=ServiceOrderPart.Status.RESERVED,
-            created_by=created_by,
-        )
-
-    return service_order_item
+    return created_parts
 
 
 @transaction.atomic
 def add_catalog_service_to_order(
-    *,
-    service_order,
-    service,
-    quantity,
-    unit_price=None,
-    created_by,
+    *, service_order, service, quantity, unit_price=None, created_by=None
 ):
     validate_order_can_receive_services(service_order)
     validate_active_service(service)
 
+    service = (
+        WorkshopService.objects.select_for_update()
+        .prefetch_related("default_parts__part")
+        .get(pk=service.pk)
+    )
     quantity = Decimal(str(quantity))
 
     if quantity <= Decimal("0.00"):
@@ -108,21 +297,33 @@ def add_catalog_service_to_order(
     if unit_price < Decimal("0.00"):
         raise ValidationError("O preço unitário não pode ser negativo.")
 
-    return create_service_order_item_with_default_parts(
+    service_order_item = _create_order_service_item(
         service_order=service_order,
         service=service,
         quantity=quantity,
         unit_price=unit_price,
+    )
+    parts = _copy_default_parts_to_order_service(
+        service_order=service_order,
+        service_order_item=service_order_item,
+        service=service,
+        service_quantity=quantity,
         created_by=created_by,
     )
+    return {"service_item": service_order_item, "parts": parts}
 
 
 @transaction.atomic
-def add_combo_to_order(*, service_order, combo, created_by):
+def add_combo_to_order(*, service_order, combo, created_by=None):
     validate_order_can_receive_services(service_order)
     validate_active_combo(combo)
     validate_combo_has_items(combo)
 
+    combo = (
+        ServiceCombo.objects.select_for_update()
+        .prefetch_related("items__service__default_parts__part")
+        .get(pk=combo.pk)
+    )
     combo_items = list(combo.items.select_related("service").all())
     gross_total = sum(
         (item.quantity * item.unit_price for item in combo_items), Decimal("0.00")
@@ -131,12 +332,11 @@ def add_combo_to_order(*, service_order, combo, created_by):
     if combo.discount_amount > gross_total:
         raise ValidationError("O desconto do combo não pode ser maior que o subtotal.")
 
-    created_items = []
+    created = []
     remaining_discount = combo.discount_amount
 
     for index, combo_item in enumerate(combo_items):
         validate_active_service(combo_item.service)
-
         line_total = combo_item.quantity * combo_item.unit_price
 
         if gross_total > Decimal("0.00") and combo.discount_amount > Decimal("0.00"):
@@ -147,7 +347,6 @@ def add_combo_to_order(*, service_order, combo, created_by):
                     line_total / gross_total * combo.discount_amount
                 ).quantize(Decimal("0.01"))
                 remaining_discount -= line_discount
-
             discounted_line_total = max(line_total - line_discount, Decimal("0.00"))
             unit_price = (discounted_line_total / combo_item.quantity).quantize(
                 Decimal("0.01")
@@ -155,15 +354,20 @@ def add_combo_to_order(*, service_order, combo, created_by):
         else:
             unit_price = combo_item.unit_price
 
-        created_items.append(
-            create_service_order_item_with_default_parts(
-                service_order=service_order,
-                service=combo_item.service,
-                quantity=combo_item.quantity,
-                unit_price=unit_price,
-                created_by=created_by,
-                description_prefix=f"Combo {combo.code} - {combo.name}: ",
-            )
+        service_order_item = _create_order_service_item(
+            service_order=service_order,
+            service=combo_item.service,
+            quantity=combo_item.quantity,
+            unit_price=unit_price,
+            prefix=f"Combo {combo.code} - {combo.name}: ",
         )
+        parts = _copy_default_parts_to_order_service(
+            service_order=service_order,
+            service_order_item=service_order_item,
+            service=combo_item.service,
+            service_quantity=combo_item.quantity,
+            created_by=created_by,
+        )
+        created.append({"service_item": service_order_item, "parts": parts})
 
-    return created_items
+    return created

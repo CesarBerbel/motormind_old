@@ -6,11 +6,15 @@ from django.db import migrations, models
 
 def migrate_text_categories_to_catalog(apps, schema_editor):
     WorkshopService = apps.get_model("workshop_services", "WorkshopService")
-    WorkshopServiceCategory = apps.get_model("workshop_services", "WorkshopServiceCategory")
+    WorkshopServiceCategory = apps.get_model(
+        "workshop_services", "WorkshopServiceCategory"
+    )
 
     category_cache = {}
 
-    for service in WorkshopService.objects.exclude(category__isnull=True).exclude(category=""):
+    for service in WorkshopService.objects.exclude(category__isnull=True).exclude(
+        category=""
+    ):
         category_name = service.category.strip()
         if not category_name:
             continue
@@ -37,13 +41,38 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="WorkshopServiceCategory",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
-                ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True, verbose_name="Excluído em")),
-                ("name", models.CharField(max_length=80, unique=True, verbose_name="Nome")),
-                ("description", models.TextField(blank=True, null=True, verbose_name="Descrição")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "deleted_at",
+                    models.DateTimeField(
+                        blank=True, db_index=True, null=True, verbose_name="Excluído em"
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(max_length=80, unique=True, verbose_name="Nome"),
+                ),
+                (
+                    "description",
+                    models.TextField(blank=True, null=True, verbose_name="Descrição"),
+                ),
                 ("is_active", models.BooleanField(default=True, verbose_name="Ativa")),
-                ("created_at", models.DateTimeField(auto_now_add=True, verbose_name="Criada em")),
-                ("updated_at", models.DateTimeField(auto_now=True, verbose_name="Atualizada em")),
+                (
+                    "created_at",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Criada em"),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="Atualizada em"),
+                ),
             ],
             options={
                 "verbose_name": "Categoria de serviço",
@@ -63,7 +92,9 @@ class Migration(migrations.Migration):
                 verbose_name="Categoria",
             ),
         ),
-        migrations.RunPython(migrate_text_categories_to_catalog, migrations.RunPython.noop),
+        migrations.RunPython(
+            migrate_text_categories_to_catalog, migrations.RunPython.noop
+        ),
         migrations.RemoveField(
             model_name="workshopservice",
             name="category",
