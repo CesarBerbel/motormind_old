@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from customers.models import Customer, Vehicle
 from inventory.forms import ServiceOrderPartForm
-from inventory.models import Part, ServiceOrderPart
+from inventory.models import Part, PartBrand, PartCategory, ServiceOrderPart
 from inventory.services import (
     cancel_reserved_service_order_part,
     confirm_service_order_part_usage,
@@ -73,11 +73,14 @@ def part():
     """
     Create part for financial summary tests.
     """
+    category = PartCategory.objects.get_or_create(name="Freio")[0]
+    brand, _ = PartBrand.objects.get_or_create(name="Mann")
+
     return Part.objects.create(
         name="Filtro de combustível",
         internal_code="FUEL-SUM-001",
-        brand="Mann",
-        category="Motor",
+        brand=brand,
+        category=category,
         unit="un",
         cost_price=Decimal("20.00"),
         sale_price=Decimal("80.00"),

@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.urls import reverse
 
-from inventory.models import Part, StockMovement
+from inventory.models import Part, PartBrand, PartCategory, StockMovement
 
 
 @pytest.fixture
@@ -50,11 +50,14 @@ def part():
     """
     Create part for inventory view tests.
     """
+    brand, _ = PartBrand.objects.get_or_create(name="Bosch")
+    category = PartCategory.objects.get_or_create(name="Freio")[0]
+
     return Part.objects.create(
         name="Pastilha de freio",
         internal_code="BRK-VIEW-001",
-        brand="Bosch",
-        category="Freio",
+        brand=brand,
+        category=category,
         unit="un",
         cost_price=Decimal("80.00"),
         sale_price=Decimal("150.00"),
