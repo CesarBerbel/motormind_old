@@ -64,7 +64,14 @@ class WorkshopServiceAdmin(admin.ModelAdmin):
 
 @admin.register(WorkshopServiceVersion)
 class WorkshopServiceVersionAdmin(admin.ModelAdmin):
-    list_display = ["service", "version_number", "default_price_snapshot", "estimated_minutes_snapshot", "created_by", "created_at"]
+    list_display = [
+        "service",
+        "version_number",
+        "default_price_snapshot",
+        "estimated_minutes_snapshot",
+        "created_by",
+        "created_at",
+    ]
     list_filter = ["created_at"]
     search_fields = ["service__name", "service__code", "name_snapshot", "code_snapshot"]
     readonly_fields = [
@@ -92,7 +99,29 @@ class ServiceComboAdmin(admin.ModelAdmin):
 
 @admin.register(WorkshopCatalogAuditLog)
 class WorkshopCatalogAuditLogAdmin(admin.ModelAdmin):
-    list_display = ["action", "service", "combo", "category", "changed_by", "created_at"]
+    list_display = [
+        "action",
+        "service",
+        "combo",
+        "category",
+        "changed_by",
+        "created_at",
+    ]
     list_filter = ["action", "created_at"]
-    search_fields = ["service__name", "service__code", "combo__name", "combo__code", "category__name"]
-    readonly_fields = ["action", "service", "combo", "category", "changed_by", "old_data", "new_data", "created_at"]
+    search_fields = [
+        "service__name",
+        "service__code",
+        "combo__name",
+        "combo__code",
+        "category__name",
+    ]
+    readonly_fields = [
+        "action",
+        "service",
+        "combo",
+        "category",
+        "changed_by",
+        "old_data",
+        "new_data",
+        "created_at",
+    ]

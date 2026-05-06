@@ -41,7 +41,9 @@ class WorkshopServiceCategory(SoftDeleteModel):
     def clean(self):
         super().clean()
         if self.pk and self.parent_id == self.pk:
-            raise ValidationError({"parent": "A categoria não pode ser pai dela mesma."})
+            raise ValidationError(
+                {"parent": "A categoria não pode ser pai dela mesma."}
+            )
 
 
 class WorkshopService(SoftDeleteModel):
@@ -71,7 +73,9 @@ class WorkshopService(SoftDeleteModel):
         verbose_name="Tempo estimado em minutos",
         help_text="Tempo operacional padrão usado em agenda, previsão e produtividade.",
     )
-    current_version = models.PositiveIntegerField(default=1, verbose_name="Versão atual")
+    current_version = models.PositiveIntegerField(
+        default=1, verbose_name="Versão atual"
+    )
     is_active = models.BooleanField(default=True, verbose_name="Ativo")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
@@ -150,7 +154,9 @@ class WorkshopServicePart(SoftDeleteModel):
     def clean(self):
         super().clean()
         if self.part_id and not self.part.is_active:
-            raise ValidationError({"part": "Não é possível vincular uma peça inativa ao serviço."})
+            raise ValidationError(
+                {"part": "Não é possível vincular uma peça inativa ao serviço."}
+            )
 
 
 class WorkshopServiceVersion(models.Model):
@@ -168,11 +174,19 @@ class WorkshopServiceVersion(models.Model):
     version_number = models.PositiveIntegerField(verbose_name="Número da versão")
     code_snapshot = models.CharField(max_length=50, verbose_name="Código")
     name_snapshot = models.CharField(max_length=150, verbose_name="Nome")
-    category_snapshot = models.CharField(max_length=160, blank=True, verbose_name="Categoria")
+    category_snapshot = models.CharField(
+        max_length=160, blank=True, verbose_name="Categoria"
+    )
     description_snapshot = models.TextField(blank=True, verbose_name="Descrição")
-    default_price_snapshot = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Preço padrão")
-    estimated_minutes_snapshot = models.PositiveIntegerField(default=0, verbose_name="Tempo estimado")
-    parts_snapshot = models.JSONField(default=list, blank=True, verbose_name="Peças da versão")
+    default_price_snapshot = models.DecimalField(
+        max_digits=10, decimal_places=2, verbose_name="Preço padrão"
+    )
+    estimated_minutes_snapshot = models.PositiveIntegerField(
+        default=0, verbose_name="Tempo estimado"
+    )
+    parts_snapshot = models.JSONField(
+        default=list, blank=True, verbose_name="Peças da versão"
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -227,12 +241,20 @@ class ServiceCombo(SoftDeleteModel):
 
     @property
     def gross_total(self):
-        total = self.items.aggregate(total=Sum(F("quantity") * F("unit_price")))["total"]
+        total = self.items.aggregate(total=Sum(F("quantity") * F("unit_price")))[
+            "total"
+        ]
         return total or Decimal("0.00")
 
     @property
     def estimated_minutes(self):
-        return sum((item.estimated_minutes_total for item in self.items.select_related("service")), 0)
+        return sum(
+            (
+                item.estimated_minutes_total
+                for item in self.items.select_related("service")
+            ),
+            0,
+        )
 
     @property
     def total(self):
@@ -244,7 +266,11 @@ class ServiceCombo(SoftDeleteModel):
     def clean(self):
         super().clean()
         if self.discount_amount > self.gross_total and self.pk:
-            raise ValidationError({"discount_amount": "O desconto não pode ser maior que o subtotal do combo."})
+            raise ValidationError(
+                {
+                    "discount_amount": "O desconto não pode ser maior que o subtotal do combo."
+                }
+            )
 
 
 class ServiceComboItem(SoftDeleteModel):
@@ -252,7 +278,12 @@ class ServiceComboItem(SoftDeleteModel):
     Service line inside a combo.
     """
 
-    combo = models.ForeignKey(ServiceCombo, on_delete=models.CASCADE, related_name="items", verbose_name="Combo")
+    combo = models.ForeignKey(
+        ServiceCombo,
+        on_delete=models.CASCADE,
+        related_name="items",
+        verbose_name="Combo",
+    )
     service = models.ForeignKey(
         WorkshopService,
         on_delete=models.PROTECT,
@@ -279,7 +310,11 @@ class ServiceComboItem(SoftDeleteModel):
         verbose_name = "Item do combo"
         verbose_name_plural = "Itens do combo"
         ordering = ["created_at"]
-        constraints = [models.UniqueConstraint(fields=["combo", "service"], name="unique_service_per_combo")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["combo", "service"], name="unique_service_per_combo"
+            )
+        ]
 
     def __str__(self):
         return f"{self.combo.name} - {self.service.name}"
@@ -295,7 +330,9 @@ class ServiceComboItem(SoftDeleteModel):
     def clean(self):
         super().clean()
         if self.service_id and not self.service.is_active:
-            raise ValidationError({"service": "Não é possível adicionar serviço inativo ao combo."})
+            raise ValidationError(
+                {"service": "Não é possível adicionar serviço inativo ao combo."}
+            )
 
 
 class WorkshopCatalogAuditLog(models.Model):
@@ -313,7 +350,9 @@ class WorkshopCatalogAuditLog(models.Model):
         CATEGORY_CREATED = "category_created", "Categoria criada"
         CATEGORY_UPDATED = "category_updated", "Categoria atualizada"
 
-    action = models.CharField(max_length=40, choices=Action.choices, verbose_name="Ação")
+    action = models.CharField(
+        max_length=40, choices=Action.choices, verbose_name="Ação"
+    )
     service = models.ForeignKey(
         WorkshopService,
         on_delete=models.SET_NULL,
@@ -346,7 +385,9 @@ class WorkshopCatalogAuditLog(models.Model):
         related_name="workshop_catalog_audit_logs",
         verbose_name="Alterado por",
     )
-    old_data = models.JSONField(default=dict, blank=True, verbose_name="Dados anteriores")
+    old_data = models.JSONField(
+        default=dict, blank=True, verbose_name="Dados anteriores"
+    )
     new_data = models.JSONField(default=dict, blank=True, verbose_name="Dados novos")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
 

@@ -3,14 +3,12 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from inventory.models import ServiceOrderPart
 from inventory.services import reserve_catalog_part_for_service_order_item
 from service_orders.models import ServiceOrder, ServiceOrderItem
 from workshop_services.models import (
     ServiceCombo,
     WorkshopCatalogAuditLog,
     WorkshopService,
-    WorkshopServicePart,
     WorkshopServiceVersion,
 )
 
@@ -20,7 +18,9 @@ def validate_order_can_receive_services(service_order):
         raise ValidationError("Não é possível adicionar serviços a uma OS cancelada.")
 
     if service_order.is_budget_approved:
-        raise ValidationError("Orçamento aprovado não permite adicionar serviços ao valor da OS.")
+        raise ValidationError(
+            "Orçamento aprovado não permite adicionar serviços ao valor da OS."
+        )
 
 
 def validate_active_service(service):
@@ -57,7 +57,9 @@ def service_snapshot(service):
                 "unit_price": str(item.effective_unit_price),
                 "is_active": item.is_active,
             }
-            for item in service.default_parts.select_related("part").order_by("created_at")
+            for item in service.default_parts.select_related("part").order_by(
+                "created_at"
+            )
         ],
     }
 
@@ -98,12 +100,23 @@ def create_service_version(service, *, created_by=None):
         default_price_snapshot=service.default_price,
         estimated_minutes_snapshot=service.estimated_minutes,
         parts_snapshot=service_snapshot(service)["default_parts"],
-        created_by=created_by if getattr(created_by, "is_authenticated", False) else None,
+        created_by=(
+            created_by if getattr(created_by, "is_authenticated", False) else None
+        ),
     )
     return version
 
 
-def log_catalog_change(*, action, user=None, service=None, combo=None, category=None, old_data=None, new_data=None):
+def log_catalog_change(
+    *,
+    action,
+    user=None,
+    service=None,
+    combo=None,
+    category=None,
+    old_data=None,
+    new_data=None,
+):
     return WorkshopCatalogAuditLog.objects.create(
         action=action,
         service=service,
@@ -119,7 +132,11 @@ def log_catalog_change(*, action, user=None, service=None, combo=None, category=
 def save_category_with_audit(*, form, user=None, instance=None):
     old_data = {}
     if instance and instance.pk:
-        old_data = {"name": instance.name, "parent_id": instance.parent_id, "is_active": instance.is_active}
+        old_data = {
+            "name": instance.name,
+            "parent_id": instance.parent_id,
+            "is_active": instance.is_active,
+        }
     category = form.save()
     action = (
         WorkshopCatalogAuditLog.Action.CATEGORY_UPDATED
@@ -131,7 +148,11 @@ def save_category_with_audit(*, form, user=None, instance=None):
         user=user,
         category=category,
         old_data=old_data,
-        new_data={"name": category.name, "parent_id": category.parent_id, "is_active": category.is_active},
+        new_data={
+            "name": category.name,
+            "parent_id": category.parent_id,
+            "is_active": category.is_active,
+        },
     )
     return category
 
@@ -151,7 +172,9 @@ def save_service_with_parts_and_audit(*, form, formset, user=None, instance=None
         if old_data
         else WorkshopCatalogAuditLog.Action.SERVICE_CREATED
     )
-    log_catalog_change(action=action, user=user, service=service, old_data=old_data, new_data=new_data)
+    log_catalog_change(
+        action=action, user=user, service=service, old_data=old_data, new_data=new_data
+    )
     log_catalog_change(
         action=WorkshopCatalogAuditLog.Action.SERVICE_PARTS_UPDATED,
         user=user,
@@ -191,8 +214,14 @@ def save_combo_with_items_and_audit(*, form, formset, user=None, instance=None):
     combo.refresh_from_db()
 
     new_data = combo_snapshot(combo)
-    action = WorkshopCatalogAuditLog.Action.COMBO_UPDATED if old_data else WorkshopCatalogAuditLog.Action.COMBO_CREATED
-    log_catalog_change(action=action, user=user, combo=combo, old_data=old_data, new_data=new_data)
+    action = (
+        WorkshopCatalogAuditLog.Action.COMBO_UPDATED
+        if old_data
+        else WorkshopCatalogAuditLog.Action.COMBO_CREATED
+    )
+    log_catalog_change(
+        action=action, user=user, combo=combo, old_data=old_data, new_data=new_data
+    )
     log_catalog_change(
         action=WorkshopCatalogAuditLog.Action.COMBO_ITEMS_UPDATED,
         user=user,
@@ -203,7 +232,9 @@ def save_combo_with_items_and_audit(*, form, formset, user=None, instance=None):
     return combo
 
 
-def _create_order_service_item(*, service_order, service, quantity, unit_price, prefix=""):
+def _create_order_service_item(
+    *, service_order, service, quantity, unit_price, prefix=""
+):
     description = f"{prefix}{service.code} - {service.name}"
     if service.current_version:
         description = f"{description} (v{service.current_version})"
@@ -217,9 +248,15 @@ def _create_order_service_item(*, service_order, service, quantity, unit_price, 
     )
 
 
-def _copy_default_parts_to_order_service(*, service_order, service_order_item, service, service_quantity, created_by):
+def _copy_default_parts_to_order_service(
+    *, service_order, service_order_item, service, service_quantity, created_by
+):
     created_parts = []
-    default_parts = service.default_parts.filter(is_active=True).select_related("part").order_by("created_at")
+    default_parts = (
+        service.default_parts.filter(is_active=True)
+        .select_related("part")
+        .order_by("created_at")
+    )
     for default_part in default_parts:
         created_parts.append(
             reserve_catalog_part_for_service_order_item(
@@ -236,11 +273,17 @@ def _copy_default_parts_to_order_service(*, service_order, service_order_item, s
 
 
 @transaction.atomic
-def add_catalog_service_to_order(*, service_order, service, quantity, unit_price=None, created_by=None):
+def add_catalog_service_to_order(
+    *, service_order, service, quantity, unit_price=None, created_by=None
+):
     validate_order_can_receive_services(service_order)
     validate_active_service(service)
 
-    service = WorkshopService.objects.select_for_update().prefetch_related("default_parts__part").get(pk=service.pk)
+    service = (
+        WorkshopService.objects.select_for_update()
+        .prefetch_related("default_parts__part")
+        .get(pk=service.pk)
+    )
     quantity = Decimal(str(quantity))
 
     if quantity <= Decimal("0.00"):
@@ -276,9 +319,15 @@ def add_combo_to_order(*, service_order, combo, created_by=None):
     validate_active_combo(combo)
     validate_combo_has_items(combo)
 
-    combo = ServiceCombo.objects.select_for_update().prefetch_related("items__service__default_parts__part").get(pk=combo.pk)
+    combo = (
+        ServiceCombo.objects.select_for_update()
+        .prefetch_related("items__service__default_parts__part")
+        .get(pk=combo.pk)
+    )
     combo_items = list(combo.items.select_related("service").all())
-    gross_total = sum((item.quantity * item.unit_price for item in combo_items), Decimal("0.00"))
+    gross_total = sum(
+        (item.quantity * item.unit_price for item in combo_items), Decimal("0.00")
+    )
 
     if combo.discount_amount > gross_total:
         raise ValidationError("O desconto do combo não pode ser maior que o subtotal.")
@@ -294,10 +343,14 @@ def add_combo_to_order(*, service_order, combo, created_by=None):
             if index == len(combo_items) - 1:
                 line_discount = remaining_discount
             else:
-                line_discount = (line_total / gross_total * combo.discount_amount).quantize(Decimal("0.01"))
+                line_discount = (
+                    line_total / gross_total * combo.discount_amount
+                ).quantize(Decimal("0.01"))
                 remaining_discount -= line_discount
             discounted_line_total = max(line_total - line_discount, Decimal("0.00"))
-            unit_price = (discounted_line_total / combo_item.quantity).quantize(Decimal("0.01"))
+            unit_price = (discounted_line_total / combo_item.quantity).quantize(
+                Decimal("0.01")
+            )
         else:
             unit_price = combo_item.unit_price
 

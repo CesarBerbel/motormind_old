@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
 from core.permissions import can_manage_service_order_items, user_passes_permission
@@ -117,7 +116,9 @@ def service_create_view(request):
         form = WorkshopServiceForm(request.POST, instance=service)
         formset = WorkshopServicePartFormSet(request.POST, instance=service)
         if form.is_valid() and formset.is_valid():
-            save_service_with_parts_and_audit(form=form, formset=formset, user=request.user, instance=None)
+            save_service_with_parts_and_audit(
+                form=form, formset=formset, user=request.user, instance=None
+            )
             messages.success(request, "Serviço cadastrado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível cadastrar o serviço.")
@@ -146,7 +147,9 @@ def service_update_view(request, pk):
         form = WorkshopServiceForm(request.POST, instance=service)
         formset = WorkshopServicePartFormSet(request.POST, instance=service)
         if form.is_valid() and formset.is_valid():
-            save_service_with_parts_and_audit(form=form, formset=formset, user=request.user, instance=service)
+            save_service_with_parts_and_audit(
+                form=form, formset=formset, user=request.user, instance=service
+            )
             messages.success(request, "Serviço atualizado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível atualizar o serviço.")
@@ -197,7 +200,10 @@ def combo_create_view(request):
             messages.success(request, "Combo cadastrado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
 
-        messages.error(request, "Não foi possível cadastrar o combo. Verifique os dados informados.")
+        messages.error(
+            request,
+            "Não foi possível cadastrar o combo. Verifique os dados informados.",
+        )
     else:
         form = ServiceComboForm()
         formset = ServiceComboItemCreateFormSet(
@@ -216,6 +222,7 @@ def combo_create_view(request):
         },
     )
 
+
 @login_required
 @user_passes_permission(can_manage_workshop_services)
 def combo_update_view(request, pk):
@@ -226,7 +233,9 @@ def combo_update_view(request, pk):
         formset = ServiceComboItemFormSet(request.POST, instance=combo, prefix="items")
 
         if form.is_valid() and formset.is_valid():
-            save_combo_with_items_and_audit(form=form, formset=formset, user=request.user, instance=combo)
+            save_combo_with_items_and_audit(
+                form=form, formset=formset, user=request.user, instance=combo
+            )
             messages.success(request, "Combo atualizado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
 

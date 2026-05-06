@@ -7,11 +7,19 @@ from workshop_services.models import (
 
 
 def get_active_categories():
-    return WorkshopServiceCategory.objects.filter(is_active=True).select_related("parent").order_by("parent__name", "name")
+    return (
+        WorkshopServiceCategory.objects.filter(is_active=True)
+        .select_related("parent")
+        .order_by("parent__name", "name")
+    )
 
 
 def get_categories_for_list():
-    return WorkshopServiceCategory.objects.select_related("parent").all().order_by("parent__name", "name")
+    return (
+        WorkshopServiceCategory.objects.select_related("parent")
+        .all()
+        .order_by("parent__name", "name")
+    )
 
 
 def get_active_services():
@@ -41,8 +49,12 @@ def get_active_combos():
 
 
 def get_combos_for_list():
-    return ServiceCombo.objects.prefetch_related("items", "items__service").order_by("name")
+    return ServiceCombo.objects.prefetch_related("items", "items__service").order_by(
+        "name"
+    )
 
 
 def get_recent_catalog_audit_logs(limit=30):
-    return WorkshopCatalogAuditLog.objects.select_related("service", "combo", "category", "changed_by")[:limit]
+    return WorkshopCatalogAuditLog.objects.select_related(
+        "service", "combo", "category", "changed_by"
+    )[:limit]

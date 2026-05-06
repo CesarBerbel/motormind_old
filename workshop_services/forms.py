@@ -12,7 +12,6 @@ from workshop_services.models import (
     WorkshopServicePart,
 )
 
-
 COMPACT_TEXT_ATTRS = {
     "class": "form-control form-control-sm",
     "autocomplete": "off",
@@ -35,8 +34,12 @@ class ServicePriceSelect(forms.Select):
     automaticamente o preco unitario quando o servico for escolhido.
     """
 
-    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
-        option = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
 
         instance = getattr(value, "instance", None)
         if instance is not None:
@@ -49,10 +52,14 @@ class ServicePriceSelect(forms.Select):
 class WorkshopServiceCategoryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["parent"].queryset = WorkshopServiceCategory.objects.filter(is_active=True).order_by("name")
+        self.fields["parent"].queryset = WorkshopServiceCategory.objects.filter(
+            is_active=True
+        ).order_by("name")
         self.fields["parent"].required = False
         if self.instance and self.instance.pk:
-            self.fields["parent"].queryset = self.fields["parent"].queryset.exclude(pk=self.instance.pk)
+            self.fields["parent"].queryset = self.fields["parent"].queryset.exclude(
+                pk=self.instance.pk
+            )
 
     class Meta:
         model = WorkshopServiceCategory
@@ -173,7 +180,9 @@ class ServiceComboForm(forms.Form):
     description = forms.CharField(
         label="Descricao",
         required=False,
-        widget=forms.Textarea(attrs={"class": "form-control form-control-sm", "rows": 3}),
+        widget=forms.Textarea(
+            attrs={"class": "form-control form-control-sm", "rows": 3}
+        ),
     )
     discount_amount = BRLDecimalField(
         label="Desconto do combo",
@@ -218,7 +227,9 @@ class ServiceComboForm(forms.Form):
             qs = qs.exclude(pk=self.instance.pk)
 
         if qs.exists():
-            raise forms.ValidationError("Ja existe um combo cadastrado com este codigo.")
+            raise forms.ValidationError(
+                "Ja existe um combo cadastrado com este codigo."
+            )
 
         return code
 
@@ -233,7 +244,9 @@ class ServiceComboForm(forms.Form):
         combo.name = self.cleaned_data["name"]
         combo.code = self.cleaned_data.get("code", "")
         combo.description = self.cleaned_data.get("description", "")
-        combo.discount_amount = self.cleaned_data.get("discount_amount") or Decimal("0.00")
+        combo.discount_amount = self.cleaned_data.get("discount_amount") or Decimal(
+            "0.00"
+        )
         combo.is_active = self.cleaned_data.get("is_active", False)
 
         if commit:
@@ -255,7 +268,9 @@ class ServiceComboItemForm(forms.ModelForm):
         model = ServiceComboItem
         fields = ["service", "quantity", "unit_price"]
         widgets = {
-            "service": ServicePriceSelect(attrs={"class": "form-select form-select-sm combo-service-select"}),
+            "service": ServicePriceSelect(
+                attrs={"class": "form-select form-select-sm combo-service-select"}
+            ),
             "quantity": forms.NumberInput(
                 attrs={
                     "class": "form-control form-control-sm",

@@ -41,7 +41,7 @@ def add_service_order_item_column_if_missing(apps, schema_editor):
         return
 
     schema_editor.execute(
-        f'ALTER TABLE {table_name} ADD COLUMN {column_name} bigint NULL'
+        f"ALTER TABLE {table_name} ADD COLUMN {column_name} bigint NULL"
     )
 
 
