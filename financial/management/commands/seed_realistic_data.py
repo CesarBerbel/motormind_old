@@ -1,4 +1,5 @@
 import random
+import unicodedata
 from decimal import Decimal
 
 from django.apps import apps
@@ -125,66 +126,104 @@ class Command(BaseCommand):
         Receivable.objects.all().delete()
         Expense.objects.all().delete()
 
-        ServiceOrderPart = self.get_service_order_part_model()
+        # Delete dependent/child objects first to avoid FK protection errors.
+        self.delete_model_objects_if_exists("financial", "CashFlowEntry")
+        self.delete_model_objects_if_exists("financial", "Payment")
+        self.delete_model_objects_if_exists("financial", "Receivable")
+        self.delete_model_objects_if_exists("financial", "Expense")
 
-        if ServiceOrderPart:
-            ServiceOrderPart.objects.all().delete()
+        self.delete_model_objects_if_exists("inventory", "PartStockMovement")
+        self.delete_model_objects_if_exists("inventory", "ServiceOrderPart")
 
-        self.delete_part_stock_movements_if_exists()
         ServiceOrderItem.objects.all().delete()
         ServiceOrder.objects.all().delete()
 
-        self.delete_parts_if_exists()
+        self.delete_model_objects_if_exists("inventory", "Part")
+        self.delete_model_objects_if_exists("service_orders", "Part")
+        self.delete_model_objects_if_exists("service_orders", "Employee")
 
         Vehicle.objects.all().delete()
         Customer.objects.all().delete()
 
         User.objects.all().delete()
 
-        self.admin_user = User.objects.create_superuser(
-            email="admin@admin.com",
-            password="321654",
-        )
+        self.admin_user = self.create_admin_user()
 
         self.stdout.write(self.style.SUCCESS("Database reset completed."))
 
-    def delete_parts_if_exists(self):
+    def delete_model_objects_if_exists(self, app_label, model_name):
         """
-        Delete parts if Part model exists.
+        Delete all objects for an optional model when it exists.
         """
-        Part = self.get_part_model()
+        try:
+            model_class = apps.get_model(app_label, model_name)
+        except LookupError:
+            return
 
-        if Part:
-            Part.objects.all().delete()
-
-    def delete_part_stock_movements_if_exists(self):
-        """
-        Delete part stock movements if model exists.
-        """
-        PartStockMovement = self.get_part_stock_movement_model()
-
-        if PartStockMovement:
-            PartStockMovement.objects.all().delete()
+        model_class.objects.all().delete()
 
     # =========================
     # USERS
     # =========================
 
+    def create_admin_user(self):
+        """
+        Create admin user with the expected default password.
+        """
+        User = get_user_model()
+
+        return User.objects.create_superuser(
+            email="admin@admin.com",
+            password="321654",
+        )
+
     def get_or_create_admin_user(self):
         """
-        Return admin user or create it.
+        Return admin user or create it with a valid password.
         """
         User = get_user_model()
 
         admin_user = User.objects.filter(email="admin@admin.com").first()
 
         if admin_user:
+            if not admin_user.has_usable_password():
+                admin_user.set_password("321654")
+                admin_user.save(update_fields=["password"])
+
             return admin_user
 
-        return User.objects.create_superuser(
-            email="admin@admin.com",
-            password="321654",
-        )
+        return self.create_admin_user()
+
+    def normalize_group_slug_for_email(self, group_name):
+        """
+        Convert a group name into a deterministic ASCII slug safe for email local-part.
+
+        Examples:
+        - "Mecânico" becomes "mecanico";
+        - "Financeiro" becomes "financeiro";
+        - "Atendente Geral" becomes "atendente_geral".
+        """
+        normalized = unicodedata.normalize("NFKD", group_name)
+        ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
+        ascii_text = ascii_text.lower().strip()
+
+        allowed_chars = []
+        previous_was_separator = False
+
+        for char in ascii_text:
+            if char.isalnum():
+                allowed_chars.append(char)
+                previous_was_separator = False
+            elif char in {" ", "-", "_"} and not previous_was_separator:
+                allowed_chars.append("_")
+                previous_was_separator = True
+
+        slug = "".join(allowed_chars).strip("_")
+
+        if not slug:
+            return "grupo"
+
+        return slug
 
     def create_users_by_existing_groups(self):
         """
@@ -210,28 +249,27 @@ class Command(BaseCommand):
         ]
 
         for group in groups:
-            group_slug = group.name.lower().replace(" ", "_").replace("-", "_")
+            group_slug = self.normalize_group_slug_for_email(group.name)
 
             for index, (first_name, last_name) in enumerate(people_names, start=1):
                 email = f"{group_slug}{index}@motormind.test"
 
                 user = User.objects.filter(email=email).first()
 
-                if user is None:
+                if not user:
                     user = User.objects.create_user(
                         email=email,
                         password="123456",
-                        first_name=first_name,
-                        last_name=last_name,
-                        is_active=True,
-                        is_staff=False,
                     )
-                else:
-                    user.first_name = first_name
-                    user.last_name = last_name
-                    user.is_active = True
-                    user.is_staff = False
-                    user.save()
+
+                user.first_name = first_name
+                user.last_name = last_name
+                user.is_active = True
+                user.is_staff = False
+
+                # Keep seeded group users deterministic and testable.
+                user.set_password("123456")
+                user.save()
                 user.groups.clear()
                 user.groups.add(group)
 

@@ -74,11 +74,11 @@ class SeedRealisticDataCommandTests(TestCase):
             "5",
         )
 
-        self.assertGreater(Customer.objects.count(), 0)
-        self.assertGreater(Vehicle.objects.count(), 0)
-        self.assertGreater(ServiceOrder.objects.count(), 0)
-        self.assertGreater(ServiceOrderItem.objects.count(), 0)
         self.assertGreater(Expense.objects.count(), 0)
+        self.assertGreater(ServiceOrderItem.objects.count(), 0)
+        self.assertGreater(ServiceOrder.objects.count(), 0)
+        self.assertGreater(Vehicle.objects.count(), 0)
+        self.assertGreater(Customer.objects.count(), 0)
 
         output = self.call_seed_command("--reset-only")
 

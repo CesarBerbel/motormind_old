@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Part, ServiceOrderPart, StockMovement
+from .models import Part, PartBrand, PartCategory, ServiceOrderPart, StockMovement
 
 
 @admin.register(Part)
@@ -22,7 +22,13 @@ class PartAdmin(admin.ModelAdmin):
     )
 
     list_filter = ("is_active", "brand", "category", "created_at")
-    search_fields = ("name", "internal_code", "barcode", "brand", "category")
+    search_fields = (
+        "name",
+        "internal_code",
+        "barcode",
+        "brand__name",
+        "category__name",
+    )
     readonly_fields = ("created_at", "updated_at", "stock_status_label")
 
 
@@ -76,3 +82,27 @@ class ServiceOrderPartAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = ("service_order", "part", "created_by")
     readonly_fields = ("subtotal", "total", "created_at", "updated_at")
+
+
+@admin.register(PartBrand)
+class PartBrandAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for part brands.
+    """
+
+    list_display = ("name", "is_active", "created_at", "updated_at")
+    list_filter = ("is_active", "created_at")
+    search_fields = ("name",)
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(PartCategory)
+class PartCategoryAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for part categories.
+    """
+
+    list_display = ("name", "is_active", "created_at", "updated_at")
+    list_filter = ("is_active", "created_at")
+    search_fields = ("name", "description")
+    readonly_fields = ("created_at", "updated_at")

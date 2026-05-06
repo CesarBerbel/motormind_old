@@ -8,6 +8,47 @@ from django.db import models
 from core.models import SoftDeleteModel
 
 
+class PartBrand(SoftDeleteModel):
+    """
+    Stores normalized automotive part brands.
+    """
+
+    name = models.CharField(max_length=80, unique=True, verbose_name="Nome da marca")
+    is_active = models.BooleanField(default=True, verbose_name="Ativa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criada em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizada em")
+
+    class Meta:
+        verbose_name = "Marca de peça"
+        verbose_name_plural = "Marcas de peças"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class PartCategory(SoftDeleteModel):
+    """
+    Stores normalized automotive part categories.
+    """
+
+    name = models.CharField(
+        max_length=80, unique=True, verbose_name="Nome da categoria"
+    )
+    description = models.TextField(blank=True, verbose_name="Descrição")
+    is_active = models.BooleanField(default=True, verbose_name="Ativa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criada em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizada em")
+
+    class Meta:
+        verbose_name = "Categoria de peça"
+        verbose_name_plural = "Categorias de peças"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Part(SoftDeleteModel):
     """
     Model that stores parts available in workshop inventory.
@@ -20,9 +61,21 @@ class Part(SoftDeleteModel):
     barcode = models.CharField(
         max_length=80, blank=True, null=True, verbose_name="Código de barras"
     )
-    brand = models.CharField(max_length=80, blank=True, null=True, verbose_name="Marca")
-    category = models.CharField(
-        max_length=80, blank=True, null=True, verbose_name="Categoria"
+    brand = models.ForeignKey(
+        PartBrand,
+        on_delete=models.PROTECT,
+        related_name="parts",
+        blank=True,
+        null=True,
+        verbose_name="Marca",
+    )
+    category = models.ForeignKey(
+        PartCategory,
+        on_delete=models.PROTECT,
+        related_name="parts",
+        blank=True,
+        null=True,
+        verbose_name="Categoria",
     )
     unit = models.CharField(
         max_length=20, default="un", verbose_name="Unidade de medida"
