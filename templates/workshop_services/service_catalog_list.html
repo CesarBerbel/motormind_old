@@ -27,6 +27,7 @@
                         <th>Categoria</th>
                         <th>Preço padrão</th>
                         <th>Tempo</th>
+                        <th>Peças padrão</th>
                         <th>Status</th>
                         <th class="text-end">Ações</th>
                     </tr>
@@ -39,11 +40,12 @@
                             <td>{{ service.category|default:"-" }}</td>
                             <td>{{ service.default_price|brl }}</td>
                             <td>{{ service.estimated_minutes }} min</td>
+                            <td>{{ service.default_parts.count }}</td>
                             <td>{% if service.is_active %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</td>
                             <td class="text-end"><a href="{% url 'workshop_services:service_update' service.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a></td>
                         </tr>
                     {% empty %}
-                        <tr><td colspan="7" class="text-center text-muted py-4">Nenhum serviço cadastrado.</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted py-4">Nenhum serviço cadastrado.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

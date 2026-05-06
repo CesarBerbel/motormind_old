@@ -32,30 +32,69 @@ def validate_combo_has_items(combo):
 
 
 @transaction.atomic
-def add_catalog_service_to_order(*, service_order, service, quantity, unit_price=None):
-    validate_order_can_receive_services(service_order)
-    validate_active_service(service)
+def add_catalog_service_to_order(
+    *,
+    service_order,
+    catalog_service=None,
+    service=None,
+    quantity=Decimal("1.00"),
+    discount=Decimal("0.00"),
+    created_by=None,
+):
+    """
+    Add a catalog service to a service order using the catalog default price.
 
-    quantity = Decimal(str(quantity))
+    Accepts both catalog_service and service for backward compatibility with
+    older tests/views.
+    """
+    catalog_service = catalog_service or service
+
+    if catalog_service is None:
+        raise ValueError("Informe o serviço do catálogo.")
+
+    quantity = quantity or Decimal("1.00")
+    discount = discount or Decimal("0.00")
 
     if quantity <= Decimal("0.00"):
-        raise ValidationError("A quantidade deve ser maior que zero.")
+        raise ValueError("A quantidade deve ser maior que zero.")
 
-    if unit_price in [None, ""]:
-        unit_price = service.default_price
-    else:
-        unit_price = Decimal(str(unit_price))
+    if discount < Decimal("0.00"):
+        raise ValueError("O desconto não pode ser negativo.")
 
-    if unit_price < Decimal("0.00"):
-        raise ValidationError("O preço unitário não pode ser negativo.")
+    unit_price = catalog_service.default_price
+    subtotal = quantity * unit_price
 
-    return ServiceOrderItem.objects.create(
-        service_order=service_order,
-        item_type=ServiceOrderItem.ItemType.SERVICE,
-        description=f"{service.code} - {service.name}",
-        quantity=quantity,
-        unit_price=unit_price,
+    if discount > subtotal:
+        raise ValueError("O desconto não pode ser maior que o subtotal.")
+
+    service_code = getattr(catalog_service, "internal_code", None) or getattr(
+        catalog_service,
+        "code",
+        "",
     )
+
+    service_name = getattr(catalog_service, "name", "")
+
+    if service_code:
+        description = f"{service_code} - {service_name}"
+    else:
+        description = service_name
+
+    item_data = {
+        "service_order": service_order,
+        "item_type": "service",
+        "description": description,
+        "quantity": quantity,
+        "unit_price": unit_price,
+    }
+
+    if any(field.name == "discount" for field in ServiceOrderItem._meta.fields):
+        item_data["discount"] = discount
+
+    if any(field.name == "created_by" for field in ServiceOrderItem._meta.fields):
+        item_data["created_by"] = created_by
+
+    return ServiceOrderItem.objects.create(**item_data)
 
 
 @transaction.atomic

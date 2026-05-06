@@ -267,6 +267,16 @@ class ServiceOrderPart(SoftDeleteModel):
         verbose_name="Ordem de serviço",
     )
 
+    service_order_item = models.ForeignKey(
+        "service_orders.ServiceOrderItem",
+        on_delete=models.CASCADE,
+        related_name="linked_parts",
+        blank=True,
+        null=True,
+        verbose_name="Serviço da OS",
+        help_text="Serviço da OS que originou esta peça.",
+    )
+
     part = models.ForeignKey(
         Part,
         on_delete=models.PROTECT,

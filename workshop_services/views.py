@@ -11,6 +11,7 @@ from workshop_services.forms import (
     ServiceComboForm,
     ServiceComboItemFormSet,
     WorkshopServiceForm,
+    WorkshopServicePartFormSet,
 )
 from workshop_services.models import ServiceCombo, WorkshopService
 from workshop_services.permissions import (
@@ -42,19 +43,24 @@ def service_catalog_list_view(request):
 def service_create_view(request):
     if request.method == "POST":
         form = WorkshopServiceForm(request.POST)
-        if form.is_valid():
-            form.save()
+        formset = WorkshopServicePartFormSet(request.POST)
+        if form.is_valid() and formset.is_valid():
+            service = form.save()
+            formset.instance = service
+            formset.save()
             messages.success(request, "Serviço cadastrado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível cadastrar o serviço.")
     else:
         form = WorkshopServiceForm()
+        formset = WorkshopServicePartFormSet()
 
     return render(
         request,
         "workshop_services/service_form.html",
         {
             "form": form,
+            "formset": formset,
             "page_title": "Cadastrar serviço",
             "button_text": "Salvar serviço",
         },
@@ -68,19 +74,23 @@ def service_update_view(request, pk):
 
     if request.method == "POST":
         form = WorkshopServiceForm(request.POST, instance=service)
-        if form.is_valid():
+        formset = WorkshopServicePartFormSet(request.POST, instance=service)
+        if form.is_valid() and formset.is_valid():
             form.save()
+            formset.save()
             messages.success(request, "Serviço atualizado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível atualizar o serviço.")
     else:
         form = WorkshopServiceForm(instance=service)
+        formset = WorkshopServicePartFormSet(instance=service)
 
     return render(
         request,
         "workshop_services/service_form.html",
         {
             "form": form,
+            "formset": formset,
             "page_title": "Editar serviço",
             "button_text": "Salvar alterações",
         },
@@ -166,6 +176,7 @@ def add_service_to_order_view(request, service_order_pk):
                     service=form.cleaned_data["service"],
                     quantity=form.cleaned_data["quantity"],
                     unit_price=form.cleaned_data["unit_price"],
+                    created_by=request.user,
                 )
             except ValidationError as error:
                 form.add_error(None, error)
