@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
 from core.permissions import can_manage_service_order_items, user_passes_permission
@@ -10,15 +11,24 @@ from workshop_services.forms import (
     AddComboToOrderForm,
     ServiceComboForm,
     ServiceComboItemFormSet,
+    WorkshopServiceCategoryForm,
     WorkshopServiceForm,
     WorkshopServicePartFormSet,
 )
-from workshop_services.models import ServiceCombo, WorkshopService
+from workshop_services.models import (
+    ServiceCombo,
+    WorkshopService,
+    WorkshopServiceCategory,
+)
 from workshop_services.permissions import (
     can_manage_workshop_services,
     can_view_workshop_services,
 )
-from workshop_services.selectors import get_combos_for_list, get_services_for_list
+from workshop_services.selectors import (
+    get_categories_for_list,
+    get_combos_for_list,
+    get_services_for_list,
+)
 from workshop_services.services import add_catalog_service_to_order, add_combo_to_order
 
 
@@ -27,6 +37,7 @@ from workshop_services.services import add_catalog_service_to_order, add_combo_t
 def service_catalog_list_view(request):
     services = get_services_for_list()
     combos = get_combos_for_list()
+    categories = get_categories_for_list()
 
     return render(
         request,
@@ -34,6 +45,57 @@ def service_catalog_list_view(request):
         {
             "services": services,
             "combos": combos,
+            "categories": categories,
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_manage_workshop_services)
+def category_create_view(request):
+    if request.method == "POST":
+        form = WorkshopServiceCategoryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Categoria cadastrada com sucesso.")
+            return redirect("workshop_services:service_catalog_list")
+        messages.error(request, "Não foi possível cadastrar a categoria.")
+    else:
+        form = WorkshopServiceCategoryForm()
+
+    return render(
+        request,
+        "workshop_services/category_form.html",
+        {
+            "form": form,
+            "page_title": "Cadastrar categoria de serviço",
+            "button_text": "Salvar categoria",
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_manage_workshop_services)
+def category_update_view(request, pk):
+    category = get_object_or_404(WorkshopServiceCategory, pk=pk)
+
+    if request.method == "POST":
+        form = WorkshopServiceCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Categoria atualizada com sucesso.")
+            return redirect("workshop_services:service_catalog_list")
+        messages.error(request, "Não foi possível atualizar a categoria.")
+    else:
+        form = WorkshopServiceCategoryForm(instance=category)
+
+    return render(
+        request,
+        "workshop_services/category_form.html",
+        {
+            "form": form,
+            "page_title": "Editar categoria de serviço",
+            "button_text": "Salvar alterações",
         },
     )
 
@@ -41,19 +103,22 @@ def service_catalog_list_view(request):
 @login_required
 @user_passes_permission(can_manage_workshop_services)
 def service_create_view(request):
+    service = WorkshopService()
+
     if request.method == "POST":
-        form = WorkshopServiceForm(request.POST)
-        formset = WorkshopServicePartFormSet(request.POST)
+        form = WorkshopServiceForm(request.POST, instance=service)
+        formset = WorkshopServicePartFormSet(request.POST, instance=service)
         if form.is_valid() and formset.is_valid():
-            service = form.save()
-            formset.instance = service
-            formset.save()
+            with transaction.atomic():
+                service = form.save()
+                formset.instance = service
+                formset.save()
             messages.success(request, "Serviço cadastrado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível cadastrar o serviço.")
     else:
-        form = WorkshopServiceForm()
-        formset = WorkshopServicePartFormSet()
+        form = WorkshopServiceForm(instance=service)
+        formset = WorkshopServicePartFormSet(instance=service)
 
     return render(
         request,
@@ -76,8 +141,9 @@ def service_update_view(request, pk):
         form = WorkshopServiceForm(request.POST, instance=service)
         formset = WorkshopServicePartFormSet(request.POST, instance=service)
         if form.is_valid() and formset.is_valid():
-            form.save()
-            formset.save()
+            with transaction.atomic():
+                form.save()
+                formset.save()
             messages.success(request, "Serviço atualizado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
         messages.error(request, "Não foi possível atualizar o serviço.")
@@ -107,9 +173,10 @@ def combo_create_view(request):
         formset = ServiceComboItemFormSet(request.POST, instance=combo)
 
         if form.is_valid() and formset.is_valid():
-            combo = form.save()
-            formset.instance = combo
-            formset.save()
+            with transaction.atomic():
+                combo = form.save()
+                formset.instance = combo
+                formset.save()
             messages.success(request, "Combo cadastrado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
 
@@ -140,8 +207,9 @@ def combo_update_view(request, pk):
         formset = ServiceComboItemFormSet(request.POST, instance=combo)
 
         if form.is_valid() and formset.is_valid():
-            form.save()
-            formset.save()
+            with transaction.atomic():
+                form.save()
+                formset.save()
             messages.success(request, "Combo atualizado com sucesso.")
             return redirect("workshop_services:service_catalog_list")
 
