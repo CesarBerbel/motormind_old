@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from core.permissions import (
@@ -30,11 +31,15 @@ def part_list_view(request):
     """
     List inventory parts.
     """
-    search = request.GET.get("search", "").strip()
+
+    # 🔥 CORREÇÃO AQUI
+    search = request.GET.get("q") or request.GET.get("search", "")
+    search = search.strip()
+
     low_stock = request.GET.get("low_stock", "").strip()
     status = request.GET.get("status", "").strip()
 
-    parts = Part.objects.all().order_by("name")
+    parts = Part.objects.select_related("brand", "category").all().order_by("name")
 
     if search:
         parts = parts.filter(
@@ -521,3 +526,39 @@ def category_update_view(request, pk):
             "back_url_name": "inventory:category_list",
         },
     )
+
+
+def part_autocomplete(request):
+    query = request.GET.get("q", "").strip()
+
+    results = []
+
+    if query:
+        parts = (
+            Part.objects.select_related("brand", "category")
+            .filter(
+                Q(name__icontains=query)
+                | Q(internal_code__icontains=query)
+                | Q(barcode__icontains=query)
+            )
+            .order_by("name")[:10]
+        )
+
+        for part in parts:
+            results.append(
+                {
+                    "id": part.id,
+                    "name": part.name,
+                    "internal_code": part.internal_code,
+                    "brand_id": part.brand_id,
+                    "brand_name": part.brand.name if part.brand else "",
+                    "category_id": part.category_id,
+                    "category_name": part.category.name if part.category else "",
+                    "sale_price": str(part.sale_price),
+                    "cost_price": str(part.cost_price),
+                    "unit": part.unit,
+                    "location": part.location,
+                }
+            )
+
+    return JsonResponse({"results": results})

@@ -86,4 +86,5 @@ urlpatterns = [
         service_order_part_views.service_order_part_return_view,
         name="service_order_part_return",
     ),
+    path("pecas/autocomplete/", part_views.part_autocomplete, name="part_autocomplete"),
 ]
