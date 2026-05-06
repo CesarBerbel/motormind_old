@@ -2,11 +2,19 @@ from workshop_services.models import ServiceCombo, WorkshopService
 
 
 def get_active_services():
-    return WorkshopService.objects.filter(is_active=True).order_by("name")
+    return (
+        WorkshopService.objects.filter(is_active=True)
+        .prefetch_related("default_parts", "default_parts__part")
+        .order_by("name")
+    )
 
 
 def get_services_for_list():
-    return WorkshopService.objects.all().order_by("name")
+    return (
+        WorkshopService.objects.prefetch_related("default_parts", "default_parts__part")
+        .all()
+        .order_by("name")
+    )
 
 
 def get_active_combos():

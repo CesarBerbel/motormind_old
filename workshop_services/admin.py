@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from workshop_services.models import ServiceCombo, ServiceComboItem, WorkshopService
+from workshop_services.models import (
+    ServiceCombo,
+    ServiceComboItem,
+    WorkshopService,
+    WorkshopServicePart,
+)
+
+
+class WorkshopServicePartInline(admin.TabularInline):
+    model = WorkshopServicePart
+    extra = 1
 
 
 class ServiceComboItemInline(admin.TabularInline):
@@ -20,6 +30,7 @@ class WorkshopServiceAdmin(admin.ModelAdmin):
     ]
     list_filter = ["is_active", "category"]
     search_fields = ["name", "code", "category"]
+    inlines = [WorkshopServicePartInline]
 
 
 @admin.register(ServiceCombo)

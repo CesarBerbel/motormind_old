@@ -4,7 +4,12 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from core.form_fields import BRLDecimalField, money_widget
-from workshop_services.models import ServiceCombo, ServiceComboItem, WorkshopService
+from workshop_services.models import (
+    ServiceCombo,
+    ServiceComboItem,
+    WorkshopService,
+    WorkshopServicePart,
+)
 
 
 class WorkshopServiceForm(forms.ModelForm):
@@ -43,6 +48,37 @@ class WorkshopServiceForm(forms.ModelForm):
             ),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+
+class WorkshopServicePartForm(forms.ModelForm):
+    unit_price = BRLDecimalField(
+        label="Preço unitário",
+        min_value=Decimal("0.00"),
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        widget=money_widget("Vazio = preço de venda da peça"),
+    )
+
+    class Meta:
+        model = WorkshopServicePart
+        fields = ["part", "quantity", "unit_price", "is_active"]
+        widgets = {
+            "part": forms.Select(attrs={"class": "form-select"}),
+            "quantity": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.01", "min": "0.01"}
+            ),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+
+WorkshopServicePartFormSet = inlineformset_factory(
+    WorkshopService,
+    WorkshopServicePart,
+    form=WorkshopServicePartForm,
+    extra=1,
+    can_delete=True,
+)
 
 
 class ServiceComboForm(forms.ModelForm):

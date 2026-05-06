@@ -53,6 +53,77 @@ class WorkshopService(SoftDeleteModel):
         return f"{self.code} - {self.name}"
 
 
+class WorkshopServicePart(SoftDeleteModel):
+    """
+    Default inventory part required by a catalog service.
+    These parts are copied to the service order when the service is added.
+    """
+
+    service = models.ForeignKey(
+        WorkshopService,
+        on_delete=models.CASCADE,
+        related_name="default_parts",
+        verbose_name="Serviço",
+    )
+    part = models.ForeignKey(
+        "inventory.Part",
+        on_delete=models.PROTECT,
+        related_name="workshop_service_templates",
+        verbose_name="Peça",
+    )
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("1.00"),
+        validators=[MinValueValidator(Decimal("0.01"))],
+        verbose_name="Quantidade padrão",
+    )
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        verbose_name="Preço unitário",
+        help_text="Deixe vazio para usar o preço de venda atual da peça.",
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Ativa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criada em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizada em")
+
+    class Meta:
+        verbose_name = "Peça padrão do serviço"
+        verbose_name_plural = "Peças padrão dos serviços"
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["service", "part"],
+                name="unique_default_part_per_workshop_service",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.service.name} - {self.part.name}"
+
+    @property
+    def effective_unit_price(self):
+        if self.unit_price is not None:
+            return self.unit_price
+        return self.part.sale_price
+
+    @property
+    def total(self):
+        return self.quantity * self.effective_unit_price
+
+    def clean(self):
+        super().clean()
+
+        if self.part_id and not self.part.is_active:
+            raise ValidationError(
+                {"part": "Não é possível vincular uma peça inativa ao serviço."}
+            )
+
+
 class ServiceCombo(SoftDeleteModel):
     """
     Commercial package composed of multiple catalog services.
