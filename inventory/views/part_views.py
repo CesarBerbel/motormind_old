@@ -10,8 +10,8 @@ from core.permissions import (
     can_move_inventory_stock,
     user_passes_permission,
 )
-from inventory.forms import PartForm, StockMovementForm
-from inventory.models import Part
+from inventory.forms import PartBrandForm, PartCategoryForm, PartForm, StockMovementForm
+from inventory.models import Part, PartBrand, PartCategory
 from inventory.selectors import get_critical_parts_with_priority
 from inventory.services import (
     adjust_stock,
@@ -41,8 +41,8 @@ def part_list_view(request):
             Q(name__icontains=search)
             | Q(internal_code__icontains=search)
             | Q(barcode__icontains=search)
-            | Q(brand__icontains=search)
-            | Q(category__icontains=search)
+            | Q(brand__name__icontains=search)
+            | Q(category__name__icontains=search)
         )
 
     if status == "active":
@@ -313,5 +313,211 @@ def stock_movement_create_view(request, pk):
         {
             "form": form,
             "part": part,
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_access_inventory)
+def brand_list_view(request):
+    """
+    List part brands.
+    """
+    search = request.GET.get("search", "").strip()
+    status = request.GET.get("status", "").strip()
+
+    brands = PartBrand.objects.all().order_by("name")
+
+    if search:
+        brands = brands.filter(name__icontains=search)
+
+    if status == "active":
+        brands = brands.filter(is_active=True)
+
+    if status == "inactive":
+        brands = brands.filter(is_active=False)
+
+    return render(
+        request,
+        "inventory/brands/list.html",
+        {
+            "brands": brands,
+            "search": search,
+            "status": status,
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_manage_inventory)
+def brand_create_view(request):
+    """
+    Create part brand.
+    """
+    if request.method == "POST":
+        form = PartBrandForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Marca cadastrada com sucesso.")
+            return redirect("inventory:brand_list")
+
+        messages.error(
+            request,
+            "Não foi possível cadastrar a marca. Verifique os dados informados.",
+        )
+
+    else:
+        form = PartBrandForm(initial={"is_active": True})
+
+    return render(
+        request,
+        "inventory/brands/form.html",
+        {
+            "form": form,
+            "page_title": "Cadastrar marca",
+            "button_text": "Salvar marca",
+            "back_url_name": "inventory:brand_list",
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_manage_inventory)
+def brand_update_view(request, pk):
+    """
+    Update part brand.
+    """
+    brand = get_object_or_404(PartBrand, pk=pk)
+
+    if request.method == "POST":
+        form = PartBrandForm(request.POST, instance=brand)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Marca atualizada com sucesso.")
+            return redirect("inventory:brand_list")
+
+        messages.error(
+            request,
+            "Não foi possível atualizar a marca. Verifique os dados informados.",
+        )
+
+    else:
+        form = PartBrandForm(instance=brand)
+
+    return render(
+        request,
+        "inventory/brands/form.html",
+        {
+            "form": form,
+            "brand": brand,
+            "page_title": "Editar marca",
+            "button_text": "Salvar alterações",
+            "back_url_name": "inventory:brand_list",
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_access_inventory)
+def category_list_view(request):
+    """
+    List part categories.
+    """
+    search = request.GET.get("search", "").strip()
+    status = request.GET.get("status", "").strip()
+
+    categories = PartCategory.objects.all().order_by("name")
+
+    if search:
+        categories = categories.filter(
+            Q(name__icontains=search) | Q(description__icontains=search)
+        )
+
+    if status == "active":
+        categories = categories.filter(is_active=True)
+
+    if status == "inactive":
+        categories = categories.filter(is_active=False)
+
+    return render(
+        request,
+        "inventory/categories/list.html",
+        {
+            "categories": categories,
+            "search": search,
+            "status": status,
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_manage_inventory)
+def category_create_view(request):
+    """
+    Create part category.
+    """
+    if request.method == "POST":
+        form = PartCategoryForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Categoria cadastrada com sucesso.")
+            return redirect("inventory:category_list")
+
+        messages.error(
+            request,
+            "Não foi possível cadastrar a categoria. Verifique os dados informados.",
+        )
+
+    else:
+        form = PartCategoryForm(initial={"is_active": True})
+
+    return render(
+        request,
+        "inventory/categories/form.html",
+        {
+            "form": form,
+            "page_title": "Cadastrar categoria",
+            "button_text": "Salvar categoria",
+            "back_url_name": "inventory:category_list",
+        },
+    )
+
+
+@login_required
+@user_passes_permission(can_manage_inventory)
+def category_update_view(request, pk):
+    """
+    Update part category.
+    """
+    category = get_object_or_404(PartCategory, pk=pk)
+
+    if request.method == "POST":
+        form = PartCategoryForm(request.POST, instance=category)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Categoria atualizada com sucesso.")
+            return redirect("inventory:category_list")
+
+        messages.error(
+            request,
+            "Não foi possível atualizar a categoria. Verifique os dados informados.",
+        )
+
+    else:
+        form = PartCategoryForm(instance=category)
+
+    return render(
+        request,
+        "inventory/categories/form.html",
+        {
+            "form": form,
+            "category": category,
+            "page_title": "Editar categoria",
+            "button_text": "Salvar alterações",
+            "back_url_name": "inventory:category_list",
         },
     )

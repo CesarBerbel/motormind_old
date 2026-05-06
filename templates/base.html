@@ -147,9 +147,40 @@
                     <a href="{% url 'service_orders:workshop_agenda' %}" class="submenu-link {% if request.resolver_match.url_name == 'workshop_agenda' %}active{% endif %}">Agenda</a>
                     {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}<a href="{% url 'service_orders:mechanic_productivity_report' %}" class="submenu-link {% if request.resolver_match.url_name == 'mechanic_productivity_report' %}active{% endif %}">Produtividade</a>{% endif %}
                 {% elif '/estoque/' in request.path %}
-                    <a href="{% url 'inventory:part_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'part_list' %}active{% endif %}">Peças</a>
-                    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}<a href="{% url 'inventory:part_create' %}" class="submenu-link {% if request.resolver_match.url_name == 'part_create' %}active{% endif %}">Nova peça</a>{% endif %}
-                    <a href="{% url 'inventory:critical_parts' %}" class="submenu-link {% if request.resolver_match.url_name == 'critical_parts' %}active{% endif %}">Críticas</a>
+
+                    <!-- Peças -->
+                    <a href="{% url 'inventory:part_list' %}" 
+                        class="submenu-link {% if request.resolver_match.url_name == 'part_list' %}active{% endif %}">
+                        Peças
+                    </a>
+
+                    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                        <a href="{% url 'inventory:part_create' %}" 
+                            class="submenu-link {% if request.resolver_match.url_name == 'part_create' %}active{% endif %}">
+                            Nova peça
+                        </a>
+                    {% endif %}
+
+                    <a href="{% url 'inventory:critical_parts' %}" 
+                        class="submenu-link {% if request.resolver_match.url_name == 'critical_parts' %}active{% endif %}">
+                        Críticas
+                    </a>
+
+                    <!-- 🔥 NOVO: MARCAS -->
+                    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                        <a href="{% url 'inventory:brand_list' %}" 
+                            class="submenu-link {% if request.resolver_match.url_name == 'brand_list' %}active{% endif %}">
+                            Marcas
+                        </a>
+                    {% endif %}
+
+                    <!-- 🔥 NOVO: CATEGORIAS -->
+                    {% if request.user|has_group:"Administrador" or request.user|has_group:"Atendente" %}
+                        <a href="{% url 'inventory:category_list' %}" 
+                            class="submenu-link {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}">
+                            Categorias
+                        </a>
+                    {% endif %}
                 {% elif '/financial/' in request.path %}
                     <a href="{% url 'financial:dashboard' %}" class="submenu-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Resumo</a>
                     <a href="{% url 'financial:receivable_list' %}" class="submenu-link {% if 'receivable' in request.resolver_match.url_name %}active{% endif %}">Contas a receber</a>

@@ -7,6 +7,36 @@ app_name = "inventory"
 
 urlpatterns = [
     path(
+        "marcas/",
+        part_views.brand_list_view,
+        name="brand_list",
+    ),
+    path(
+        "marcas/criar/",
+        part_views.brand_create_view,
+        name="brand_create",
+    ),
+    path(
+        "marcas/<int:pk>/editar/",
+        part_views.brand_update_view,
+        name="brand_update",
+    ),
+    path(
+        "categorias/",
+        part_views.category_list_view,
+        name="category_list",
+    ),
+    path(
+        "categorias/criar/",
+        part_views.category_create_view,
+        name="category_create",
+    ),
+    path(
+        "categorias/<int:pk>/editar/",
+        part_views.category_update_view,
+        name="category_update",
+    ),
+    path(
         "pecas/",
         part_views.part_list_view,
         name="part_list",

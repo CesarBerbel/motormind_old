@@ -4,7 +4,7 @@ from django import forms
 
 from core.form_fields import BRLDecimalField, money_widget
 
-from .models import Part, ServiceOrderPart, StockMovement
+from .models import Part, PartBrand, PartCategory, ServiceOrderPart, StockMovement
 
 
 class PartForm(forms.ModelForm):
@@ -71,18 +71,14 @@ class PartForm(forms.ModelForm):
                     "autocomplete": "off",
                 }
             ),
-            "brand": forms.TextInput(
+            "brand": forms.Select(
                 attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: Bosch",
-                    "autocomplete": "off",
+                    "class": "form-select",
                 }
             ),
-            "category": forms.TextInput(
+            "category": forms.Select(
                 attrs={
-                    "class": "form-control",
-                    "placeholder": "Ex: Freio, Motor, Suspensão",
-                    "autocomplete": "off",
+                    "class": "form-select",
                 }
             ),
             "unit": forms.TextInput(
@@ -140,6 +136,17 @@ class PartForm(forms.ModelForm):
             "current_stock": "Quantidade disponível no estoque no momento do cadastro.",
             "minimum_stock": "Quando o estoque atual ficar igual ou abaixo deste valor, a peça será considerada crítica.",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["brand"].queryset = PartBrand.objects.filter(
+            is_active=True
+        ).order_by("name")
+        self.fields["category"].queryset = PartCategory.objects.filter(
+            is_active=True
+        ).order_by("name")
+        self.fields["brand"].empty_label = "Selecione a marca"
+        self.fields["category"].empty_label = "Selecione a categoria"
 
     def clean_cost_price(self):
         return self.cleaned_data.get("cost_price") or Decimal("0.00")
@@ -285,3 +292,96 @@ class ServiceOrderPartForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+
+class PartBrandForm(forms.ModelForm):
+    """
+    Form to create and update part brands.
+    """
+
+    class Meta:
+        model = PartBrand
+        fields = [
+            "name",
+            "is_active",
+        ]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Ex: Bosch, Cofap, Nakata",
+                    "autocomplete": "off",
+                }
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={
+                    "class": "form-check-input",
+                }
+            ),
+        }
+        labels = {
+            "name": "Nome da marca",
+            "is_active": "Marca ativa",
+        }
+        help_texts = {
+            "name": "Use um nome único para evitar marcas duplicadas no cadastro de peças.",
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data.get("name", "").strip()
+
+        if not name:
+            raise forms.ValidationError("Informe o nome da marca.")
+
+        return name
+
+
+class PartCategoryForm(forms.ModelForm):
+    """
+    Form to create and update part categories.
+    """
+
+    class Meta:
+        model = PartCategory
+        fields = [
+            "name",
+            "description",
+            "is_active",
+        ]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Ex: Freios, Suspensão, Motor",
+                    "autocomplete": "off",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Descreva quais peças pertencem a esta categoria.",
+                }
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={
+                    "class": "form-check-input",
+                }
+            ),
+        }
+        labels = {
+            "name": "Nome da categoria",
+            "description": "Descrição",
+            "is_active": "Categoria ativa",
+        }
+        help_texts = {
+            "name": "Use categorias operacionais coerentes com o estoque da oficina.",
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data.get("name", "").strip()
+
+        if not name:
+            raise forms.ValidationError("Informe o nome da categoria.")
+
+        return name
